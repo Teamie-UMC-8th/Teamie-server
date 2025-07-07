@@ -13,7 +13,7 @@ export class UserProject extends BaseEntity{
     })
     permission: projectPermission;
 
-    @Column()
+    @Column({ length: 13 })
     role: string;
 
     @ManyToOne(() => User, (user) => user.userProjects, {onDelete: 'CASCADE'})

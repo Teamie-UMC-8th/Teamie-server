@@ -9,31 +9,31 @@ import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
 import { Writer } from '../mappings/writers/writers.entity';
 import { Attendee } from '../mappings/attendees/attendees.entity';
 import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
-import { PortfolioAI } from '../portfolioAIs/portfolioAIs.entity';
+import { FinalPortfolio } from '../finalPortfolios/finalPortfolios.entity';
 
 @Entity()
 export class User extends BaseEntity {
-    @Column()
+    @Column({ length: 10 })
     name: string;
 
-    @Column({ unique: true })
+    @Column({
+        unique: true,
+        length: 255,
+    })
     email: string;
 
-    @Column()
+    @Column({ length: 15 })
     school: string;
 
     @Column()
     tier: string; // NOTE: 추후 ENUM으로 바꾸기(요금제 확정 시)
 
-    @Column({ default: 0 })
-    point: number;
-
-    @Column()
+    @Column({ length: 255 })
     imageUrl: string;
 
     // TODO: 로그인 관련 로직 구현 시 accessToken 등 필드 추가
 
-    @Column()
+    @Column({ default: 0 })
     credit: number;
 
     @Column({ default: 0 })
@@ -41,6 +41,9 @@ export class User extends BaseEntity {
 
     @Column({ default: true })
     isActive: boolean;
+
+    @Column({ length: 15 })
+    major: string;
 
     @OneToMany(() => Comment, (comment) => comment.user)
     comments: Comment[];
@@ -69,6 +72,6 @@ export class User extends BaseEntity {
     @OneToMany(() => MasterPortfolio, (masterPF) => masterPF.user)
     masterPFs: MasterPortfolio[];
 
-    @OneToMany(() => PortfolioAI, (pfAI) => pfAI.user)
-    pfAIs: PortfolioAI[];
+    @OneToMany(() => FinalPortfolio, (finalPortfolio) => finalPortfolio.user)
+    finalPortfolios: FinalPortfolio[];
 }

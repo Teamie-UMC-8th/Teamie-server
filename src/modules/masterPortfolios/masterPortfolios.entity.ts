@@ -2,34 +2,34 @@ import { BaseEntity } from "src/common/entities/base.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
 import { User } from "../users/users.entity";
 import { Project } from "../projects/projects.entity";
-import { PortfolioTag } from "src/common/enums/portfolioTag.enum";
+import { portfolioType } from "src/common/enums/portfolioType.enum";
 
 @Entity()
 export class MasterPortfolio extends BaseEntity{
     @Column({ length: 2000 })
-    detail: string;
+    detailInfo: string;
 
     @Column({ length: 2000 })
-    responsibilites: string;
+    assignedTask: string;
 
     @Column({ length: 2000 })
-    achivements: string;
+    keyAchievement: string;
 
     @Column({ length: 2000 })
-    insights: string;
+    insight: string;
 
     @Column()
-    contributionRatio: number;
+    contributionRate: number;
 
-    @Column({ length: 100 })
+    @Column({ length: 24 })
     mainTask: string;
 
     @Column({
         type: 'enum',
-        enum: PortfolioTag,
-        default: PortfolioTag.OTHER
+        enum: portfolioType,
+        default: portfolioType.OTHER
     })
-    tag: PortfolioTag;
+    category : portfolioType;
 
     @ManyToOne(() => User, (user) => user.masterPFs, {onDelete:'CASCADE'})
     user: User;

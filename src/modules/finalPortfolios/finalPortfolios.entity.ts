@@ -1,11 +1,11 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 import { User } from "../users/users.entity";
-import { PFAIResult } from "./pfAIResults/ppAIResults.entity";
+import { PortfolioAIResult } from "./portfolioAIResult/portfolioAIResults.entity";
 import { ApplicationType } from "src/common/enums/applicationType.enum";
 
 @Entity()
-export class PortfolioAI extends BaseEntity{
+export class FinalPortfolio extends BaseEntity{
     @Column({ length: 20 })
     title: string;
 
@@ -28,12 +28,12 @@ export class PortfolioAI extends BaseEntity{
     @Column({ length: 400 })
     companyInsight: string;
 
-    @Column({ length: 400 })
+    @Column({ length: 500 })
     jd: string;
 
-    @ManyToOne(() => User, (user) => user.pfAIs, {onDelete: 'CASCADE'})
+    @ManyToOne(() => User, (user) => user.finalPortfolios, {onDelete: 'CASCADE'})
     user: User;
 
-    @OneToMany(() => PFAIResult, (result) => result.portfolioAI)
-    results: PFAIResult[];
+    @OneToMany(() => PortfolioAIResult, (result) => result.finalPortfolio)
+    results: PortfolioAIResult[];
 }
