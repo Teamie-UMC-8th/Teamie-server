@@ -1,14 +1,15 @@
 import { Status } from "src/common/enums/status.enum";
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 import { Project } from "../projects/projects.entity";
 import { Comment } from "../comments/comments.entity";
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Manager } from "../mappings/managers/managers.entity";
 import { TaskFile } from "../mappings/taskFiles/taskFiles.entity";
+import { Step } from "../steps/steps.entity";
 
 @Entity()
 export class Task extends BaseEntity{
-    @Column()
+    @Column({ length: 35 })
     name: string;
 
     @Column()
@@ -19,16 +20,13 @@ export class Task extends BaseEntity{
         enum: Status,
         default: Status.NOTSTART,
     })
-    status: Status
+    status: Status;
 
-    @Column()
-    step: number;
-
-    @Column()
+    @Column({ length: 500 })
     memo: string;   //비고
 
-    @ManyToOne(() => Project, (project) => project.tasks, {onDelete: 'CASCADE'})
-    project: Project;
+    @ManyToOne(() => Step, (step) => step.tasks, {onDelete: 'CASCADE'})
+    step: Step;
 
     @OneToMany(() => Comment, (comment) => comment.task)
     comments: Comment[];

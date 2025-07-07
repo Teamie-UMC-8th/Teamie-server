@@ -5,11 +5,12 @@ import { PersonalRecall } from '../personalRecalls/personalRecalls.entity';
 import { Plan } from '../plans/plans.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
-import { MasterPortpolio } from '../masterPortpolios/masterPortpolios.entity';
+import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
+import { Step } from '../steps/steps.entity';
 
 @Entity()
 export class Project extends BaseEntity{
-    @Column()
+    @Column({ length: 20 })
     name: string;
 
     @Column({length:300})
@@ -24,9 +25,6 @@ export class Project extends BaseEntity{
     @Column()
     completedAt: Date;
 
-    @OneToMany(() => Task, (task) => task.project)
-    tasks: Task[];
-
     @OneToMany(() => PersonalRecall, (personalRecall) => personalRecall.project)
     personalRecalls: PersonalRecall[];
 
@@ -39,6 +37,9 @@ export class Project extends BaseEntity{
     @OneToMany(() => ProjectFile, (projectFile) => projectFile.project)
     projectFiles: ProjectFile[];
 
-    @OneToMany(() => MasterPortpolio, (masterPP) => masterPP.project)
-    masterPPs: MasterPortpolio[];
+    @OneToMany(() => MasterPortfolio, (masterPF) => masterPF.project)
+    masterPFs: MasterPortfolio[];
+
+    @OneToMany(() => Step, (step) => step.project)
+    steps: Step[];
 }

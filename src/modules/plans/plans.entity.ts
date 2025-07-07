@@ -15,7 +15,7 @@ export class Plan extends BaseEntity {
     @Column({length: 20})
     location: string;
 
-    @Column({length: 3000})
+    @Column({length: 500})
     memo: string;   //비고
 
     @Column()

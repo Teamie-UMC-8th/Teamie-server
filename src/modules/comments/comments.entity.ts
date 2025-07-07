@@ -6,7 +6,7 @@ import { Cocomment } from './cocomments/cocomments.entity';
 
 @Entity()
 export class Comment extends BaseEntity {
-    @Column({length: 500})
+    @Column({ length: 300 })
     content: string;
 
     @ManyToOne(() => User, (user) => user.comments, {onDelete: 'CASCADE'})

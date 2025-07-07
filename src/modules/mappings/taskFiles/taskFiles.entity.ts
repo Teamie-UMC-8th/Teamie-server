@@ -5,7 +5,7 @@ import { Column, Entity, ManyToOne } from "typeorm";
 
 @Entity()
 export class TaskFile extends BaseEntity{
-    @Column()
+    @Column({ length: 255 })
     fileUrl: string;
 
     @ManyToOne(() => Task, (task) => task.taskFiles, {onDelete: 'CASCADE'})

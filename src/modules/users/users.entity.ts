@@ -8,8 +8,8 @@ import { TaskFile } from '../mappings/taskFiles/taskFiles.entity';
 import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
 import { Writer } from '../mappings/writers/writers.entity';
 import { Attendee } from '../mappings/attendees/attendees.entity';
-import { MasterPortpolio } from '../masterPortpolios/masterPortpolios.entity';
-import { PortpolioAI } from '../portpolioAIs/portpolioAIs.entity';
+import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
+import { PortfolioAI } from '../portfolioAIs/portfolioAIs.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -66,9 +66,9 @@ export class User extends BaseEntity {
     @OneToMany(() => Attendee, (attendee) => attendee.user)
     attendees: Attendee[];
 
-    @OneToMany(() => MasterPortpolio, (masterPP) => masterPP.user)
-    masterPPs: MasterPortpolio[];
+    @OneToMany(() => MasterPortfolio, (masterPF) => masterPF.user)
+    masterPFs: MasterPortfolio[];
 
-    @OneToMany(() => PortpolioAI, (ppAI) => ppAI.user)
-    ppAIs: PortpolioAI[];
+    @OneToMany(() => PortfolioAI, (pfAI) => pfAI.user)
+    pfAIs: PortfolioAI[];
 }
