@@ -1,0 +1,16 @@
+import { BaseEntity } from "src/common/entities/base.entity";
+import { Task } from "src/modules/tasks/tasks.entity";
+import { User } from "src/modules/users/users.entity";
+import { Column, Entity, ManyToOne } from "typeorm";
+
+@Entity()
+export class TaskFile extends BaseEntity{
+    @Column({ length: 255 })
+    fileUrl: string;
+
+    @ManyToOne(() => Task, (task) => task.taskFiles, {onDelete: 'CASCADE'})
+    task: Task;
+
+    @ManyToOne(() => User, (user) => user.taskFiles, {onDelete: 'CASCADE'})
+    user: User;
+}
