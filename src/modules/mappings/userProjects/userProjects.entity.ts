@@ -1,5 +1,5 @@
 import { BaseEntity } from "src/common/entities/base.entity";
-import { TeamRole } from "src/common/enums/role.enum";
+import { projectPermission } from "src/common/enums/projectPermission.enum";
 import { Project } from "src/modules/projects/projects.entity";
 import { User } from "src/modules/users/users.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
@@ -8,10 +8,13 @@ import { Column, Entity, ManyToOne } from "typeorm";
 export class UserProject extends BaseEntity{
     @Column({
         type: 'enum',
-        enum: TeamRole,
-        default: TeamRole.MEMBER,
+        enum: projectPermission,
+        default: projectPermission.MEMBER,
     })
-    role: TeamRole
+    permission: projectPermission;
+
+    @Column()
+    role: string;
 
     @ManyToOne(() => User, (user) => user.userProjects, {onDelete: 'CASCADE'})
     user: User;
