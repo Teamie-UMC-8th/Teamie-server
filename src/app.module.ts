@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthCheckModule } from './modules/healthCheck/healthCheck.module';
 import { typeORMConfig } from './config/typeorm.config';
-import { S3TestController } from './modules/upload/upload.controller';
+import { S3TestController } from './infra/upload/upload.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({
