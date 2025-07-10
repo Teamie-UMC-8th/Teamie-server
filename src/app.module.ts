@@ -8,6 +8,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import type { RedisClientOptions } from 'redis';
+import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls.module';
 
 
 @Module({
@@ -32,7 +33,8 @@ import type { RedisClientOptions } from 'redis';
     }),
     HealthCheckModule,
     TasksModule,
-    ProjectsModule, 
+    ProjectsModule,
+    PersonalRecallsModule, 
   ],
 })
 export class AppModule {}
