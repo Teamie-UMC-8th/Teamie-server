@@ -1,6 +1,6 @@
 import { Status } from "src/common/enums/status.enum";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
-import { Project } from "../projects/projects.entity";
+import { Project } from "../projects/entities/projects.entity";
 import { Comment } from "../comments/comments.entity";
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Manager } from "../mappings/managers/managers.entity";
