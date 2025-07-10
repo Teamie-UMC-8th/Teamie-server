@@ -46,4 +46,14 @@ export class ProjectsController {
   return await this.projectsService.getProjectFullData(projectId);
 }
 
+  @Get('/:projectId')
+  @ApiCommonResponse(AllProjectResponseDto)
+  @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.')
+  async getProjectFullData(@Param('projectId') projectId: number) {
+  if (!projectId) {
+    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');}
+    
+    return await this.projectsService.getProjectFullData(projectId);
+  }
+
 }
