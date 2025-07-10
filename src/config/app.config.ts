@@ -2,6 +2,7 @@ import { ConfigService } from "@nestjs/config"
 
 export const defaultConfig = (configService: ConfigService) => ({
     app: {
+        baseUrl: configService.get<string>('BASE_URL'), 
         version: configService.get<string>('API_VERSION'),
         perfixes: {
             api: 'api',
