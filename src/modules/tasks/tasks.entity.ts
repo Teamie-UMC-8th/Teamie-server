@@ -9,21 +9,22 @@ import { Step } from "../steps/steps.entity";
 
 @Entity()
 export class Task extends BaseEntity{
-    @Column({ length: 35 })
+    @Column({ length: 35, default: '빈 업무' })
     name: string;
 
     @Column()
     deadline: Date;
 
+    
     @Column({
         type: 'enum',
         enum: Status,
         default: Status.NOTSTART,
     })
-    status: Status;
+    status: Status;   
 
-    @Column({ length: 500 })
-    memo: string;   //비고
+    @Column()
+    memo: string;
 
     @ManyToOne(() => Step, (step) => step.tasks, {onDelete: 'CASCADE'})
     step: Step;
