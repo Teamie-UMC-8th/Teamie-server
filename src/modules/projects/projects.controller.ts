@@ -1,11 +1,11 @@
-import { Controller, Post, Get, Body, Param, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
 import { AllProjectResponseDto } from './dto/all-project-response.dto';
 import { ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-responce.helper';
 import { ConfigService } from '@nestjs/config';
-
+import { UpdateProjectDto } from './dto/update-project.dto';
 @Controller('/projects')
 export class ProjectsController {
   constructor(
@@ -51,19 +51,46 @@ export class ProjectsController {
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.',404)
   @ApiCommonErrorResponse('FORBIDDEN', '해당 프로젝트에 접근 권한이 없습니다.',403)
   async getProjectFullData(@Param('projectId') projectId: number) {
-  if (!projectId) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
-  }
 
   const userId = parseInt(process.env.DEFAULT_USER_ID || '1', 10);
 
   const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
-
   if (!isMember) {
-    throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
-  }
+      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+    }
 
     return await this.projectsService.getProjectFullData(projectId);
   }
+
+  @Patch('/:projectId')
+  @ApiBody({ type: UpdateProjectDto })
+  @ApiCommonResponse(AllProjectResponseDto)
+  @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+  @ApiCommonErrorResponse('FORBIDDEN', '해당 항목을 수정할 권한이 없습니다.', 403)
+  async updateProject(
+    @Param('projectId') projectId: number,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    const userId = parseInt(process.env.DEFAULT_USER_ID || '1', 10);
+
+    const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
+    if (!isMember) {
+      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+    }
+
+    const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
+
+    // rule, goal은 팀장만 수정 가능
+    if (
+      (!isLead && dto.rule !== undefined) ||
+      (!isLead && dto.goal !== undefined)
+    ) {
+      throw new ForbiddenException('해당 항목을 수정할 권한이 없습니다.');
+    }
+
+    return await this.projectsService.updateProject(projectId, dto);
+
+  }
+
 
 }

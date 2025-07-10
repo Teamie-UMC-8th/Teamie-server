@@ -1,15 +1,15 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/projectPermission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
-import {  CACHE_MANAGER  } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
 import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/all-project-response.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -79,6 +79,9 @@ export class ProjectsService {
 
   async getProjectFullData(projectId: number): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.projectRepository.findOneOrFail({ where: { id: projectId } });
+  if (!projectId) {
+    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+  }
 
   const userProjects = await this.userProjectRepository.find({
     where: { project: { id: projectId } },
@@ -94,13 +97,36 @@ export class ProjectsService {
   return CommonResponse.success(AllProjectResponseDto.fromEntity({ project, users, posts }));
   }
 
+
   async checkProjectMembership(userId: number, projectId: number): Promise<boolean> {
     const mapping = await this.userProjectRepository.findOne({
       where: { user: { id: userId }, project: { id: projectId } },
     });
     return !!mapping;
+  }
+
+  async updateProject(projectId: number, dto: UpdateProjectDto): Promise<CommonResponse<AllProjectResponseDto>> {
+  const project = await this.projectRepository.findOne({ where: { id: projectId } });
+  if (!project) {
+    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+  }
+  // 해당 필드들만 조건부로 갱신
+  if (dto.name !== undefined) project.name = dto.name;
+  if (dto.rule !== undefined) project.rule = dto.rule;
+  if (dto.goal !== undefined) project.goal = dto.goal;
+
+  await this.projectRepository.save(project);
+
+  return this.getProjectFullData(projectId);
+  }
+  async checkProjectLeader(userId: number, projectId: number): Promise<boolean> {
+    const mapping = await this.userProjectRepository.findOne({
+      where: { user: { id: userId }, project: { id: projectId }, permission: projectPermission.LEAD },
+    });
+    return !!mapping;   
+  }
 }
-}
+
 
 export function generateRandomCode(length=10): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
