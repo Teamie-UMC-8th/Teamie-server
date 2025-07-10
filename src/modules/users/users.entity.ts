@@ -1,7 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { Comment } from '../comments/comments.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { PersonalRecall } from '../personalRecalls/personalRecalls.entity';
+import { PersonalRecall } from '../personalRecalls/entities/personalRecalls.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { Manager } from '../mappings/managers/managers.entity';
 import { TaskFile } from '../mappings/taskFiles/taskFiles.entity';
