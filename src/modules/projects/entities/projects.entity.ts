@@ -21,8 +21,8 @@ export class Project extends BaseEntity{
     @Column({ default: false })
     isCompleted: boolean;
 
-    @Column()
-    completedAt: Date;
+    @Column({ type: 'datetime', nullable: true })
+    completedAt: Date | null;
 
     @OneToMany(() => PersonalRecall, (personalRecall) => personalRecall.project)
     personalRecalls: PersonalRecall[];
