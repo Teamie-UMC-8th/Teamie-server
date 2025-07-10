@@ -1,11 +1,17 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Req, NotFoundException, Query, All } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
-import { ApiBody } from '@nestjs/swagger';
+import { AllProjectResponseDto } from './dto/all-project-response.dto';
+import { ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-responce.helper';
+import { ConfigService } from '@nestjs/config';
+
 @Controller('/projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly configService: ConfigService
+  ) {}
 
   @Post()
   @ApiBody({ type: CreateProjectDto })
@@ -16,6 +22,28 @@ export class ProjectsController {
     //@ReqUser() user: UserPayload,  // 여기서 user.id를 사용
   ) {
     const userId = parseInt(process.env.DEFAULT_USER_ID || '1', 10);
+    if (!userId) {
+      throw new NotFoundException('인증되지 않은 사용자입니다.');}
     return await this.projectsService.createProject(dto, userId);
   }
+
+  @Get('/join')
+  @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
+  @ApiCommonResponse(AllProjectResponseDto)
+  @ApiCommonErrorResponse('NOT_FOUND', '유효하지 않은 초대코드입니다.')
+  async joinProject(@Query('inviteCode') inviteCode: string) {
+    const userId = parseInt(this.configService.get('DEFAULT_USER_ID') || '1', 10);
+
+  const project = await this.projectsService.getProjectByInviteCode(inviteCode);
+  if (!project) throw new NotFoundException('유효하지 않은 초대코드입니다.');
+
+  const projectId = project.id;
+  const alreadyJoined = await this.projectsService.isUserInProject(userId, projectId);
+  if (!alreadyJoined) {
+    await this.projectsService.addUserToProject(userId, projectId, 'member');
+  }
+
+  return await this.projectsService.getProjectFullData(projectId);
+}
+
 }
