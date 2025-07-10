@@ -4,10 +4,11 @@ import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/projectPermission.enum';
-import { CreateProjectDto } from './dto/create-project.dto';
+import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
 import {  CACHE_MANAGER  } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-
+import { ConfigService } from '@nestjs/config';
+import { CommonResponse } from '../../common/response/common-response.dto';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -19,6 +20,8 @@ export class ProjectsService {
 
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
+
+    private readonly configService: ConfigService,
     
   ) {}
 
@@ -48,13 +51,11 @@ export class ProjectsService {
     const ttlSeconds = 60 * 60 * 24 *7 ;  //7일
     await this.cacheManager.set(key, savedProject, ttlSeconds);
 
-    const inviteCode = `https://teamie.site/invite/${code}`;
+    const baseUrl = this.configService.get('BASE_URL');
+    const inviteCode = `${baseUrl}/projects/join/${code}`;
 
-    return {
-      id: savedProject.id,
-      name: savedProject.name,
-      inviteCode,
-    };
+
+    return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
   }
 }
 
