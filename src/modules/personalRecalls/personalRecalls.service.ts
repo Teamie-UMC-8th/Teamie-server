@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PersonalRecall } from './entities/personalRecalls.entity';
 import { Repository } from 'typeorm';
-import { CommonResponse } from 'src/common/response/common-response.dto';
 import { PersonalRecallResponseDto } from './dtos/personalRecall.dto';
 
 @Injectable()
@@ -19,6 +18,7 @@ export class PersonalRecallsService {
         project: { id: projectId },
       },
     });
-    return CommonResponse.success(PersonalRecallResponseDto.from(personalRecalls[0]));
+
+    return PersonalRecallResponseDto.from(personalRecalls[0]);
   }
 }
