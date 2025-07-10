@@ -12,6 +12,7 @@ import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersController } from './modules/users/users.controller';
 import { UsersService } from './modules/users/users.service';
+import { UsersModule } from './modules/users/users.module';
 
 
 @Module({
@@ -39,6 +40,7 @@ import { UsersService } from './modules/users/users.service';
     ProjectsModule,
     PersonalRecallsModule,
     AuthModule,
+    UsersModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

@@ -22,16 +22,23 @@ export class User extends BaseEntity {
     })
     email: string;
 
-    @Column({ length: 15 })
+    @Column({
+        length: 15,
+        nullable: true
+    })
     school: string;
 
-    @Column()
+    @Column({ nullable: true })
     tier: string; // NOTE: 추후 ENUM으로 바꾸기(요금제 확정 시)
 
     @Column({ length: 255 })
     imageUrl: string;
 
-    // TODO: 로그인 관련 로직 구현 시 accessToken 등 필드 추가
+    @Column({
+        type: 'bigint',
+        unique: true
+    })
+    kakaoId: string;
 
     @Column({ default: 0 })
     credit: number;
@@ -42,7 +49,10 @@ export class User extends BaseEntity {
     @Column({ default: true })
     isActive: boolean;
 
-    @Column({ length: 15 })
+    @Column({
+        length: 15,
+        nullable: true,
+    })
     major: string;
 
     @OneToMany(() => Comment, (comment) => comment.user)
