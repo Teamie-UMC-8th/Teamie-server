@@ -4,7 +4,8 @@ import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber} from 'class-validato
 import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
 import { Type } from 'class-transformer';
 import { TaskFileResponseDto} from '../../mappings/taskFiles/dtos/create-taskFile-dto';
-
+import { Task } from '../tasks.entity';
+import { Manager } from '../../mappings/managers/managers.entity';
 export class UpdateTaskRequestDto {
     @ApiProperty({
     example: 'api명세서 작성',
@@ -56,11 +57,13 @@ export class UpdateTaskRequestDto {
     @IsOptional()
     files?: Express.Multer.File[];
 
-    @IsOptional()
     @ApiProperty({
     example: 5,
-    description: '해당 업무가 속한 step의 ID',
+    description: '이동할 step의 ID',
+    required: false,
     })
+    @IsOptional()
+    @IsNumber()
     @Type(() => Number)
     stepId?: number;
 }
@@ -108,4 +111,21 @@ export class UpdateTaskResponseDto {
     description: '해당 업무가 속한 step의 ID',
     })
     stepId: number;
+
+    static from(task: Task, managers: Manager[]): UpdateTaskResponseDto {
+    const dto = new UpdateTaskResponseDto();
+    dto.name = task.name;
+    dto.deadline = task.deadline;
+    dto.status = task.status;
+    dto.memo = task.memo;
+    dto.managers = managers.map((m) => ({
+      userId: m.user.id,
+      userName: m.user.name,
+    }));
+    dto.files = task.taskFiles.map((f) => ({
+      fileUrl: f.fileUrl,
+    }));
+    dto.stepId = task.step.id;
+    return dto;
+  }
 }

@@ -78,7 +78,6 @@ export class TasksService {
     });
   }
 
-  // ✅ stepId가 있고 기존 step과 다를 때만 이동
   if (dto.stepId && dto.stepId !== task.step.id) {
     const newStep = await this.stepRepository.findOne({
       where: { id: dto.stepId },
@@ -110,15 +109,12 @@ export class TasksService {
     task.step = newStep;
   }
 
-  // ✅ 값이 있으면 각각 수정
   if (dto.name !== undefined) task.name = dto.name;
   if (dto.deadline !== undefined) task.deadline = new Date(dto.deadline);
   if (dto.status !== undefined) task.status = dto.status;
   if (dto.memo !== undefined) task.memo = dto.memo;
 
   const updatedTask = await this.taskRepository.save(task);
-
-  // ✅ managerIds가 undefined가 아닐 때만 수정
   if (dto.managerIds !== undefined) {
     await this.managerRepository.delete({ task: { id: updatedTask.id } });
 
@@ -139,20 +135,7 @@ export class TasksService {
     relations: ['user'],
   });
 
-  const responseDto = new UpdateTaskResponseDto();
-  responseDto.name = updatedTask.name;
-  responseDto.deadline = updatedTask.deadline;
-  responseDto.status = updatedTask.status;
-  responseDto.memo = updatedTask.memo;
-  responseDto.managers = managers.map((m) => ({
-    userId: m.user.id,
-    userName: m.user.name,
-  }));
-  responseDto.files = task.taskFiles.map((f) => ({
-    fileUrl: f.fileUrl,
-  }));
-  responseDto.stepId = task.step.id;
-
+  const responseDto = UpdateTaskResponseDto.from(updatedTask, managers);
   return responseDto;
 }
 
