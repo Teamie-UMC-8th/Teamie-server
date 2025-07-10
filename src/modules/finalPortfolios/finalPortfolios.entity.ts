@@ -1,6 +1,6 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
-import { User } from "../users/users.entity";
+import { User } from "../users/entities/users.entity";
 import { PortfolioAIResult } from "./portfolioAIResult/portfolioAIResults.entity";
 import { ApplicationType } from "src/common/enums/applicationType.enum";
 
