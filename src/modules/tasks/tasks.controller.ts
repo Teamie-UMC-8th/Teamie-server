@@ -20,7 +20,7 @@ export class TasksController {
     return await this.tasksService.createTask(userId, dto);
   } 
 
-  @Patch(':taskId')
+  @Patch('/:taskId')
   @ApiBody({ type: UpdateTaskRequestDto })
   @ApiCommonResponse(UpdateTaskResponseDto)
   async updateTask(
