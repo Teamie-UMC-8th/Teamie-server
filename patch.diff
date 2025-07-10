@@ -1,0 +1,705 @@
+diff --git a/.gitignore b/.gitignore
+index 4b56acf..76eea8d 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -41,6 +41,8 @@ lerna-debug.log*
+ .env.test.local
+ .env.production.local
+ .env.local
++.env.prod
++
+ 
+ # temp directory
+ .temp
+diff --git a/package-lock.json b/package-lock.json
+index 87dcc3c..ef2b3c8 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,12 +9,16 @@
+       "version": "0.0.1",
+       "license": "UNLICENSED",
+       "dependencies": {
++        "@nestjs/cache-manager": "^3.0.1",
+         "@nestjs/common": "^11.0.1",
+         "@nestjs/config": "^4.0.2",
+         "@nestjs/core": "^11.0.1",
+         "@nestjs/platform-express": "^11.0.1",
+         "@nestjs/swagger": "^11.2.0",
+         "@nestjs/typeorm": "^11.0.0",
++        "cache-manager": "^7.0.1",
++        "cache-manager-redis-store": "^3.0.1",
++        "class-validator": "^0.14.2",
+         "mysql2": "^3.14.1",
+         "reflect-metadata": "^0.2.2",
+         "rxjs": "^7.8.1",
+@@ -1808,6 +1812,37 @@
+         "@jridgewell/sourcemap-codec": "^1.4.14"
+       }
+     },
++    "node_modules/@keyv/serialize": {
++      "version": "1.0.3",
++      "resolved": "https://registry.npmjs.org/@keyv/serialize/-/serialize-1.0.3.tgz",
++      "integrity": "sha512-qnEovoOp5Np2JDGonIDL6Ayihw0RhnRh6vxPuHo4RDn1UOzwEo4AeIfpL6UGIrsceWrCMiVPgwRjbHu4vYFc3g==",
++      "dependencies": {
++        "buffer": "^6.0.3"
++      }
++    },
++    "node_modules/@keyv/serialize/node_modules/buffer": {
++      "version": "6.0.3",
++      "resolved": "https://registry.npmjs.org/buffer/-/buffer-6.0.3.tgz",
++      "integrity": "sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "dependencies": {
++        "base64-js": "^1.3.1",
++        "ieee754": "^1.2.1"
++      }
++    },
+     "node_modules/@lukeed/csprng": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/@lukeed/csprng/-/csprng-1.1.0.tgz",
+@@ -2109,6 +2144,18 @@
+         "node": ">= 10"
+       }
+     },
++    "node_modules/@nestjs/cache-manager": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/@nestjs/cache-manager/-/cache-manager-3.0.1.tgz",
++      "integrity": "sha512-4UxTnR0fsmKL5YDalU2eLFVnL+OBebWUpX+hEduKGncrVKH4PPNoiRn1kXyOCjmzb0UvWgqubpssNouc8e0MCw==",
++      "peerDependencies": {
++        "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0",
++        "@nestjs/core": "^9.0.0 || ^10.0.0 || ^11.0.0",
++        "cache-manager": ">=6",
++        "keyv": ">=5",
++        "rxjs": "^7.8.1"
++      }
++    },
+     "node_modules/@nestjs/cli": {
+       "version": "11.0.7",
+       "resolved": "https://registry.npmjs.org/@nestjs/cli/-/cli-11.0.7.tgz",
+@@ -2702,6 +2749,64 @@
+         "url": "https://opencollective.com/pkgr"
+       }
+     },
++    "node_modules/@redis/bloom": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/@redis/bloom/-/bloom-1.2.0.tgz",
++      "integrity": "sha512-HG2DFjYKbpNmVXsa0keLHp/3leGJz1mjh09f2RLGGLQZzSHpkmZWuwJbAvo3QcRY8p80m5+ZdXZdYOSBLlp7Cg==",
++      "peerDependencies": {
++        "@redis/client": "^1.0.0"
++      }
++    },
++    "node_modules/@redis/client": {
++      "version": "1.6.1",
++      "resolved": "https://registry.npmjs.org/@redis/client/-/client-1.6.1.tgz",
++      "integrity": "sha512-/KCsg3xSlR+nCK8/8ZYSknYxvXHwubJrU82F3Lm1Fp6789VQ0/3RJKfsmRXjqfaTA++23CvC3hqmqe/2GEt6Kw==",
++      "dependencies": {
++        "cluster-key-slot": "1.1.2",
++        "generic-pool": "3.9.0",
++        "yallist": "4.0.0"
++      },
++      "engines": {
++        "node": ">=14"
++      }
++    },
++    "node_modules/@redis/client/node_modules/yallist": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/yallist/-/yallist-4.0.0.tgz",
++      "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
++    },
++    "node_modules/@redis/graph": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/@redis/graph/-/graph-1.1.1.tgz",
++      "integrity": "sha512-FEMTcTHZozZciLRl6GiiIB4zGm5z5F3F6a6FZCyrfxdKOhFlGkiAqlexWMBzCi4DcRoyiOsuLfW+cjlGWyExOw==",
++      "peerDependencies": {
++        "@redis/client": "^1.0.0"
++      }
++    },
++    "node_modules/@redis/json": {
++      "version": "1.0.7",
++      "resolved": "https://registry.npmjs.org/@redis/json/-/json-1.0.7.tgz",
++      "integrity": "sha512-6UyXfjVaTBTJtKNG4/9Z8PSpKE6XgSyEb8iwaqDcy+uKrd/DGYHTWkUdnQDyzm727V7p21WUMhsqz5oy65kPcQ==",
++      "peerDependencies": {
++        "@redis/client": "^1.0.0"
++      }
++    },
++    "node_modules/@redis/search": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/@redis/search/-/search-1.2.0.tgz",
++      "integrity": "sha512-tYoDBbtqOVigEDMAcTGsRlMycIIjwMCgD8eR2t0NANeQmgK/lvxNAvYyb6bZDD4frHRhIHkJu2TBRvB0ERkOmw==",
++      "peerDependencies": {
++        "@redis/client": "^1.0.0"
++      }
++    },
++    "node_modules/@redis/time-series": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/@redis/time-series/-/time-series-1.1.0.tgz",
++      "integrity": "sha512-c1Q99M5ljsIuc4YdaCwfUEXsofakb9c8+Zse2qxTadu8TalLXuAESzLvFAvNVbkmSlvlzIQOLpBCmWI9wTOt+g==",
++      "peerDependencies": {
++        "@redis/client": "^1.0.0"
++      }
++    },
+     "node_modules/@scarf/scarf": {
+       "version": "1.4.0",
+       "resolved": "https://registry.npmjs.org/@scarf/scarf/-/scarf-1.4.0.tgz",
+@@ -3351,6 +3456,11 @@
+         "@types/superagent": "^8.1.0"
+       }
+     },
++    "node_modules/@types/validator": {
++      "version": "13.15.2",
++      "resolved": "https://registry.npmjs.org/@types/validator/-/validator-13.15.2.tgz",
++      "integrity": "sha512-y7pa/oEJJ4iGYBxOpfAKn5b9+xuihvzDVnC/OSvlVnGxVg0pOqmjiMafiJ1KVNQEaPZf9HsEp5icEwGg8uIe5Q=="
++    },
+     "node_modules/@types/yargs": {
+       "version": "17.0.33",
+       "resolved": "https://registry.npmjs.org/@types/yargs/-/yargs-17.0.33.tgz",
+@@ -4926,6 +5036,25 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/cache-manager": {
++      "version": "7.0.1",
++      "resolved": "https://registry.npmjs.org/cache-manager/-/cache-manager-7.0.1.tgz",
++      "integrity": "sha512-Hd7FOyTtwhwLgkKeKQWEw6Ixj63VKuUWYwkGgL6g6Q7eISW6uxci5+DtUXlqI0gtbLCPPdhL1+HP9Zht27DbrA==",
++      "dependencies": {
++        "keyv": "^5.3.4"
++      }
++    },
++    "node_modules/cache-manager-redis-store": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/cache-manager-redis-store/-/cache-manager-redis-store-3.0.1.tgz",
++      "integrity": "sha512-o560kw+dFqusC9lQJhcm6L2F2fMKobJ5af+FoR2PdnMVdpQ3f3Bz6qzvObTGyvoazQJxjQNWgMQeChP4vRTuXQ==",
++      "dependencies": {
++        "redis": "^4.3.1"
++      },
++      "engines": {
++        "node": ">= 16.18.0"
++      }
++    },
+     "node_modules/cacheable-lookup": {
+       "version": "7.0.0",
+       "resolved": "https://registry.npmjs.org/cacheable-lookup/-/cacheable-lookup-7.0.0.tgz",
+@@ -4953,6 +5082,15 @@
+         "node": ">=14.16"
+       }
+     },
++    "node_modules/cacheable-request/node_modules/keyv": {
++      "version": "4.5.4",
++      "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
++      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
++      "dev": true,
++      "dependencies": {
++        "json-buffer": "3.0.1"
++      }
++    },
+     "node_modules/call-bind": {
+       "version": "1.0.8",
+       "resolved": "https://registry.npmjs.org/call-bind/-/call-bind-1.0.8.tgz",
+@@ -5111,6 +5249,16 @@
+       "integrity": "sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==",
+       "dev": true
+     },
++    "node_modules/class-validator": {
++      "version": "0.14.2",
++      "resolved": "https://registry.npmjs.org/class-validator/-/class-validator-0.14.2.tgz",
++      "integrity": "sha512-3kMVRF2io8N8pY1IFIXlho9r8IPUUIfHe2hYVtiebvAzU2XeQFXTv+XI4WX+TnXmtwXMDcjngcpkiPM0O9PvLw==",
++      "dependencies": {
++        "@types/validator": "^13.11.8",
++        "libphonenumber-js": "^1.11.1",
++        "validator": "^13.9.0"
++      }
++    },
+     "node_modules/cli-cursor": {
+       "version": "3.1.0",
+       "resolved": "https://registry.npmjs.org/cli-cursor/-/cli-cursor-3.1.0.tgz",
+@@ -5216,6 +5364,14 @@
+         "node": ">=0.8"
+       }
+     },
++    "node_modules/cluster-key-slot": {
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/cluster-key-slot/-/cluster-key-slot-1.1.2.tgz",
++      "integrity": "sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
+     "node_modules/co": {
+       "version": "4.6.0",
+       "resolved": "https://registry.npmjs.org/co/-/co-4.6.0.tgz",
+@@ -6457,6 +6613,15 @@
+         "node": ">=16"
+       }
+     },
++    "node_modules/flat-cache/node_modules/keyv": {
++      "version": "4.5.4",
++      "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
++      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
++      "dev": true,
++      "dependencies": {
++        "json-buffer": "3.0.1"
++      }
++    },
+     "node_modules/flatted": {
+       "version": "3.3.3",
+       "resolved": "https://registry.npmjs.org/flatted/-/flatted-3.3.3.tgz",
+@@ -6654,6 +6819,14 @@
+         "is-property": "^1.0.2"
+       }
+     },
++    "node_modules/generic-pool": {
++      "version": "3.9.0",
++      "resolved": "https://registry.npmjs.org/generic-pool/-/generic-pool-3.9.0.tgz",
++      "integrity": "sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g==",
++      "engines": {
++        "node": ">= 4"
++      }
++    },
+     "node_modules/gensync": {
+       "version": "1.0.0-beta.2",
+       "resolved": "https://registry.npmjs.org/gensync/-/gensync-1.0.0-beta.2.tgz",
+@@ -8064,12 +8237,11 @@
+       }
+     },
+     "node_modules/keyv": {
+-      "version": "4.5.4",
+-      "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+-      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
+-      "dev": true,
++      "version": "5.3.4",
++      "resolved": "https://registry.npmjs.org/keyv/-/keyv-5.3.4.tgz",
++      "integrity": "sha512-ypEvQvInNpUe+u+w8BIcPkQvEqXquyyibWE/1NB5T2BTzIpS5cGEV1LZskDzPSTvNAaT4+5FutvzlvnkxOSKlw==",
+       "dependencies": {
+-        "json-buffer": "3.0.1"
++        "@keyv/serialize": "^1.0.3"
+       }
+     },
+     "node_modules/kind-of": {
+@@ -8112,6 +8284,11 @@
+         "node": ">= 0.8.0"
+       }
+     },
++    "node_modules/libphonenumber-js": {
++      "version": "1.12.9",
++      "resolved": "https://registry.npmjs.org/libphonenumber-js/-/libphonenumber-js-1.12.9.tgz",
++      "integrity": "sha512-VWwAdNeJgN7jFOD+wN4qx83DTPMVPPAUyx9/TUkBXKLiNkuWWk6anV0439tgdtwaJDrEdqkvdN22iA6J4bUCZg=="
++    },
+     "node_modules/lines-and-columns": {
+       "version": "1.2.4",
+       "resolved": "https://registry.npmjs.org/lines-and-columns/-/lines-and-columns-1.2.4.tgz",
+@@ -9284,6 +9461,22 @@
+         "url": "https://paulmillr.com/funding/"
+       }
+     },
++    "node_modules/redis": {
++      "version": "4.7.1",
++      "resolved": "https://registry.npmjs.org/redis/-/redis-4.7.1.tgz",
++      "integrity": "sha512-S1bJDnqLftzHXHP8JsT5II/CtHWQrASX5K96REjWjlmWKrviSOLWmM7QnRLstAWsu1VBBV1ffV6DzCvxNP0UJQ==",
++      "workspaces": [
++        "./packages/*"
++      ],
++      "dependencies": {
++        "@redis/bloom": "1.2.0",
++        "@redis/client": "1.6.1",
++        "@redis/graph": "1.1.1",
++        "@redis/json": "1.0.7",
++        "@redis/search": "1.2.0",
++        "@redis/time-series": "1.1.0"
++      }
++    },
+     "node_modules/reflect-metadata": {
+       "version": "0.2.2",
+       "resolved": "https://registry.npmjs.org/reflect-metadata/-/reflect-metadata-0.2.2.tgz",
+@@ -11123,6 +11316,14 @@
+         "node": ">=10.12.0"
+       }
+     },
++    "node_modules/validator": {
++      "version": "13.15.15",
++      "resolved": "https://registry.npmjs.org/validator/-/validator-13.15.15.tgz",
++      "integrity": "sha512-BgWVbCI72aIQy937xbawcs+hrVaN/CZ2UwutgaJ36hGqRrLNM+f5LUT/YPRbo8IV/ASeFzXszezV+y2+rq3l8A==",
++      "engines": {
++        "node": ">= 0.10"
++      }
++    },
+     "node_modules/vary": {
+       "version": "1.1.2",
+       "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+diff --git a/package.json b/package.json
+index c65ec26..37f4219 100644
+--- a/package.json
++++ b/package.json
+@@ -20,12 +20,16 @@
+     "test:e2e": "jest --config ./test/jest-e2e.json"
+   },
+   "dependencies": {
++    "@nestjs/cache-manager": "^3.0.1",
+     "@nestjs/common": "^11.0.1",
+     "@nestjs/config": "^4.0.2",
+     "@nestjs/core": "^11.0.1",
+     "@nestjs/platform-express": "^11.0.1",
+     "@nestjs/swagger": "^11.2.0",
+     "@nestjs/typeorm": "^11.0.0",
++    "cache-manager": "^7.0.1",
++    "cache-manager-redis-store": "^3.0.1",
++    "class-validator": "^0.14.2",
+     "mysql2": "^3.14.1",
+     "reflect-metadata": "^0.2.2",
+     "rxjs": "^7.8.1",
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 9ee9222..3a4790a 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -3,6 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
+ import { TypeOrmModule } from '@nestjs/typeorm';
+ import { HealthCheckModule } from './modules/healthCheck/healthCheck.module';
+ import { typeORMConfig } from './config/typeorm.config';
++import { ProjectsModule } from './modules/projects/projects.module';
++import { CacheModule } from '@nestjs/cache-manager';
++import { redisStore } from 'cache-manager-redis-store';
++import type { RedisClientOptions } from 'redis';
+ 
+ @Module({
+   imports: [
+@@ -15,7 +19,17 @@ import { typeORMConfig } from './config/typeorm.config';
+       inject: [ConfigService],
+       useFactory: typeORMConfig,
+     }),
++    CacheModule.registerAsync<RedisClientOptions>({
++      isGlobal: true,
++      useFactory: async () => ({
++        store: await redisStore({
++          url: process.env.REDIS_URL, // .env에 저장한 주소
++        }) as unknown,
++        ttl: 0,
++      }),
++    }),
+     HealthCheckModule,
++    ProjectsModule, 
+   ],
+ })
+ export class AppModule {}
+diff --git a/src/config/typeorm.config.ts b/src/config/typeorm.config.ts
+index 7f8d18f..f4e7dfd 100644
+--- a/src/config/typeorm.config.ts
++++ b/src/config/typeorm.config.ts
+@@ -1,13 +1,17 @@
+ import { TypeOrmModuleOptions } from "@nestjs/typeorm"
+ import { ConfigService } from "@nestjs/config"
+ 
+-export const typeORMConfig = (configService: ConfigService): TypeOrmModuleOptions => ({
+-    type: 'mysql',
+-    host: configService.get<string>('DB_HOST'),
+-    port: configService.get<number>('DB_PORT'),
+-    username: configService.get<string>('DB_USERNAME'),
+-    password: configService.get<string>('DB_PASSWORD'),
+-    database: configService.get<string>('DB_NAME'),
+-    entities: [__dirname + '/../modules/**/*.entity.{ts,js}'],
+-    synchronize: true   //개발단계에서만 허용
+-});
+\ No newline at end of file
++export const typeORMConfig = (configService: ConfigService): TypeOrmModuleOptions => {
++    console.log('DB_HOST:', configService.get<string>('DB_HOST'));
++    console.log('DB_NAME:', configService.get<string>('DB_NAME'));
++    return {
++        type: 'mysql',
++        host: configService.get<string>('DB_HOST'),
++        port: configService.get<number>('DB_PORT'),
++        username: configService.get<string>('DB_USERNAME'),
++        password: configService.get<string>('DB_PASSWORD'),
++        database: configService.get<string>('DB_NAME'),
++        entities: [__dirname + '/../modules/**/*.entity.{ts,js}'],
++        synchronize: true   //개발단계에서만 허용
++    };
++};
+\ No newline at end of file
+diff --git a/src/modules/mappings/projectFiles/projectFiles.entity.ts b/src/modules/mappings/projectFiles/projectFiles.entity.ts
+index 8608722..7f26d0f 100644
+--- a/src/modules/mappings/projectFiles/projectFiles.entity.ts
++++ b/src/modules/mappings/projectFiles/projectFiles.entity.ts
+@@ -1,6 +1,6 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { FileType } from "src/common/enums/fileType.enum";
+-import { Project } from "src/modules/projects/projects.entity";
++import { Project } from "src/modules/projects/entities/projects.entity";
+ import { User } from "src/modules/users/users.entity";
+ import { Column, Entity, ManyToOne } from "typeorm";
+ 
+diff --git a/src/modules/mappings/userProjects/userProjects.entity.ts b/src/modules/mappings/userProjects/userProjects.entity.ts
+index 2b73045..0d85049 100644
+--- a/src/modules/mappings/userProjects/userProjects.entity.ts
++++ b/src/modules/mappings/userProjects/userProjects.entity.ts
+@@ -1,6 +1,6 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { projectPermission } from "src/common/enums/projectPermission.enum";
+-import { Project } from "src/modules/projects/projects.entity";
++import { Project } from "src/modules/projects/entities/projects.entity";
+ import { User } from "src/modules/users/users.entity";
+ import { Column, Entity, ManyToOne } from "typeorm";
+ 
+diff --git a/src/modules/masterPortfolios/masterPortfolios.entity.ts b/src/modules/masterPortfolios/masterPortfolios.entity.ts
+index 156721a..78f358a 100644
+--- a/src/modules/masterPortfolios/masterPortfolios.entity.ts
++++ b/src/modules/masterPortfolios/masterPortfolios.entity.ts
+@@ -1,7 +1,7 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { Column, Entity, ManyToOne } from "typeorm";
+ import { User } from "../users/users.entity";
+-import { Project } from "../projects/projects.entity";
++import { Project } from "../projects/entities/projects.entity";
+ import { portfolioType } from "src/common/enums/portfolioType.enum";
+ 
+ @Entity()
+diff --git a/src/modules/personalRecalls/personalRecalls.entity.ts b/src/modules/personalRecalls/personalRecalls.entity.ts
+index 2d8d693..97214dc 100644
+--- a/src/modules/personalRecalls/personalRecalls.entity.ts
++++ b/src/modules/personalRecalls/personalRecalls.entity.ts
+@@ -1,7 +1,7 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { Column, Entity, ManyToOne } from "typeorm";
+ import { User } from "../users/users.entity";
+-import { Project } from "../projects/projects.entity";
++import { Project } from "../projects/entities/projects.entity";
+ 
+ @Entity()
+ export class PersonalRecall extends BaseEntity {
+diff --git a/src/modules/plans/plans.entity.ts b/src/modules/plans/plans.entity.ts
+index 219435a..e6846f2 100644
+--- a/src/modules/plans/plans.entity.ts
++++ b/src/modules/plans/plans.entity.ts
+@@ -1,6 +1,6 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
+-import { Project } from "../projects/projects.entity";
++import { Project } from "../projects/entities/projects.entity";
+ import { Writer } from "../mappings/writers/writers.entity";
+ import { Attendee } from "../mappings/attendees/attendees.entity";
+ 
+diff --git a/src/modules/projects/dto/create-project.dto.ts b/src/modules/projects/dto/create-project.dto.ts
+new file mode 100644
+index 0000000..f908685
+--- /dev/null
++++ b/src/modules/projects/dto/create-project.dto.ts
+@@ -0,0 +1,31 @@
++import { IsNotEmpty } from 'class-validator';
++import { ApiProperty } from '@nestjs/swagger';
++
++export class CreateProjectDto{
++    @ApiProperty({
++    example: '우리 팀 프로젝트',
++    description: '생성할 프로젝트 이름',
++  })
++    @IsNotEmpty()
++    name:string;
++}
++
++export class CreateProjectResponseDto {
++  @ApiProperty({
++    example: 1,
++    description: '프로젝트 ID',
++  })
++  id: number;
++
++  @ApiProperty({
++    example: '우리 팀 프로젝트',
++    description: '프로젝트 이름',
++  })
++  name: string;
++
++  @ApiProperty({
++    example: 'https://teamie.site/invite/abcd1234',
++    description: '초대 코드 URL',
++  })
++  inviteCode: string;
++}
+\ No newline at end of file
+diff --git a/src/modules/projects/projects.entity.ts b/src/modules/projects/entities/projects.entity.ts
+similarity index 64%
+rename from src/modules/projects/projects.entity.ts
+rename to src/modules/projects/entities/projects.entity.ts
+index a866421..b33c2c2 100644
+--- a/src/modules/projects/projects.entity.ts
++++ b/src/modules/projects/entities/projects.entity.ts
+@@ -1,12 +1,11 @@
+-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+-import { Task } from '../tasks/tasks.entity';
++import { Entity, Column,  OneToMany } from 'typeorm';
+ import { BaseEntity } from 'src/common/entities/base.entity';
+-import { PersonalRecall } from '../personalRecalls/personalRecalls.entity';
+-import { Plan } from '../plans/plans.entity';
+-import { UserProject } from '../mappings/userProjects/userProjects.entity';
+-import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
+-import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
+-import { Step } from '../steps/steps.entity';
++import { PersonalRecall } from '../../personalRecalls/personalRecalls.entity';
++import { Plan } from '../../plans/plans.entity';
++import { UserProject } from '../../mappings/userProjects/userProjects.entity';
++import { ProjectFile } from '../../mappings/projectFiles/projectFiles.entity';
++import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity';
++import { Step } from '../../steps/steps.entity';
+ 
+ @Entity()
+ export class Project extends BaseEntity{
+diff --git a/src/modules/projects/projects.controller.ts b/src/modules/projects/projects.controller.ts
+new file mode 100644
+index 0000000..ca758cc
+--- /dev/null
++++ b/src/modules/projects/projects.controller.ts
+@@ -0,0 +1,23 @@
++import { Controller, Post, Body } from '@nestjs/common';
++import { ProjectsService } from './projects.service';
++import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
++import { ApiBody, ApiCreatedResponse } from '@nestjs/swagger';
++
++@Controller('/projects')
++export class ProjectsController {
++  constructor(private readonly projectsService: ProjectsService) {}
++
++  @Post()
++  @ApiBody({ type: CreateProjectDto })
++  @ApiCreatedResponse({
++  description: '프로젝트 생성 성공',
++  type: CreateProjectResponseDto,
++})
++  async createProject(
++    @Body() dto: CreateProjectDto
++    //@ReqUser() user: UserPayload,  // 여기서 user.id를 사용
++  ) {
++    const mockUser = 1  // Mock user for testing
++    return await this.projectsService.createProject(dto, mockUser);
++  }
++}
+diff --git a/src/modules/projects/projects.module.ts b/src/modules/projects/projects.module.ts
+new file mode 100644
+index 0000000..8d9fba8
+--- /dev/null
++++ b/src/modules/projects/projects.module.ts
+@@ -0,0 +1,16 @@
++import { Module } from '@nestjs/common';
++import { TypeOrmModule } from '@nestjs/typeorm';
++import { ProjectsController } from './projects.controller';
++import { ProjectsService } from './projects.service';
++import { Project } from './entities/projects.entity';
++import { UserProject } from '../mappings/userProjects/userProjects.entity'; 
++
++@Module({
++  imports: [
++    TypeOrmModule.forFeature([Project, UserProject]),
++  ],
++  controllers: [ProjectsController],
++  providers: [ProjectsService],
++  exports: [ProjectsService], // 다른 모듈에서 사용 가능하게 할 경우
++})
++export class ProjectsModule {}
+\ No newline at end of file
+diff --git a/src/modules/projects/projects.service.ts b/src/modules/projects/projects.service.ts
+new file mode 100644
+index 0000000..874723e
+--- /dev/null
++++ b/src/modules/projects/projects.service.ts
+@@ -0,0 +1,68 @@
++import { Injectable, Inject } from '@nestjs/common';
++import { InjectRepository } from '@nestjs/typeorm';
++import { Project } from './entities/projects.entity';
++import { UserProject } from '../mappings/userProjects/userProjects.entity';
++import { Repository } from 'typeorm';
++import { projectPermission } from 'src/common/enums/projectPermission.enum';
++import { CreateProjectDto } from './dto/create-project.dto';
++import {  CACHE_MANAGER  } from '@nestjs/cache-manager';
++import { Cache } from 'cache-manager';
++
++@Injectable()
++export class ProjectsService {
++  constructor(
++    @InjectRepository(Project)
++    private readonly projectRepository: Repository<Project>,
++
++    @InjectRepository(UserProject)
++    private readonly userProjectRepository: Repository<UserProject>,
++
++    @Inject(CACHE_MANAGER)
++    private cacheManager: Cache,
++    
++  ) {}
++
++  async createProject(dto:CreateProjectDto, userId: number) {
++    const {name} = dto;
++    const project = this.projectRepository.create({
++      name,
++      goal: '',
++      rule: '',
++      isCompleted: false,
++      completedAt: undefined,
++    });
++
++    const savedProject = await this.projectRepository.save(project);
++
++    const userProject = this.userProjectRepository.create({
++      user: { id: userId }, // User 엔티티의 id를 사용하여 관계 설정
++      project: savedProject,
++      permission: projectPermission.LEAD,
++      role: '',
++    });
++
++    await this.userProjectRepository.save(userProject);
++
++    const code = generateRandomCode();
++    const key = `invite:${code}`;
++    const ttlSeconds = 60 * 60 * 24 *7 ;  //7일
++    await this.cacheManager.set(key, savedProject, ttlSeconds);
++
++    const inviteCode = `https://teamie.site/invite/${code}`;
++
++    return {
++      id: savedProject.id,
++      name: savedProject.name,
++      inviteCode,
++    };
++  }
++}
++
++export function generateRandomCode(length=10): string {
++  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
++  let code = '';
++  for (let i = 0; i < length; i++) {
++    code += chars.charAt(Math.floor(Math.random() * chars.length))
++  }
++  return code;
++}
+diff --git a/src/modules/steps/steps.entity.ts b/src/modules/steps/steps.entity.ts
+index 2deeb71..d9055a6 100644
+--- a/src/modules/steps/steps.entity.ts
++++ b/src/modules/steps/steps.entity.ts
+@@ -1,6 +1,6 @@
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
+-import { Project } from "../projects/projects.entity";
++import { Project } from "../projects/entities/projects.entity";
+ import { Task } from "../tasks/tasks.entity";
+ 
+ @Entity()
+diff --git a/src/modules/tasks/tasks.entity.ts b/src/modules/tasks/tasks.entity.ts
+index a08ce5e..291d74f 100644
+--- a/src/modules/tasks/tasks.entity.ts
++++ b/src/modules/tasks/tasks.entity.ts
+@@ -1,6 +1,6 @@
+ import { Status } from "src/common/enums/status.enum";
+ import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
+-import { Project } from "../projects/projects.entity";
++import { Project } from "../projects/entities/projects.entity";
+ import { Comment } from "../comments/comments.entity";
+ import { BaseEntity } from "src/common/entities/base.entity";
+ import { Manager } from "../mappings/managers/managers.entity";
