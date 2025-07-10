@@ -1,6 +1,6 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { projectPermission } from "src/common/enums/projectPermission.enum";
-import { Project } from "src/modules/projects/projects.entity";
+import { Project } from "src/modules/projects/entities/projects.entity";
 import { User } from "src/modules/users/users.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
 
