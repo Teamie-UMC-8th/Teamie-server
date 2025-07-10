@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Req, NotFoundException, Query, All } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
 import { AllProjectResponseDto } from './dto/all-project-response.dto';
@@ -30,7 +30,7 @@ export class ProjectsController {
   @Get('/join')
   @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
   @ApiCommonResponse(AllProjectResponseDto)
-  @ApiCommonErrorResponse('NOT_FOUND', '유효하지 않은 초대코드입니다.')
+  @ApiCommonErrorResponse('NOT_FOUND', '유효하지 않은 초대코드입니다.',404)
   async joinProject(@Query('inviteCode') inviteCode: string) {
     const userId = parseInt(this.configService.get('DEFAULT_USER_ID') || '1', 10);
 
@@ -48,11 +48,21 @@ export class ProjectsController {
 
   @Get('/:projectId')
   @ApiCommonResponse(AllProjectResponseDto)
-  @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.')
+  @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.',404)
+  @ApiCommonErrorResponse('FORBIDDEN', '해당 프로젝트에 접근 권한이 없습니다.',403)
   async getProjectFullData(@Param('projectId') projectId: number) {
   if (!projectId) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');}
-    
+    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+  }
+
+  const userId = parseInt(process.env.DEFAULT_USER_ID || '1', 10);
+
+  const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
+
+  if (!isMember) {
+    throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+  }
+
     return await this.projectsService.getProjectFullData(projectId);
   }
 

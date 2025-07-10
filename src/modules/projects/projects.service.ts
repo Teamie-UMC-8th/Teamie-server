@@ -93,6 +93,13 @@ export class ProjectsService {
 
   return CommonResponse.success(AllProjectResponseDto.fromEntity({ project, users, posts }));
   }
+
+  async checkProjectMembership(userId: number, projectId: number): Promise<boolean> {
+    const mapping = await this.userProjectRepository.findOne({
+      where: { user: { id: userId }, project: { id: projectId } },
+    });
+    return !!mapping;
+}
 }
 
 export function generateRandomCode(length=10): string {
