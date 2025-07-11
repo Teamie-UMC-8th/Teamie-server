@@ -1,10 +1,11 @@
-import { Controller, Get, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { KakaoUser, KakaoUserAfterAuth } from "src/common/decorators/user.decorator";
 import { Response } from "express";
-import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Pulbic } from "src/common/decorators/public.decorator";
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -14,6 +15,7 @@ export class AuthController{
         private readonly configService: ConfigService
     ){}
 
+    @Pulbic()
     @Get('/kakao')
     @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
@@ -26,6 +28,7 @@ export class AuthController{
     })
     async kakaoLogin(){}
 
+    @Pulbic()
     @Get('/kakao/callback')
     @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
