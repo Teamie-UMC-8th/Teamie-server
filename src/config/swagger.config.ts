@@ -13,5 +13,21 @@ export const createSwaggerConfig = (configService: ConfigService) => {
         .setTitle(config.title)
         .setDescription(config.description)
         .setVersion(config.version)
+        .addBearerAuth(
+            {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+                name: 'Authorization',
+                in: 'header',
+            },
+            'access-token',
+        )
         .build();
 };
+
+export const publicPaths = {
+    '/auth/kakao': ['get'],
+    '/auth/kakao/callback': ['get'],
+    '/health': ['get'],
+}
