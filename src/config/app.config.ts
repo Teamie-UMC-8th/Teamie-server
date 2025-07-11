@@ -1,3 +1,4 @@
+import { RequestMethod } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config"
 
 export const defaultConfig = (configService: ConfigService) => ({
@@ -9,12 +10,10 @@ export const defaultConfig = (configService: ConfigService) => ({
             auth: 'auth',
         },
         excludeRoutes: [
-            /* TODO : auth 관련 API 버전 prefix 제외.
             {
-                path: 'auth/v1/login',
-                method: RequestMethod.POST,
+                path: 'auth/(.*)',
+                method: RequestMethod.ALL,
             }
-            */
         ],
     },
     swagger: {

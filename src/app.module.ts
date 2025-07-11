@@ -9,6 +9,10 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import type { RedisClientOptions } from 'redis';
 import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersController } from './modules/users/users.controller';
+import { UsersService } from './modules/users/users.service';
+import { UsersModule } from './modules/users/users.module';
 
 
 @Module({
@@ -34,7 +38,11 @@ import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls
     HealthCheckModule,
     TasksModule,
     ProjectsModule,
-    PersonalRecallsModule, 
+    PersonalRecallsModule,
+    AuthModule,
+    UsersModule,
   ],
+  controllers: [UsersController],
+  providers: [UsersService],
 })
 export class AppModule {}
