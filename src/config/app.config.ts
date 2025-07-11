@@ -13,6 +13,10 @@ export const defaultConfig = (configService: ConfigService) => ({
             {
                 path: 'auth/(.*)',
                 method: RequestMethod.ALL,
+            },
+            {
+                path: '/health',
+                method: RequestMethod.GET,
             }
         ],
     },
