@@ -4,7 +4,7 @@ import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity'; 
-import { RedisModule } from '../redis/redis.module';
+import { RedisModule } from '../../infra/redis/redis.module';
 
 @Module({
   imports: [
