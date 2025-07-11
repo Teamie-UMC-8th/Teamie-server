@@ -10,9 +10,9 @@ import { redisStore } from 'cache-manager-redis-store';
 import type { RedisClientOptions } from 'redis';
 import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { UsersController } from './modules/users/users.controller';
-import { UsersService } from './modules/users/users.service';
 import { UsersModule } from './modules/users/users.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 
 
 @Module({
@@ -42,7 +42,11 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     UsersModule,
   ],
-  controllers: [UsersController],
-  providers: [UsersService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

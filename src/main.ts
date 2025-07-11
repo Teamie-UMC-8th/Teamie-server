@@ -5,7 +5,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { defaultConfig } from './config/app.config';
 import { SwaggerModule } from '@nestjs/swagger';
-import { createSwaggerConfig } from './config/swagger.config';
+import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +21,18 @@ async function bootstrap() {
   // swagger
   const swaggerDocConfig = createSwaggerConfig(configService);
   const document = SwaggerModule.createDocument(app, swaggerDocConfig);
+  // 공개 및 보안 문서 작성
+  for (const path in document.paths) {
+    for (const method in document.paths[path]) {
+      const isPublic =
+        publicPaths[path]?.includes(method.toLowerCase()) ?? false;
+      if (isPublic) {
+        document.paths[path][method].security = []; // 보안 해제
+      } else {
+        document.paths[path][method].security = [{ 'access-token': [] }];
+      }
+    }
+  }
   SwaggerModule.setup(config.swagger.path, app, document);
 
   // 응답통일 및 예외처리
