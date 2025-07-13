@@ -1,22 +1,24 @@
-import { Body, Controller, Post, Param, Req, UseGuards, Patch, Delete, Get} from '@nestjs/common';
+import { Body, Controller, Post, Param, Req, Patch} from '@nestjs/common';
 import { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto } from './dtos/create-task.dto';
-import { ConfigService } from '@nestjs/config';
-import { ApiBody } from '@nestjs/swagger';
-import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-responce.helper';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiCommonResponse} from '../../common/response/swagger-responce.helper';
 import { UpdateTaskRequestDto , UpdateTaskResponseDto} from './dtos/update-task.dto';
-//import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { User } from 'src/common/decorators/user.decorator';
 
+@ApiTags('Tasks')
+@ApiBearerAuth('access-token')
 @Controller('/tasks')
 export class TasksController {
-    constructor(private readonly tasksService: TasksService,
-      private readonly configService: ConfigService) {}
+  constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  //@UseGuards(JwtAuthGuard)
-  async createTask(@Req() req: Request, @Body() dto: CreateTaskRequestDto) {
-    const userId = this.configService.get('DEFAULT_USERID');
+  async createTask(
+    @Req() req: Request,
+    @Body() dto: CreateTaskRequestDto,
+    @User('id') userId: number,
+  ) {
     return await this.tasksService.createTask(userId, dto);
   } 
 
@@ -26,8 +28,9 @@ export class TasksController {
   async updateTask(
     @Param('taskId') taskId: number,
     @Req() req: Request, 
-    @Body() dto: UpdateTaskRequestDto) {
-	  const userId = this.configService.get('DEFAULT_USERID'); //하드코딩
+    @Body() dto: UpdateTaskRequestDto,
+    @User('id') userId: number,
+  ) {
 	  return await this.tasksService.updateTask(dto, userId, taskId);
-}
+  }
 }
