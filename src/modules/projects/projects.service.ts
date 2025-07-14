@@ -133,13 +133,16 @@ export class ProjectsService {
     // 프로젝트 완료 상태로 변경
     project.isCompleted = true;
     project.completedAt = new Date(); // 현재 시간으로 설정
-    const members = await this.userProjectRepository.find({ where: { project: { id: projectId } } });
+    const members = await this.userProjectRepository.find({ where: { project: { id: projectId } } , relations: ['user']});
 
     // 각 멤버에 대해 personalRecall 생성
     for (const member of members) {
       await this.personalRecallRepository.save({
         user: { id: member.user.id },
         project: { id: projectId },
+        q1: '',
+        q2: '',
+        q3: '',
       });
     }
     return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
@@ -149,8 +152,8 @@ export class ProjectsService {
   // 이미 완료된 프로젝트는 수정할 수 없음
   private async assertProjectIsEditable(projectId: number): Promise<Project> {
   const project = await this.projectRepository.findOne({ where: { id: projectId } });
-  if (!project) throw new NotFoundException('프로젝트가 존재하지 않습니다.');
-  if (project.isCompleted) throw new ForbiddenException('이미 완료된 프로젝트입니다.');
+  if (!project) throw new ProjectNotFoundException();
+  if (project.isCompleted) throw new ProjectNotFoundException;
   return project;
 }
   private async assertProjectExists(projectId: number): Promise<Project> {

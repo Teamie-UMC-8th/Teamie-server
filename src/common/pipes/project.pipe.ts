@@ -9,8 +9,8 @@ import { ProjectsService } from '../../modules/projects/projects.service';
 export class ValidateProjectAccessPipe implements PipeTransform {
   constructor(private readonly projectsService: ProjectsService) {}
 
-  async transform(projectId: any, { metatype, type }: any): Promise<number> {
-    const userId = metatype.userId; 
+  async transform(value: { projectId: number; userId: number }): Promise<number> {
+    const { projectId, userId } = value;
 
     const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
     if (!isMember) throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');

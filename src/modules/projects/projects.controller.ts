@@ -1,8 +1,8 @@
-import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/createProject.dto';
 import { AllProjectResponseDto } from './dto/allProjectResponse.dto';
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags, ApiParam } from '@nestjs/swagger';
 import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-responce.helper';
 import { UpdateProjectDto } from './dto/updateProject.dto';
 import { User } from 'src/common/decorators/user.decorator';
@@ -51,23 +51,25 @@ export class ProjectsController {
   }
 
   @Get('/:projectId')
+  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
   @ApiCommonResponse(AllProjectResponseDto)
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.',404)
   @ApiCommonErrorResponse('FORBIDDEN', '해당 프로젝트에 접근 권한이 없습니다.',403)
   async getProjectFullData(
-    @ProjectIdWithUser(ValidateProjectAccessPipe) projectId: number,
+    @ProjectIdWithUser('projectId',ValidateProjectAccessPipe) projectId: number,
     @User('id') userId: number,
   ) {
     return await this.projectsService.getProjectFullData(projectId);
   }
 
   @Patch('/:projectId')
+  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
   @ApiBody({ type: UpdateProjectDto })
   @ApiCommonResponse(AllProjectResponseDto)
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
   @ApiCommonErrorResponse('FORBIDDEN', '해당 항목을 수정할 권한이 없습니다.', 403)
   async updateProject(
-    @ProjectIdWithUser(ValidateProjectAccessPipe) projectId: number,
+    @ProjectIdWithUser('projectId',ValidateProjectAccessPipe) projectId: number,
     @Body() dto: UpdateProjectDto,
     @User('id') userId: number,
   ) {
@@ -86,11 +88,12 @@ export class ProjectsController {
   }
 
   @Patch(':projectId/complete')
+  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
   @ApiCommonResponse(CompleteProjectResponseDto)
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
   @ApiCommonErrorResponse('FORBIDDEN', '프로젝트는 팀장만 완료할 수 있습니다.', 403)
   async completeProject(
-    @IsProjectLeader(IsProjectLeaderPipe) projectId: number,
+    @IsProjectLeader('projectId',IsProjectLeaderPipe) projectId: number,
     @User('id') userId: number,
   ) {
 
