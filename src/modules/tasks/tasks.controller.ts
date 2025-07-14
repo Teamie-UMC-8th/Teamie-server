@@ -33,4 +33,13 @@ export class TasksController {
   ) {
 	  return await this.tasksService.updateTask(dto, userId, taskId);
   }
+
+  @Delete('/:taskId')
+  @ApiCommonResponse(UpdateTaskResponseDto)
+  async deleteTask(
+    @Param('taskId') taskId: number) {
+	  const userId = this.configService.get('DEFAULT_USERID'); //하드코딩
+	  return await this.tasksService.deleteTask(userId, taskId);
+  }
+
 }
