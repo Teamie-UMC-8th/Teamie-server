@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dto/createProject.dto';
 import { AllProjectResponseDto } from './dto/allProjectResponse.dto';
@@ -9,6 +9,8 @@ import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dto/completeProject.dto';
 import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
 import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
+import { InvalidInvitecodeException, ProjectForbiddenException, ProjectUpdateForbiddenException } from 'src/common/exceptions/custom.errors';
+
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -25,7 +27,6 @@ export class ProjectsController {
     @Body() dto: CreateProjectDto,
     @User('id') userId: number,
   ) {
-    console.log(userId);
     return await this.projectsService.createProject(dto, userId);
   }
 
@@ -38,7 +39,7 @@ export class ProjectsController {
     @User('id') userId: number,
   ) {
     const project = await this.projectsService.getProjectByInviteCode(inviteCode);
-    if (!project) throw new NotFoundException('유효하지 않은 초대코드입니다.');
+    if (!project) throw new InvalidInvitecodeException();
 
     const projectId = project.id;
     const alreadyJoined = await this.projectsService.isUserInProject(userId, projectId);
@@ -57,7 +58,6 @@ export class ProjectsController {
     @ProjectIdWithUser(ValidateProjectAccessPipe) projectId: number,
     @User('id') userId: number,
   ) {
-
     return await this.projectsService.getProjectFullData(projectId);
   }
 
@@ -71,7 +71,6 @@ export class ProjectsController {
     @Body() dto: UpdateProjectDto,
     @User('id') userId: number,
   ) {
-
     const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
 
     // rule, goal은 팀장만 수정 가능
@@ -79,7 +78,7 @@ export class ProjectsController {
       (!isLead && dto.rule !== undefined) ||
       (!isLead && dto.goal !== undefined)
     ) {
-      throw new ForbiddenException('해당 항목을 수정할 권한이 없습니다.');
+      throw new ProjectUpdateForbiddenException();
     }
 
     return await this.projectsService.updateProject(projectId, dto);

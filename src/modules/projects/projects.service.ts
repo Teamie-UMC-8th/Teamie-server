@@ -13,6 +13,7 @@ import { UpdateProjectDto } from './dto/updateProject.dto';
 import { CompleteProjectResponseDto } from './dto/completeProject.dto';
 // Update the import path to the correct location of PersonalRecall entity
 import { PersonalRecall } from '../personalRecalls/entities/personalRecalls.entity';
+import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -110,6 +111,7 @@ export class ProjectsService {
 
   async updateProject(projectId: number, dto: UpdateProjectDto): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.assertProjectIsEditable(projectId);
+
   // 해당 필드들만 조건부로 갱신
   if (dto.name !== undefined) project.name = dto.name;
   if (dto.rule !== undefined) project.rule = dto.rule;
@@ -153,7 +155,7 @@ export class ProjectsService {
 }
   private async assertProjectExists(projectId: number): Promise<Project> {
     const project = await this.projectRepository.findOne({ where: { id: projectId } });
-    if (!project) throw new NotFoundException('프로젝트가 존재하지 않습니다.');
+    if (!project) throw new ProjectNotFoundException();
     return project;
   }
 }

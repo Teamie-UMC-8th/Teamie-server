@@ -1,4 +1,4 @@
-import {BadRequestException, ForbiddenException, NotFoundException, Injectable} from '@nestjs/common';
+import { Injectable} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial} from 'typeorm';
 import { Task } from './tasks.entity';
@@ -7,6 +7,8 @@ import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto  } from './dtos/create-task.dto';
 import { UpdateTaskRequestDto , UpdateTaskResponseDto} from './dtos/update-task.dto';
 import { Manager} from '../mappings/managers/managers.entity';
+import { DeleteTaskResponseDto  } from './dtos/delete-task.dto';
+import { ProjectForbiddenException, StepNotFoundException, TaskNotFoundException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class TasksService {
@@ -33,10 +35,7 @@ export class TasksService {
     });
 
     if (!targetStep ) {
-      throw new BadRequestException({
-        errorCode: 'STEP_NOT_FOUND',
-        message: '해당 step이 존재하지 않습니다.',
-      });
+      throw new StepNotFoundException();
     }
 
     const projectId = targetStep .project.id;
@@ -49,10 +48,7 @@ export class TasksService {
     });
 
     if (!userPorject) {
-        throw new ForbiddenException({
-          errorCode: 'NOT_PROJECT_MEMBER',
-          message: '프로젝트 참여자가 아닙니다.',
-        });
+        throw new ProjectForbiddenException();
     }
 
     const task = {
@@ -72,10 +68,7 @@ export class TasksService {
   });
 
   if (!task) {
-    throw new NotFoundException({
-      errorCode: 'TASK_NOT_FOUND',
-      message: '수정하려는 업무가 없습니다.',
-    });
+    throw new TaskNotFoundException();
   }
 
   if (dto.stepId && dto.stepId !== task.step.id) {
@@ -85,10 +78,7 @@ export class TasksService {
     });
 
     if (!newStep) {
-      throw new BadRequestException({
-        errorCode: 'STEP_NOT_FOUND',
-        message: '이동하려는 step이 존재하지 않습니다.',
-      });
+      throw new StepNotFoundException();
     }
 
     // 이동할 step의 프로젝트 기준으로 참여자 검증
@@ -100,10 +90,7 @@ export class TasksService {
     });
 
     if (!userProject) {
-      throw new ForbiddenException({
-        errorCode: 'NOT_PROJECT_MEMBER',
-        message: '해당 step이 포함된 프로젝트에 참여하지 않았습니다.',
-      });
+      throw new ProjectForbiddenException();
     }
 
     task.step = newStep;
@@ -129,7 +116,6 @@ export class TasksService {
     }
   }
 
-  // 결과 조립
   const managers = await this.managerRepository.find({
     where: { task: { id: updatedTask.id } },
     relations: ['user'],
@@ -137,6 +123,36 @@ export class TasksService {
 
   const responseDto = UpdateTaskResponseDto.from(updatedTask, managers);
   return responseDto;
+}
+  async deleteTask(userId: number, taskId: number) {
+  const task = await this.taskRepository.findOne({
+    where: { id: taskId },
+    relations: ['step', 'step.project'],
+  });
+
+  if (!task) {
+    throw new TaskNotFoundException();
+  }
+
+  // 프로젝트 참여 여부 확인
+  const projectId = task.step.project.id;
+  const userProject = await this.userProjectRepository.findOne({
+    where: {
+      user: { id: userId },
+      project: { id: projectId },
+    },
+  });
+
+  if (!userProject) {
+    throw new ProjectForbiddenException();
+  }
+
+  await this.taskRepository.delete(taskId);
+
+  return {
+    message: '업무가 성공적으로 삭제되었습니다.',
+    taskId,
+  };
 }
 
 } 
