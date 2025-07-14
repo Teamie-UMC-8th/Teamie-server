@@ -1,6 +1,6 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Task } from "src/modules/tasks/tasks.entity";
-import { User } from "src/modules/users/users.entity";
+import { User } from "src/modules/users/entities/users.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
 
 @Entity()

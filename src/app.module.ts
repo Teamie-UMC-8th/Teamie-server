@@ -8,6 +8,11 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import type { RedisClientOptions } from 'redis';
+import { PersonalRecallsModule } from './modules/personalRecalls/personalRecalls.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 
 
 @Module({
@@ -32,7 +37,16 @@ import type { RedisClientOptions } from 'redis';
     }),
     HealthCheckModule,
     TasksModule,
-    ProjectsModule, 
+    ProjectsModule,
+    PersonalRecallsModule,
+    AuthModule,
+    UsersModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}
