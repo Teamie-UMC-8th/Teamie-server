@@ -11,6 +11,8 @@ import { CommonResponse } from '../../common/response/common-response.dto';
 import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/allProjectResponse.dto';
 import { UpdateProjectDto } from './dto/updateProject.dto';
 import { CompleteProjectResponseDto } from './dto/completeProject.dto';
+// Update the import path to the correct location of PersonalRecall entity
+import { PersonalRecall } from '../personalRecalls/entities/personalRecalls.entity';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -20,9 +22,12 @@ export class ProjectsService {
     @InjectRepository(UserProject)
     private readonly userProjectRepository: Repository<UserProject>,
 
+    @InjectRepository(PersonalRecall)
+    private readonly personalRecallRepository: Repository<PersonalRecall>, // <-- Inject the repository
 
     @Inject('REDIS_CLIENT')
-    private readonly redis: Cache, private readonly configService: ConfigService,
+    private readonly redis: Cache, 
+    private readonly configService: ConfigService,
   ) {}
 
   async createProject(dto:CreateProjectDto, userId: number):Promise<CommonResponse<CreateProjectResponseDto>> {
@@ -126,7 +131,15 @@ export class ProjectsService {
     // 프로젝트 완료 상태로 변경
     project.isCompleted = true;
     project.completedAt = new Date(); // 현재 시간으로 설정
-    await this.projectRepository.save(project);
+    const members = await this.userProjectRepository.find({ where: { project: { id: projectId } } });
+
+    // 각 멤버에 대해 personalRecall 생성
+    for (const member of members) {
+      await this.personalRecallRepository.save({
+        user: { id: member.user.id },
+        project: { id: projectId },
+      });
+    }
     return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
   }
 
