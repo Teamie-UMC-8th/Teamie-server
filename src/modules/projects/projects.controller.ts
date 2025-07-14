@@ -23,7 +23,6 @@ export class ProjectsController {
     @Body() dto: CreateProjectDto,
     @User('id') userId: number,
   ) {
-    console.log(userId);
     return await this.projectsService.createProject(dto, userId);
   }
 
