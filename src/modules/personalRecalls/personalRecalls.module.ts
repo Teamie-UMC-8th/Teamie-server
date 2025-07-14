@@ -9,5 +9,6 @@ import { PersonalRecall } from './entities/personalRecalls.entity';
   imports: [TypeOrmModule.forFeature([PersonalRecall]), ConfigModule],
   controllers: [PersonalRecallsController],
   providers: [PersonalRecallsService],
+  exports: [PersonalRecallsService, TypeOrmModule], 
 })
 export class PersonalRecallsModule {}

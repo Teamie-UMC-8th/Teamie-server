@@ -23,7 +23,7 @@ export class ProjectsService {
     private readonly userProjectRepository: Repository<UserProject>,
 
     @InjectRepository(PersonalRecall)
-    private readonly personalRecallRepository: Repository<PersonalRecall>, // <-- Inject the repository
+    private readonly personalRecallRepository: Repository<PersonalRecall>,
 
     @Inject('REDIS_CLIENT')
     private readonly redis: Cache, 

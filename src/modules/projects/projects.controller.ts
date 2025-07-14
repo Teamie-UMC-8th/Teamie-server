@@ -7,7 +7,8 @@ import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response
 import { UpdateProjectDto } from './dto/updateProject.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dto/completeProject.dto';
-
+import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
+import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -53,13 +54,9 @@ export class ProjectsController {
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.',404)
   @ApiCommonErrorResponse('FORBIDDEN', '해당 프로젝트에 접근 권한이 없습니다.',403)
   async getProjectFullData(
-    @Param('projectId') projectId: number,
+    @ProjectIdWithUser(ValidateProjectAccessPipe) projectId: number,
     @User('id') userId: number,
   ) {
-    const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
-    if (!isMember) {
-      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
-    }
 
     return await this.projectsService.getProjectFullData(projectId);
   }
@@ -70,14 +67,10 @@ export class ProjectsController {
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
   @ApiCommonErrorResponse('FORBIDDEN', '해당 항목을 수정할 권한이 없습니다.', 403)
   async updateProject(
-    @Param('projectId') projectId: number,
+    @ProjectIdWithUser(ValidateProjectAccessPipe) projectId: number,
     @Body() dto: UpdateProjectDto,
     @User('id') userId: number,
   ) {
-    const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
-    if (!isMember) {
-      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
-    }
 
     const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
 
@@ -98,18 +91,10 @@ export class ProjectsController {
   @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
   @ApiCommonErrorResponse('FORBIDDEN', '프로젝트는 팀장만 완료할 수 있습니다.', 403)
   async completeProject(
-    @Param('projectId') projectId: number,
+    @IsProjectLeader(IsProjectLeaderPipe) projectId: number,
     @User('id') userId: number,
   ) {
-    const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
-    if (!isMember) {
-      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
-    }
 
-  const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
-  if (!isLead) {
-    throw new ForbiddenException('프로젝트는 팀장만 완료할 수 있습니다.');
-  }
 
   return await this.projectsService.completeProject(projectId);
 }
@@ -117,3 +102,5 @@ export class ProjectsController {
 
 
 }
+
+

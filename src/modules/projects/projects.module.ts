@@ -5,11 +5,13 @@ import { ProjectsService } from './projects.service';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity'; 
 import { RedisModule } from '../../infra/redis/redis.module';
+import { PersonalRecallsModule } from '../personalRecalls/personalRecalls.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Project, UserProject]),
-    RedisModule
+    RedisModule,
+    PersonalRecallsModule
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService],
