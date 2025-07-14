@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
 import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/all-project-response.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -80,7 +81,7 @@ export class ProjectsService {
   async getProjectFullData(projectId: number): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.projectRepository.findOneOrFail({ where: { id: projectId } });
   if (!projectId) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+    throw new ProjectNotFoundException();
   }
 
   const userProjects = await this.userProjectRepository.find({
@@ -108,7 +109,7 @@ export class ProjectsService {
   async updateProject(projectId: number, dto: UpdateProjectDto): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.projectRepository.findOne({ where: { id: projectId } });
   if (!project) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+    throw new ProjectNotFoundException();
   }
   // 해당 필드들만 조건부로 갱신
   if (dto.name !== undefined) project.name = dto.name;
