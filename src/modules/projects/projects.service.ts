@@ -1,15 +1,16 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/projectPermission.enum';
-import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
+import { CreateProjectDto, CreateProjectResponseDto } from './dto/createProject.dto';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
-import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/all-project-response.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/allProjectResponse.dto';
+import { UpdateProjectDto } from './dto/updateProject.dto';
+import { CompleteProjectResponseDto } from './dto/completeProject.dto';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -78,10 +79,7 @@ export class ProjectsService {
   }
 
   async getProjectFullData(projectId: number): Promise<CommonResponse<AllProjectResponseDto>> {
-  const project = await this.projectRepository.findOneOrFail({ where: { id: projectId } });
-  if (!projectId) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
-  }
+  const project = await this.assertProjectExists(projectId);
 
   const userProjects = await this.userProjectRepository.find({
     where: { project: { id: projectId } },
@@ -106,10 +104,7 @@ export class ProjectsService {
   }
 
   async updateProject(projectId: number, dto: UpdateProjectDto): Promise<CommonResponse<AllProjectResponseDto>> {
-  const project = await this.projectRepository.findOne({ where: { id: projectId } });
-  if (!project) {
-    throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
-  }
+  const project = await this.assertProjectIsEditable(projectId);
   // 해당 필드들만 조건부로 갱신
   if (dto.name !== undefined) project.name = dto.name;
   if (dto.rule !== undefined) project.rule = dto.rule;
@@ -124,6 +119,29 @@ export class ProjectsService {
       where: { user: { id: userId }, project: { id: projectId }, permission: projectPermission.LEAD },
     });
     return !!mapping;   
+  }
+
+  async completeProject(projectId: number): Promise<CommonResponse<CompleteProjectResponseDto>> {
+    const project = await this.assertProjectIsEditable(projectId);
+    // 프로젝트 완료 상태로 변경
+    project.isCompleted = true;
+    project.completedAt = new Date(); // 현재 시간으로 설정
+    await this.projectRepository.save(project);
+    return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
+  }
+
+  // 프로젝트가 수정 가능한 상태인지 확인하는 메서드
+  // 이미 완료된 프로젝트는 수정할 수 없음
+  private async assertProjectIsEditable(projectId: number): Promise<Project> {
+  const project = await this.projectRepository.findOne({ where: { id: projectId } });
+  if (!project) throw new NotFoundException('프로젝트가 존재하지 않습니다.');
+  if (project.isCompleted) throw new ForbiddenException('이미 완료된 프로젝트입니다.');
+  return project;
+}
+  private async assertProjectExists(projectId: number): Promise<Project> {
+    const project = await this.projectRepository.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('프로젝트가 존재하지 않습니다.');
+    return project;
   }
 }
 

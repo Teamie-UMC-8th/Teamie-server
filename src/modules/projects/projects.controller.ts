@@ -1,11 +1,12 @@
 import { Controller, Post, Get, Patch, Body, Param, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
-import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
-import { AllProjectResponseDto } from './dto/all-project-response.dto';
+import { CreateProjectDto, CreateProjectResponseDto } from './dto/createProject.dto';
+import { AllProjectResponseDto } from './dto/allProjectResponse.dto';
 import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-responce.helper';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateProjectDto } from './dto/updateProject.dto';
 import { User } from 'src/common/decorators/user.decorator';
+import { CompleteProjectResponseDto } from './dto/completeProject.dto';
 
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
@@ -91,6 +92,28 @@ export class ProjectsController {
     return await this.projectsService.updateProject(projectId, dto);
 
   }
+
+  @Patch(':projectId/complete')
+  @ApiCommonResponse(CompleteProjectResponseDto)
+  @ApiCommonErrorResponse('NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+  @ApiCommonErrorResponse('FORBIDDEN', '프로젝트는 팀장만 완료할 수 있습니다.', 403)
+  async completeProject(
+    @Param('projectId') projectId: number,
+    @User('id') userId: number,
+  ) {
+    const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
+    if (!isMember) {
+      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+    }
+
+  const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
+  if (!isLead) {
+    throw new ForbiddenException('프로젝트는 팀장만 완료할 수 있습니다.');
+  }
+
+  return await this.projectsService.completeProject(projectId);
+}
+  
 
 
 }
