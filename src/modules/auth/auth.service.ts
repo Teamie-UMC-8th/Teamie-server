@@ -1,7 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { UserInvariantViolationException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class AuthService {
@@ -21,9 +22,7 @@ export class AuthService {
         }
         //3. JWT 토큰 발급
         if(!userId){
-            throw new InternalServerErrorException(
-                '로직 상 userId는 null일 수 없습니다.'
-            );
+            throw new UserInvariantViolationException();
         }
         return this.generateAccessToken(userId!);
     }

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Param, Req, Patch} from '@nestjs/common';
+import { Body, Controller, Post, Param, Req, Patch, Delete} from '@nestjs/common';
 import { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto } from './dtos/create-task.dto';
@@ -37,8 +37,9 @@ export class TasksController {
   @Delete('/:taskId')
   @ApiCommonResponse(UpdateTaskResponseDto)
   async deleteTask(
-    @Param('taskId') taskId: number) {
-	  const userId = this.configService.get('DEFAULT_USERID'); //하드코딩
+    @Param('taskId') taskId: number,
+    @User('id') userId: number,
+  ) {
 	  return await this.tasksService.deleteTask(userId, taskId);
   }
 
