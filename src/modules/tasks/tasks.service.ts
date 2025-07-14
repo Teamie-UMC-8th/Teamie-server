@@ -7,6 +7,7 @@ import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto  } from './dtos/create-task.dto';
 import { UpdateTaskRequestDto , UpdateTaskResponseDto} from './dtos/update-task.dto';
 import { Manager} from '../mappings/managers/managers.entity';
+import { DeleteTaskResponseDto  } from './dtos/delete-task.dto';
 import { ProjectForbiddenException, StepNotFoundException, TaskNotFoundException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
@@ -115,7 +116,6 @@ export class TasksService {
     }
   }
 
-  // 결과 조립
   const managers = await this.managerRepository.find({
     where: { task: { id: updatedTask.id } },
     relations: ['user'],
@@ -123,6 +123,36 @@ export class TasksService {
 
   const responseDto = UpdateTaskResponseDto.from(updatedTask, managers);
   return responseDto;
+}
+  async deleteTask(userId: number, taskId: number) {
+  const task = await this.taskRepository.findOne({
+    where: { id: taskId },
+    relations: ['step', 'step.project'],
+  });
+
+  if (!task) {
+    throw new TaskNotFoundException();
+  }
+
+  // 프로젝트 참여 여부 확인
+  const projectId = task.step.project.id;
+  const userProject = await this.userProjectRepository.findOne({
+    where: {
+      user: { id: userId },
+      project: { id: projectId },
+    },
+  });
+
+  if (!userProject) {
+    throw new ProjectForbiddenException();
+  }
+
+  await this.taskRepository.delete(taskId);
+
+  return {
+    message: '업무가 성공적으로 삭제되었습니다.',
+    taskId,
+  };
 }
 
 } 
