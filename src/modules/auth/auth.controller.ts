@@ -1,10 +1,10 @@
-import { Controller, Get, Req, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Res, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { KakaoUser, KakaoUserAfterAuth } from "src/common/decorators/user.decorator";
 import { Response } from "express";
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Pulbic } from "src/common/decorators/public.decorator";
 
 @ApiTags('Auth')
@@ -54,14 +54,5 @@ export class AuthController{
         //TODO: 추후 refreshToken 구현 필요
         res.redirect(this.configService.get('CLIENT_REDIRECT_URI')!);    // NOTE: 환경변수 없으면 터짐!
     }
-    
-    @Get('/me')
-    @ApiBearerAuth('access-token')
-    @ApiOperation({
-        summary: '인증/인가 확인 용 임시 API',
-        description: 'accessToken에 대한 userId를 반환합니다.'
-    })
-    getMe(@Req() req) {
-        return req.user;
-    }
+
 }
