@@ -1,15 +1,15 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { Comment } from '../comments/comments.entity';
+import { Comment } from '../../comments/comments.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { PersonalRecall } from '../personalRecalls/personalRecalls.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
-import { Manager } from '../mappings/managers/managers.entity';
-import { TaskFile } from '../mappings/taskFiles/taskFiles.entity';
-import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
-import { Writer } from '../mappings/writers/writers.entity';
-import { Attendee } from '../mappings/attendees/attendees.entity';
-import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
-import { FinalPortfolio } from '../finalPortfolios/finalPortfolios.entity';
+import { PersonalRecall } from '../../personalRecalls/entities/personalRecalls.entity';
+import { UserProject } from '../../mappings/userProjects/userProjects.entity';
+import { Manager } from '../../mappings/managers/managers.entity';
+import { TaskFile } from '../../mappings/taskFiles/taskFiles.entity';
+import { ProjectFile } from '../../mappings/projectFiles/projectFiles.entity';
+import { Writer } from '../../mappings/writers/writers.entity';
+import { Attendee } from '../../mappings/attendees/attendees.entity';
+import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity';
+import { FinalPortfolio } from '../../finalPortfolios/finalPortfolios.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -22,16 +22,23 @@ export class User extends BaseEntity {
     })
     email: string;
 
-    @Column({ length: 15 })
+    @Column({
+        length: 15,
+        nullable: true
+    })
     school: string;
 
-    @Column()
+    @Column({ nullable: true })
     tier: string; // NOTE: 추후 ENUM으로 바꾸기(요금제 확정 시)
 
     @Column({ length: 255 })
     imageUrl: string;
 
-    // TODO: 로그인 관련 로직 구현 시 accessToken 등 필드 추가
+    @Column({
+        type: 'bigint',
+        unique: true
+    })
+    kakaoId: string;
 
     @Column({ default: 0 })
     credit: number;
@@ -42,7 +49,10 @@ export class User extends BaseEntity {
     @Column({ default: true })
     isActive: boolean;
 
-    @Column({ length: 15 })
+    @Column({
+        length: 15,
+        nullable: true,
+    })
     major: string;
 
     @OneToMany(() => Comment, (comment) => comment.user)

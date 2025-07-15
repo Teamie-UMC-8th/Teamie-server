@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
-import { User } from '../users/users.entity';
+import { User } from '../users/entities/users.entity';
 import { Task } from '../tasks/tasks.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Cocomment } from './cocomments/cocomments.entity';

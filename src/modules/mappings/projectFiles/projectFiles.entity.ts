@@ -1,7 +1,7 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { FileType } from "src/common/enums/fileType.enum";
-import { Project } from "src/modules/projects/projects.entity";
-import { User } from "src/modules/users/users.entity";
+import { Project } from "src/modules/projects/entities/projects.entity";
+import { User } from "src/modules/users/entities/users.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
 
 @Entity()

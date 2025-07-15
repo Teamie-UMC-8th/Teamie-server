@@ -1,12 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { Task } from '../tasks/tasks.entity';
+import { Entity, Column,  OneToMany } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { PersonalRecall } from '../personalRecalls/personalRecalls.entity';
-import { Plan } from '../plans/plans.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
-import { ProjectFile } from '../mappings/projectFiles/projectFiles.entity';
-import { MasterPortfolio } from '../masterPortfolios/masterPortfolios.entity';
-import { Step } from '../steps/steps.entity';
+import { PersonalRecall } from '../../personalRecalls/entities/personalRecalls.entity';
+import { Plan } from '../../plans/plans.entity';
+import { UserProject } from '../../mappings/userProjects/userProjects.entity';
+import { ProjectFile } from '../../mappings/projectFiles/projectFiles.entity';
+import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity';
+import { Step } from '../../steps/steps.entity';
 
 @Entity()
 export class Project extends BaseEntity{
@@ -22,8 +21,8 @@ export class Project extends BaseEntity{
     @Column({ default: false })
     isCompleted: boolean;
 
-    @Column()
-    completedAt: Date;
+    @Column({ type: 'datetime', nullable: true })
+    completedAt: Date | null;
 
     @OneToMany(() => PersonalRecall, (personalRecall) => personalRecall.project)
     personalRecalls: PersonalRecall[];

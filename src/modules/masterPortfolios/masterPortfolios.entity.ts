@@ -1,7 +1,7 @@
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Column, Entity, ManyToOne } from "typeorm";
-import { User } from "../users/users.entity";
-import { Project } from "../projects/projects.entity";
+import { User } from "../users/entities/users.entity";
+import { Project } from "../projects/entities/projects.entity";
 import { portfolioType } from "src/common/enums/portfolioType.enum";
 
 @Entity()

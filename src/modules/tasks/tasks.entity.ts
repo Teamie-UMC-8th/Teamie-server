@@ -1,6 +1,5 @@
 import { Status } from "src/common/enums/status.enum";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
-import { Project } from "../projects/projects.entity";
 import { Comment } from "../comments/comments.entity";
 import { BaseEntity } from "src/common/entities/base.entity";
 import { Manager } from "../mappings/managers/managers.entity";
@@ -9,21 +8,22 @@ import { Step } from "../steps/steps.entity";
 
 @Entity()
 export class Task extends BaseEntity{
-    @Column({ length: 35 })
+    @Column({ length: 35, default: '빈 업무' })
     name: string;
 
     @Column()
     deadline: Date;
 
+    
     @Column({
         type: 'enum',
         enum: Status,
         default: Status.NOTSTART,
     })
-    status: Status;
+    status: Status;   
 
-    @Column({ length: 500 })
-    memo: string;   //비고
+    @Column({length: 500})
+    memo: string;
 
     @ManyToOne(() => Step, (step) => step.tasks, {onDelete: 'CASCADE'})
     step: Step;
