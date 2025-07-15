@@ -5,17 +5,9 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { UploadService } from './upload.service';
+import { MulterFile, UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
