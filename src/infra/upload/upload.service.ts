@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuid } from 'uuid';
-import { File as MulterFile } from 'multer';
 
 @Injectable()
 export class UploadService {
@@ -13,7 +12,7 @@ export class UploadService {
     },
   });
 
-  async uploadFile(file: MulterFile): Promise<string> {
+  async uploadFile(file: Express.Multer.File): Promise<string> {
     const key = `upload/${uuid()}-${file.originalname}`;
 
     const command = new PutObjectCommand({
