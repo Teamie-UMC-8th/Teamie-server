@@ -5,7 +5,7 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { MulterFile, UploadService } from './upload.service';
+import { UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 @Controller('upload')
@@ -14,7 +14,7 @@ export class UploadController {
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  async upload(@UploadedFile() file: MulterFile) {
+  async upload(@UploadedFile() file: Express.Multer.File) {
     const key = await this.uploadService.uploadFile(file);
     return {
       url: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,

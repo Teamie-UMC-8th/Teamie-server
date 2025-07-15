@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "types": ["node"],  
+    "types": ["node", "Multer"],  
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
