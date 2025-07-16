@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
+import { S3TestController } from './infra/upload/upload.controller';
 
 
 @Module({
@@ -42,6 +43,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
     AuthModule,
     UsersModule,
   ],
+  controllers: [S3TestController],
   providers: [
     {
       provide: APP_GUARD,
