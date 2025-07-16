@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PersonalRecallsService } from './personalRecalls.service';
-import { PersonalRecallsController } from './personalRecalls.controller';
+import { PersonalRecallsService } from './personal-recalls.service';
+import { PersonalRecallsController } from './personal-recalls.controller';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PersonalRecall } from './entities/personalRecalls.entity';
+import { PersonalRecall } from './entities/personal-recalls.entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([PersonalRecall]), ConfigModule],

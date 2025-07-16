@@ -1,8 +1,8 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../users/entities/users.entity';
-import { PortfolioAIResult } from './portfolioAIResult/portfolioAIResults.entity';
-import { ApplicationType } from 'src/common/enums/applicationType.enum';
+import { PortfolioAIResult } from './portfolio-ai-result/portfolio-ai-results.entity';
+import { ApplicationType } from 'src/common/enums/application-type.enum';
 
 @Entity()
 export class FinalPortfolio extends BaseEntity {

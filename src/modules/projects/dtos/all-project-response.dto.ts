@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
-import { UserProject } from 'src/modules/mappings/userProjects/userProjects.entity';
+import { UserProject } from 'src/modules/mappings/user-projects/userProjects.entity';
 
 export class SimpleTaskDto {
     @ApiProperty({ example: '담당업무' })

@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { Project } from './entities/projects.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { RedisModule } from '../../infra/redis/redis.module';
 
 @Module({

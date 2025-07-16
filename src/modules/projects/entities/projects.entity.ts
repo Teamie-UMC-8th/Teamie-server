@@ -1,10 +1,10 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { PersonalRecall } from '../../personalRecalls/entities/personalRecalls.entity';
+import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { Plan } from '../../plans/plans.entity';
-import { UserProject } from '../../mappings/userProjects/userProjects.entity';
-import { ProjectFile } from '../../mappings/projectFiles/projectFiles.entity';
-import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { ProjectFile } from '../../mappings/project-files/project-files.entity';
+import { MasterPortfolio } from '../../master-portfolios/master-portfolios.entity';
 import { Step } from '../../steps/steps.entity';
 
 @Entity()

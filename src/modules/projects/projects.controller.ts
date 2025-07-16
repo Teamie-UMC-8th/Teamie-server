@@ -1,13 +1,13 @@
 import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
-import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
-import { AllProjectResponseDto } from './dto/all-project-response.dto';
+import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
+import { AllProjectResponseDto } from './dtos/all-project-response.dto';
 import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
 } from '../../common/response/swagger-responce.helper';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import {
     InvalidInvitecodeException,

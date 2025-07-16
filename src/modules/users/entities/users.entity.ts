@@ -1,15 +1,15 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { Comment } from '../../comments/comments.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { PersonalRecall } from '../../personalRecalls/entities/personalRecalls.entity';
-import { UserProject } from '../../mappings/userProjects/userProjects.entity';
+import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
 import { Manager } from '../../mappings/managers/managers.entity';
-import { TaskFile } from '../../mappings/taskFiles/taskFiles.entity';
-import { ProjectFile } from '../../mappings/projectFiles/projectFiles.entity';
+import { TaskFile } from '../../mappings/task-files/task-files.entity';
+import { ProjectFile } from '../../mappings/project-files/project-files.entity';
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
-import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity';
-import { FinalPortfolio } from '../../finalPortfolios/finalPortfolios.entity';
+import { MasterPortfolio } from '../../master-portfolios/master-portfolios.entity';
+import { FinalPortfolio } from '../../final-portfolios/final-portfolios.entity';
 
 @Entity()
 export class User extends BaseEntity {

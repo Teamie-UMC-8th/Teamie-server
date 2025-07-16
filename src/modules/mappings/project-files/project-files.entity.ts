@@ -1,5 +1,5 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { FileType } from 'src/common/enums/fileType.enum';
+import { FileType } from 'src/common/enums/file-type.enum';
 import { Project } from 'src/modules/projects/entities/projects.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';

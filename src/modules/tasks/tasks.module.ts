@@ -4,7 +4,7 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { Task } from './tasks.entity';
 import { Step } from '../steps/steps.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { ConfigModule } from '@nestjs/config';
 import { Manager } from '../mappings/managers/managers.entity';
 @Module({

@@ -1,15 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { Repository } from 'typeorm';
-import { projectPermission } from 'src/common/enums/projectPermission.enum';
-import { CreateProjectDto, CreateProjectResponseDto } from './dto/create-project.dto';
+import { projectPermission } from 'src/common/enums/project-permission.enum';
+import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
-import { UserInProjectDto, AllProjectResponseDto, PostDto } from './dto/all-project-response.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { UserInProjectDto, AllProjectResponseDto, PostDto } from './dtos/all-project-response.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
 import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 @Injectable()
 export class ProjectsService {

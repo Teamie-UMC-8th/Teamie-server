@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { PersonalRecallsService } from './personalRecalls.service';
+import { PersonalRecallsService } from './personal-recalls.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 

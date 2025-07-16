@@ -1,6 +1,6 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { FinalPortfolio } from '../finalPortfolios.entity';
+import { FinalPortfolio } from '../final-portfolios.entity';
 
 @Entity()
 export class PortfolioAIResult extends BaseEntity {
