@@ -1,11 +1,11 @@
-import { BaseEntity } from "src/common/entities/base.entity";
-import { Column, Entity, ManyToOne } from "typeorm";
-import { User } from "../users/entities/users.entity";
-import { Project } from "../projects/entities/projects.entity";
-import { portfolioType } from "src/common/enums/portfolioType.enum";
+import { BaseEntity } from 'src/common/entities/base.entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import { User } from '../users/entities/users.entity';
+import { Project } from '../projects/entities/projects.entity';
+import { portfolioType } from 'src/common/enums/portfolioType.enum';
 
 @Entity()
-export class MasterPortfolio extends BaseEntity{
+export class MasterPortfolio extends BaseEntity {
     @Column({ length: 2000 })
     detailInfo: string;
 
@@ -27,13 +27,15 @@ export class MasterPortfolio extends BaseEntity{
     @Column({
         type: 'enum',
         enum: portfolioType,
-        default: portfolioType.OTHER
+        default: portfolioType.OTHER,
     })
-    category : portfolioType;
+    category: portfolioType;
 
-    @ManyToOne(() => User, (user) => user.masterPFs, {onDelete:'CASCADE'})
+    @ManyToOne(() => User, (user) => user.masterPFs, { onDelete: 'CASCADE' })
     user: User;
 
-    @ManyToOne(() => Project, (project) => project.masterPFs, {onDelete: 'CASCADE'})
+    @ManyToOne(() => Project, (project) => project.masterPFs, {
+        onDelete: 'CASCADE',
+    })
     project: Project;
 }

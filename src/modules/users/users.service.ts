@@ -8,8 +8,8 @@ import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 export class UsersService {
     constructor(
         @InjectRepository(User)
-        private readonly userRepostiory: Repository<User>,
-    ){}
+        private readonly userRepostiory: Repository<User>
+    ) {}
 
     async findUserByKakaoId(kakaoId: string): Promise<User | null> {
         return await this.userRepostiory.findOne({

@@ -7,14 +7,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 @ApiBearerAuth('access-token')
 @Controller('/projects')
 export class PersonalRecallsController {
-  constructor(
-    private readonly personalRecallsService: PersonalRecallsService,
-  ) {}
-  @Get(":projectId/personalRecalls") // 개인 회고 조회
-  async getPersonalRecalls(
-    @Param('projectId') projectId: string,
-    @User('id') userId: number
-  ) {
-    return await this.personalRecallsService.getPersonalRecalls(userId, +projectId);
-  }
+    constructor(private readonly personalRecallsService: PersonalRecallsService) {}
+    @Get(':projectId/personalRecalls') // 개인 회고 조회
+    async getPersonalRecalls(@Param('projectId') projectId: string, @User('id') userId: number) {
+        return await this.personalRecallsService.getPersonalRecalls(userId, +projectId);
+    }
 }

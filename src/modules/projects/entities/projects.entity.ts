@@ -1,4 +1,4 @@
-import { Entity, Column,  OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personalRecalls/entities/personalRecalls.entity';
 import { Plan } from '../../plans/plans.entity';
@@ -8,14 +8,14 @@ import { MasterPortfolio } from '../../masterPortfolios/masterPortfolios.entity'
 import { Step } from '../../steps/steps.entity';
 
 @Entity()
-export class Project extends BaseEntity{
+export class Project extends BaseEntity {
     @Column({ length: 20 })
     name: string;
 
-    @Column({length:300})
+    @Column({ length: 300 })
     goal: string;
 
-    @Column({length:300})
+    @Column({ length: 300 })
     rule: string;
 
     @Column({ default: false })

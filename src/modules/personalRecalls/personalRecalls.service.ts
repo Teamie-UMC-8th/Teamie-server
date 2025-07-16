@@ -6,19 +6,19 @@ import { PersonalRecallResponseDto } from './dtos/personalRecall.dto';
 
 @Injectable()
 export class PersonalRecallsService {
-  constructor(
-    @InjectRepository(PersonalRecall)
-    private readonly personalRecallRepository: Repository<PersonalRecall>,
-  ) {}
+    constructor(
+        @InjectRepository(PersonalRecall)
+        private readonly personalRecallRepository: Repository<PersonalRecall>
+    ) {}
 
-  async getPersonalRecalls(userId: number, projectId: number) {
-    const personalRecalls = await this.personalRecallRepository.find({
-      where: {
-        user: { id: userId },
-        project: { id: projectId },
-      },
-    });
+    async getPersonalRecalls(userId: number, projectId: number) {
+        const personalRecalls = await this.personalRecallRepository.find({
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
 
-    return PersonalRecallResponseDto.from(personalRecalls[0]);
-  }
+        return PersonalRecallResponseDto.from(personalRecalls[0]);
+    }
 }

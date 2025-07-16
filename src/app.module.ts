@@ -15,40 +15,39 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 import { S3TestController } from './infra/upload/upload.controller';
 
-
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: typeORMConfig,
-    }),
-    CacheModule.registerAsync<RedisClientOptions>({
-      isGlobal: true,
-      useFactory: async () => ({
-        store: await redisStore({
-          url: process.env.REDIS_URL, // .env에 저장한 주소
-        }) as unknown,
-        ttl: 0,
-      }),
-    }),
-    HealthCheckModule,
-    TasksModule,
-    ProjectsModule,
-    PersonalRecallsModule,
-    AuthModule,
-    UsersModule,
-  ],
-  controllers: [S3TestController],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-  ],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            envFilePath: '.env',
+        }),
+        TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: typeORMConfig,
+        }),
+        CacheModule.registerAsync<RedisClientOptions>({
+            isGlobal: true,
+            useFactory: async () => ({
+                store: (await redisStore({
+                    url: process.env.REDIS_URL, // .env에 저장한 주소
+                })) as unknown,
+                ttl: 0,
+            }),
+        }),
+        HealthCheckModule,
+        TasksModule,
+        ProjectsModule,
+        PersonalRecallsModule,
+        AuthModule,
+        UsersModule,
+    ],
+    controllers: [S3TestController],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: JwtAuthGuard,
+        },
+    ],
 })
 export class AppModule {}

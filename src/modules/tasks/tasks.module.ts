@@ -8,9 +8,8 @@ import { UserProject } from '../mappings/userProjects/userProjects.entity';
 import { ConfigModule } from '@nestjs/config';
 import { Manager } from '../mappings/managers/managers.entity';
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, Step, UserProject, Manager]),
-          ConfigModule,],
-  controllers: [TasksController],
-  providers: [TasksService],
+    imports: [TypeOrmModule.forFeature([Task, Step, UserProject, Manager]), ConfigModule],
+    controllers: [TasksController],
+    providers: [TasksService],
 })
 export class TasksModule {}

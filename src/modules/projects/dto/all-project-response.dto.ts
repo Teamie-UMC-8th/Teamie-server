@@ -3,91 +3,90 @@ import { Project } from '../entities/projects.entity';
 import { UserProject } from 'src/modules/mappings/userProjects/userProjects.entity';
 
 export class SimpleTaskDto {
-  @ApiProperty({ example: '담당업무' })
-  taskName: string;
+    @ApiProperty({ example: '담당업무' })
+    taskName: string;
 
-  static from(name: string): SimpleTaskDto {
-    const dto = new SimpleTaskDto();
-    dto.taskName = name;
-    return dto;
-  }
+    static from(name: string): SimpleTaskDto {
+        const dto = new SimpleTaskDto();
+        dto.taskName = name;
+        return dto;
+    }
 }
 
 export class UserInProjectDto {
-  @ApiProperty()
-  id: number;
+    @ApiProperty()
+    id: number;
 
-  @ApiProperty()
-  name: string;
+    @ApiProperty()
+    name: string;
 
-  @ApiProperty()
-  email: string;
+    @ApiProperty()
+    email: string;
 
-  @ApiProperty()
-  school: string;
+    @ApiProperty()
+    school: string;
 
-  @ApiProperty({ nullable: true })
-  imageUrl: string | null;
+    @ApiProperty({ nullable: true })
+    imageUrl: string | null;
 
-  @ApiProperty({ type: [SimpleTaskDto] })
-  tasks: SimpleTaskDto[];
+    @ApiProperty({ type: [SimpleTaskDto] })
+    tasks: SimpleTaskDto[];
 
-  @ApiProperty({ example: 'LEAD' })
-  permission: string;
+    @ApiProperty({ example: 'LEAD' })
+    permission: string;
 
-  @ApiProperty({ example: '기획' })
-  role: string;
-  static from(entity: UserProject): UserInProjectDto {
-    const dto = new UserInProjectDto();
-    const user = entity.user;
+    @ApiProperty({ example: '기획' })
+    role: string;
+    static from(entity: UserProject): UserInProjectDto {
+        const dto = new UserInProjectDto();
+        const user = entity.user;
 
-    dto.id = user.id;
-    dto.name = user.name;
-    dto.email = user.email;
-    dto.school = user.school;
-    dto.imageUrl = user.imageUrl;
-    dto.permission = entity.permission;
-    dto.role = entity.role;
-    dto.tasks = user.managers?.map(m => SimpleTaskDto.from(m.task.name)) ?? [];
-    return dto;
-  }
+        dto.id = user.id;
+        dto.name = user.name;
+        dto.email = user.email;
+        dto.school = user.school;
+        dto.imageUrl = user.imageUrl;
+        dto.permission = entity.permission;
+        dto.role = entity.role;
+        dto.tasks = user.managers?.map((m) => SimpleTaskDto.from(m.task.name)) ?? [];
+        return dto;
+    }
 }
 
-
 export class PostDto {
-  @ApiProperty()
-  author: string;
+    @ApiProperty()
+    author: string;
 
-  @ApiProperty()
-  content: string;
+    @ApiProperty()
+    content: string;
 
-  static from(data: any): PostDto {
-    const dto = new PostDto();
-    dto.author = data.author;
-    dto.content = data.content;
-    return dto;
-  }
+    static from(data: any): PostDto {
+        const dto = new PostDto();
+        dto.author = data.author;
+        dto.content = data.content;
+        return dto;
+    }
 }
 
 export class AllProjectResponseDto {
-  @ApiProperty({ type: Project })
-  project: Project;
-
-  @ApiProperty({ type: [UserInProjectDto] })
-  users: UserInProjectDto[];
-
-  @ApiProperty({ type: [PostDto] })
-  posts: PostDto[];
-
-  static fromEntity(entity: {
+    @ApiProperty({ type: Project })
     project: Project;
+
+    @ApiProperty({ type: [UserInProjectDto] })
     users: UserInProjectDto[];
+
+    @ApiProperty({ type: [PostDto] })
     posts: PostDto[];
-  }): AllProjectResponseDto {
-    const dto = new AllProjectResponseDto();
-    dto.project = entity.project;
-    dto.users = entity.users;
-    dto.posts = entity.posts;
-    return dto;
-  }
+
+    static fromEntity(entity: {
+        project: Project;
+        users: UserInProjectDto[];
+        posts: PostDto[];
+    }): AllProjectResponseDto {
+        const dto = new AllProjectResponseDto();
+        dto.project = entity.project;
+        dto.users = entity.users;
+        dto.posts = entity.posts;
+        return dto;
+    }
 }

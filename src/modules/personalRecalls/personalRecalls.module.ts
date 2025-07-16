@@ -6,8 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PersonalRecall } from './entities/personalRecalls.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PersonalRecall]), ConfigModule],
-  controllers: [PersonalRecallsController],
-  providers: [PersonalRecallsService],
+    imports: [TypeOrmModule.forFeature([PersonalRecall]), ConfigModule],
+    controllers: [PersonalRecallsController],
+    providers: [PersonalRecallsService],
 })
 export class PersonalRecallsModule {}

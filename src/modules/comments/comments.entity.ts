@@ -9,10 +9,10 @@ export class Comment extends BaseEntity {
     @Column({ length: 300 })
     content: string;
 
-    @ManyToOne(() => User, (user) => user.comments, {onDelete: 'CASCADE'})
+    @ManyToOne(() => User, (user) => user.comments, { onDelete: 'CASCADE' })
     user: User;
 
-    @ManyToOne(() => Task, (task) => task.comments, {onDelete: 'CASCADE'})
+    @ManyToOne(() => Task, (task) => task.comments, { onDelete: 'CASCADE' })
     task: Task;
 
     @OneToMany(() => Cocomment, (cocomment) => cocomment.comment)

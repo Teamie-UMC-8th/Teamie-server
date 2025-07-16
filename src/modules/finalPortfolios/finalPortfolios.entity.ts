@@ -1,11 +1,11 @@
-import { BaseEntity } from "src/common/entities/base.entity";
-import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
-import { User } from "../users/entities/users.entity";
-import { PortfolioAIResult } from "./portfolioAIResult/portfolioAIResults.entity";
-import { ApplicationType } from "src/common/enums/applicationType.enum";
+import { BaseEntity } from 'src/common/entities/base.entity';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { User } from '../users/entities/users.entity';
+import { PortfolioAIResult } from './portfolioAIResult/portfolioAIResults.entity';
+import { ApplicationType } from 'src/common/enums/applicationType.enum';
 
 @Entity()
-export class FinalPortfolio extends BaseEntity{
+export class FinalPortfolio extends BaseEntity {
     @Column({ length: 20 })
     title: string;
 
@@ -15,7 +15,7 @@ export class FinalPortfolio extends BaseEntity{
     @Column({
         type: 'enum',
         enum: ApplicationType,
-        default: ApplicationType.INTERN
+        default: ApplicationType.INTERN,
     })
     applicationType: ApplicationType;
 
@@ -31,7 +31,9 @@ export class FinalPortfolio extends BaseEntity{
     @Column({ length: 500 })
     jd: string;
 
-    @ManyToOne(() => User, (user) => user.finalPortfolios, {onDelete: 'CASCADE'})
+    @ManyToOne(() => User, (user) => user.finalPortfolios, {
+        onDelete: 'CASCADE',
+    })
     user: User;
 
     @OneToMany(() => PortfolioAIResult, (result) => result.finalPortfolio)

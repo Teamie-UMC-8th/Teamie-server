@@ -24,7 +24,7 @@ export class User extends BaseEntity {
 
     @Column({
         length: 15,
-        nullable: true
+        nullable: true,
     })
     school: string;
 
@@ -36,7 +36,7 @@ export class User extends BaseEntity {
 
     @Column({
         type: 'bigint',
-        unique: true
+        unique: true,
     })
     kakaoId: string;
 

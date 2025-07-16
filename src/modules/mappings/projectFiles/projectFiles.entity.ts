@@ -1,11 +1,11 @@
-import { BaseEntity } from "src/common/entities/base.entity";
-import { FileType } from "src/common/enums/fileType.enum";
-import { Project } from "src/modules/projects/entities/projects.entity";
-import { User } from "src/modules/users/entities/users.entity";
-import { Column, Entity, ManyToOne } from "typeorm";
+import { BaseEntity } from 'src/common/entities/base.entity';
+import { FileType } from 'src/common/enums/fileType.enum';
+import { Project } from 'src/modules/projects/entities/projects.entity';
+import { User } from 'src/modules/users/entities/users.entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
 
 @Entity()
-export class ProjectFile extends BaseEntity{
+export class ProjectFile extends BaseEntity {
     @Column({ length: 30 })
     name: string;
 
@@ -19,9 +19,11 @@ export class ProjectFile extends BaseEntity{
     })
     category: FileType;
 
-    @ManyToOne(() => User, (user) => user.projectFiles, {onDelete: 'CASCADE'})
+    @ManyToOne(() => User, (user) => user.projectFiles, { onDelete: 'CASCADE' })
     user: User;
 
-    @ManyToOne(() => Project, (project) => project.projectFiles, {onDelete: 'CASCADE'})
+    @ManyToOne(() => Project, (project) => project.projectFiles, {
+        onDelete: 'CASCADE',
+    })
     project: Project;
 }
