@@ -1,9 +1,10 @@
-import { DocumentBuilder } from "@nestjs/swagger"
-import { ConfigService } from "@nestjs/config";
+import { DocumentBuilder } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 const swaggerConfig = (configService: ConfigService) => ({
-    title: configService.get<string>('SWAGGER_TITLE') || "Teamie API docs",
-    description: configService.get<string>('SWAGGER_DESCRIPTION') || "API document of Teamie Project",
+    title: configService.get<string>('SWAGGER_TITLE') || 'Teamie API docs',
+    description:
+        configService.get<string>('SWAGGER_DESCRIPTION') || 'API document of Teamie Project',
     version: configService.get<string>('SWAGGER_VERSION') || '1.0.0',
 });
 
@@ -21,7 +22,7 @@ export const createSwaggerConfig = (configService: ConfigService) => {
                 name: 'Authorization',
                 in: 'header',
             },
-            'access-token',
+            'access-token'
         )
         .build();
 };
@@ -30,4 +31,4 @@ export const publicPaths = {
     '/auth/kakao': ['get'],
     '/auth/kakao/callback': ['get'],
     '/health': ['get'],
-}
+};

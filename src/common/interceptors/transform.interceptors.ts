@@ -5,7 +5,6 @@ import { CommonResponse } from '../response/common-response.dto';
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, CommonResponse<T>> {
     intercept(context: ExecutionContext, next: CallHandler): Observable<CommonResponse<T>> {
-        return next.handle().pipe(
-            map((data) => CommonResponse.success(data)));
+        return next.handle().pipe(map((data) => CommonResponse.success(data)));
     }
 }

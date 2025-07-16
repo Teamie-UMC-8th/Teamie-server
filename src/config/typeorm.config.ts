@@ -1,5 +1,5 @@
-import { TypeOrmModuleOptions } from "@nestjs/typeorm"
-import { ConfigService } from "@nestjs/config"
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 
 export const typeORMConfig = (configService: ConfigService): TypeOrmModuleOptions => {
     console.log('DB_HOST:', configService.get<string>('DB_HOST'));
@@ -12,6 +12,6 @@ export const typeORMConfig = (configService: ConfigService): TypeOrmModuleOption
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/../modules/**/*.entity.{ts,js}'],
-        synchronize: true   //개발단계에서만 허용
+        synchronize: true, //개발단계에서만 허용
     };
 };

@@ -1,15 +1,15 @@
 export class ErrorPayload {
     errorCode: string;
     reason: string;
-    data? : any;
+    data?: any;
 }
 
-export class CommonResponse<T=any> {
+export class CommonResponse<T = any> {
     isSuccess: boolean;
     error: ErrorPayload | null;
     result: T | null;
 
-    private constructor(isSuccess: boolean, error: ErrorPayload | null, result: T | null){
+    private constructor(isSuccess: boolean, error: ErrorPayload | null, result: T | null) {
         this.isSuccess = isSuccess;
         this.error = error;
         this.result = result;
