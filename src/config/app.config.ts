@@ -1,9 +1,9 @@
-import { RequestMethod } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config"
+import { RequestMethod } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export const defaultConfig = (configService: ConfigService) => ({
     app: {
-        baseUrl: configService.get<string>('BASE_URL'), 
+        baseUrl: configService.get<string>('BASE_URL'),
         version: configService.get<string>('API_VERSION'),
         perfixes: {
             api: 'api',
@@ -17,7 +17,7 @@ export const defaultConfig = (configService: ConfigService) => ({
             {
                 path: '/health',
                 method: RequestMethod.GET,
-            }
+            },
         ],
     },
     swagger: {

@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { PassportStrategy } from "@nestjs/passport";
-import { Profile, Strategy } from "passport-kakao";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { Profile, Strategy } from 'passport-kakao';
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy) {
@@ -18,7 +18,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy) {
         accessToken: string,
         refreshToken: string,
         profile: Profile,
-        done: (error: any, user?: any, info?: any)=> void
+        done: (error: any, user?: any, info?: any) => void
     ): Promise<any> {
         try {
             const { _json } = profile;

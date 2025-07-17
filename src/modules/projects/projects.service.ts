@@ -1,24 +1,23 @@
-import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject  } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
-import { UserProject } from '../mappings/userProjects/userProjects.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { Repository } from 'typeorm';
-import { projectPermission } from 'src/common/enums/projectPermission.enum';
-import { CreateProjectDto, CreateProjectResponseDto } from './dto/createProject.dto';
+import { projectPermission } from 'src/common/enums/project-permission.enum';
+import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
-import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dto/allProjectResponse.dto';
-import { UpdateProjectDto } from './dto/updateProject.dto';
-import { CompleteProjectResponseDto } from './dto/completeProject.dto';
-// Update the import path to the correct location of PersonalRecall entity
-import { PersonalRecall } from '../personalRecalls/entities/personalRecalls.entity';
-import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
+import { UserInProjectDto, AllProjectResponseDto ,  PostDto} from './dtos/all-project-response.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
+import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
+import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
+import { AlreadyProjectCompletedException, ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 @Injectable()
 export class ProjectsService {
-  constructor(
-    @InjectRepository(Project)
-    private readonly projectRepository: Repository<Project>,
+    constructor(
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>,
 
     @InjectRepository(UserProject)
     private readonly userProjectRepository: Repository<UserProject>,
@@ -26,88 +25,91 @@ export class ProjectsService {
     @InjectRepository(PersonalRecall)
     private readonly personalRecallRepository: Repository<PersonalRecall>,
 
-    @Inject('REDIS_CLIENT')
-    private readonly redis: Cache, 
-    private readonly configService: ConfigService,
-  ) {}
+        @Inject('REDIS_CLIENT')
+        private readonly redis: Cache,
+        private readonly configService: ConfigService
+    ) {}
 
-  async createProject(dto:CreateProjectDto, userId: number):Promise<CommonResponse<CreateProjectResponseDto>> {
-    const {name} = dto;
-    const project = this.projectRepository.create({
-      name,
-      goal: '',
-      rule: '',
-      isCompleted: false,
-      completedAt: undefined,
-    });
+    async createProject(
+        dto: CreateProjectDto,
+        userId: number
+    ): Promise<CommonResponse<CreateProjectResponseDto>> {
+        const { name } = dto;
+        const project = this.projectRepository.create({
+            name,
+            goal: '',
+            rule: '',
+            isCompleted: false,
+            completedAt: undefined,
+        });
 
-    const savedProject = await this.projectRepository.save(project);
+        const savedProject = await this.projectRepository.save(project);
 
-    const userProject = this.userProjectRepository.create({
-      user: { id: userId }, // User 엔티티의 id를 사용하여 관계 설정
-      project: savedProject,
-      permission: projectPermission.LEAD,
-      role: '',
-    });
+        const userProject = this.userProjectRepository.create({
+            user: { id: userId }, // User 엔티티의 id를 사용하여 관계 설정
+            project: savedProject,
+            permission: projectPermission.LEAD,
+            role: '',
+        });
 
-    await this.userProjectRepository.save(userProject);
+        await this.userProjectRepository.save(userProject);
 
-    const code = generateRandomCode();
-    const key = `invite:${code}`;
-    const ttlSeconds = 60 * 60 * 24 *7 ;  //7일
-    await this.redis.set(key, savedProject.id.toString(),  ttlSeconds );
+        const code = generateRandomCode();
+        const key = `invite:${code}`;
+        const ttlSeconds = 60 * 60 * 24 * 7; //7일
+        await this.redis.set(key, savedProject.id.toString(), ttlSeconds);
 
-    const baseUrl = this.configService.get('BASE_URL');
-    const inviteCode = `${baseUrl}/projects/join/${code}`;
+        const baseUrl = this.configService.get('BASE_URL');
+        const inviteCode = `${baseUrl}/projects/join/${code}`;
 
+        return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
+    }
 
-    return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
-  }
+    async getProjectByInviteCode(inviteCode: string): Promise<Project | null> {
+        const key = `invite:${inviteCode}`;
+        const projectId = await this.redis.get<Project>(key);
+        return projectId || null;
+    }
 
-  async getProjectByInviteCode(inviteCode: string): Promise<Project | null> {
-    const key = `invite:${inviteCode}`;
-    const projectId = await this.redis.get<Project>(key);
-    return projectId || null;
-  }
+    async isUserInProject(userId: number, projectId: number): Promise<boolean> {
+        return await this.userProjectRepository.exists({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+    }
 
-  async isUserInProject(userId: number, projectId: number): Promise<boolean> {
-    return await this.userProjectRepository.exists({where: { user: { id: userId }, project: { id: projectId } }});
-  }
-  
-  async addUserToProject(userId: number, projectId: number, role: string): Promise<void> {
-    const userProject = this.userProjectRepository.create({
-      user: { id: userId },
-      project: { id: projectId },
-      permission: projectPermission.MEMBER,
-      role,
-    });
-    await this.userProjectRepository.save(userProject);
-  }
+    async addUserToProject(userId: number, projectId: number, role: string): Promise<void> {
+        const userProject = this.userProjectRepository.create({
+            user: { id: userId },
+            project: { id: projectId },
+            permission: projectPermission.MEMBER,
+            role,
+        });
+        await this.userProjectRepository.save(userProject);
+    }
 
   async getProjectFullData(projectId: number): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.assertProjectExists(projectId);
 
-  const userProjects = await this.userProjectRepository.find({
-    where: { project: { id: projectId } },
-    relations: ['user', 'user.managers', 'user.managers.task'],
-  });
+        const userProjects = await this.userProjectRepository.find({
+            where: { project: { id: projectId } },
+            relations: ['user', 'user.managers', 'user.managers.task'],
+        });
 
-  const users = userProjects.map(UserInProjectDto.from);
+        const users = userProjects.map(UserInProjectDto.from);
 
-  const key = `posts:${projectId}`;
-  const postsRaw = await this.redis.get(key) || [];
-  const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
+        const key = `posts:${projectId}`;
+        const postsRaw = (await this.redis.get(key)) || [];
+        const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
 
-  return CommonResponse.success(AllProjectResponseDto.fromEntity({ project, users, posts }));
-  }
+        return CommonResponse.success(AllProjectResponseDto.fromEntity({ project, users, posts }));
+    }
 
-
-  async checkProjectMembership(userId: number, projectId: number): Promise<boolean> {
-    const mapping = await this.userProjectRepository.findOne({
-      where: { user: { id: userId }, project: { id: projectId } },
-    });
-    return !!mapping;
-  }
+    async checkProjectMembership(userId: number, projectId: number): Promise<boolean> {
+        const mapping = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        return !!mapping;
+    }
 
   async updateProject(projectId: number, dto: UpdateProjectDto): Promise<CommonResponse<AllProjectResponseDto>> {
   const project = await this.assertProjectIsEditable(projectId);
@@ -117,7 +119,7 @@ export class ProjectsService {
   if (dto.rule !== undefined) project.rule = dto.rule;
   if (dto.goal !== undefined) project.goal = dto.goal;
 
-  await this.projectRepository.save(project);
+        await this.projectRepository.save(project);
 
   return this.getProjectFullData(projectId);
   }
@@ -152,8 +154,8 @@ export class ProjectsService {
   // 이미 완료된 프로젝트는 수정할 수 없음
   private async assertProjectIsEditable(projectId: number): Promise<Project> {
   const project = await this.projectRepository.findOne({ where: { id: projectId } });
-  if (!project) throw new ProjectNotFoundException();
-  if (project.isCompleted) throw new ProjectNotFoundException;
+  if (!project) throw new AlreadyProjectCompletedException();
+  if (project.isCompleted) throw new AlreadyProjectCompletedException;
   return project;
 }
   private async assertProjectExists(projectId: number): Promise<Project> {
@@ -163,12 +165,11 @@ export class ProjectsService {
   }
 }
 
-
-export function generateRandomCode(length=10): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code;
+export function generateRandomCode(length = 10): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
 }

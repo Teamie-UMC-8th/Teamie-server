@@ -8,37 +8,36 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-  const config = defaultConfig(configService);
+    const app = await NestFactory.create(AppModule);
+    const configService = app.get(ConfigService);
+    const config = defaultConfig(configService);
 
-  // versioning
-  const prefix = `${config.app.perfixes.api}/${config.app.version}`;
-  app.setGlobalPrefix(prefix, {
-    exclude: config.app.excludeRoutes,
-  });
+    // versioning
+    const prefix = `${config.app.perfixes.api}/${config.app.version}`;
+    app.setGlobalPrefix(prefix, {
+        exclude: config.app.excludeRoutes,
+    });
 
-  // swagger
-  const swaggerDocConfig = createSwaggerConfig(configService);
-  const document = SwaggerModule.createDocument(app, swaggerDocConfig);
-  // 공개 및 보안 문서 작성
-  for (const path in document.paths) {
-    for (const method in document.paths[path]) {
-      const isPublic =
-        publicPaths[path]?.includes(method.toLowerCase()) ?? false;
-      if (isPublic) {
-        document.paths[path][method].security = []; // 보안 해제
-      } else {
-        document.paths[path][method].security = [{ 'access-token': [] }];
-      }
+    // swagger
+    const swaggerDocConfig = createSwaggerConfig(configService);
+    const document = SwaggerModule.createDocument(app, swaggerDocConfig);
+    // 공개 및 보안 문서 작성
+    for (const path in document.paths) {
+        for (const method in document.paths[path]) {
+            const isPublic = publicPaths[path]?.includes(method.toLowerCase()) ?? false;
+            if (isPublic) {
+                document.paths[path][method].security = []; // 보안 해제
+            } else {
+                document.paths[path][method].security = [{ 'access-token': [] }];
+            }
+        }
     }
-  }
-  SwaggerModule.setup(config.swagger.path, app, document);
+    SwaggerModule.setup(config.swagger.path, app, document);
 
-  // 응답통일 및 예외처리
-  app.useGlobalInterceptors(new TransformInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
+    // 응답통일 및 예외처리
+    app.useGlobalInterceptors(new TransformInterceptor());
+    app.useGlobalFilters(new HttpExceptionFilter());
 
-  await app.listen(process.env.PORT ?? 3000);
+    await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

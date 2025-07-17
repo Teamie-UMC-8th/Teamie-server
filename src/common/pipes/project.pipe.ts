@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ProjectsService } from '../../modules/projects/projects.service';
+import { ProjectUpdateForbiddenException, ProjectForbiddenException } from '../exceptions/custom.errors';
 
 @Injectable()
 export class ValidateProjectAccessPipe implements PipeTransform {
@@ -13,7 +14,7 @@ export class ValidateProjectAccessPipe implements PipeTransform {
     const { projectId, userId } = value;
 
     const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
-    if (!isMember) throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+    if (!isMember) throw new ProjectForbiddenException();
 
     return projectId;
   }
@@ -29,12 +30,12 @@ export class IsProjectLeaderPipe implements PipeTransform {
 
     const isMember = await this.projectsService.checkProjectMembership(userId, projectId);
     if (!isMember) {
-      throw new ForbiddenException('해당 프로젝트에 접근 권한이 없습니다.');
+      throw new ProjectForbiddenException();
     }
 
     const isLeader = await this.projectsService.checkProjectLeader(userId, projectId);
     if (!isLeader) {
-      throw new ForbiddenException('프로젝트 팀장만 가능합니다.');
+      throw new ProjectUpdateForbiddenException('해당 부분은 팀장만 수정할 수 있습니다.');
     }
 
     return projectId; 

@@ -1,0 +1,58 @@
+name: Deploy to EC2 
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Grant permissions to package.json
+        run: chmod +x package.json
+      
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build NestJS project
+        run: npm run build
+
+      - name: Docker build and push
+        run: |
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker build --platform linux/amd64 -t ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }} .
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
+
+  deploy:
+    needs: build
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into EC2 and Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script: |
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+            docker image rm ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }} || true
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
+            docker compose up -d --no-deps app
+            docker compose logs
+            docker image prune -f
