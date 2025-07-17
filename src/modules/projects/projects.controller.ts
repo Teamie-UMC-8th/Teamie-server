@@ -6,19 +6,24 @@ import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags, ApiParam, ApiOperation, ApiR
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
-} from '../../common/response/swagger-responce.helper';
+} from '../../common/response/swagger-response.helper';
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
 import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
 import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
 import { InvalidInvitecodeException, ProjectForbiddenException, ProjectUpdateForbiddenException } from 'src/common/exceptions/custom.errors';
-
+import { CreateStepDto} from '../steps/dtos/create-step.dto';
+import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
+import { StepsService } from '../steps/steps.service';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
-    constructor(private readonly projectsService: ProjectsService) {}
+    constructor(
+        private readonly projectsService: ProjectsService,
+        private readonly stepsService: StepsService
+    ) {}
 
     @Post()
     @ApiBody({ type: CreateProjectDto })
@@ -97,8 +102,20 @@ export class ProjectsController {
 
   return await this.projectsService.completeProject(projectId);
 }
-  
 
+  @Post(':projectId/stepts')
+  @ApiOperation({ summary: '프로젝트 step 생성', description: '프로젝트에 새로운 stpe을 추가합니다.' })
+  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+  @ApiBody({ type: CreateStepDto })
+  @ApiCommonResponse(StepWithTaskDto)
+  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+  async createStep(
+    @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+    @Body() dto: CreateStepDto,
+    @User('id') userId: number
+  ){
+    return await this.projectsService.createStepAndGetAll(projectId, dto, userId);
+  }
 
 }
 

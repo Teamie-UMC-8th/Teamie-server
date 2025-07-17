@@ -13,21 +13,30 @@ import { UpdateProjectDto } from './dtos/update-project.dto';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
 import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
 import { AlreadyProjectCompletedException, ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
+import { Step } from '../steps/entities/steps.entity';
+import { CreateStepDto } from '../steps/dtos/create-step.dto';
+import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
+import { ProjectWithStepsDto } from './dtos/project-with-steps.dto';
+import { StepsService } from '../steps/steps.service';
 @Injectable()
 export class ProjectsService {
     constructor(
-        @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>,
+      @InjectRepository(Project)
+      private readonly projectRepository: Repository<Project>,
 
-    @InjectRepository(UserProject)
-    private readonly userProjectRepository: Repository<UserProject>,
+      @InjectRepository(UserProject)
+      private readonly userProjectRepository: Repository<UserProject>,
 
-    @InjectRepository(PersonalRecall)
-    private readonly personalRecallRepository: Repository<PersonalRecall>,
+      @InjectRepository(PersonalRecall)
+      private readonly personalRecallRepository: Repository<PersonalRecall>,
 
-        @Inject('REDIS_CLIENT')
-        private readonly redis: Cache,
-        private readonly configService: ConfigService
+      @InjectRepository(Step)
+      private readonly stepRepository: Repository<Step>,
+
+      @Inject('REDIS_CLIENT')
+      private readonly redis: Cache,
+      private readonly configService: ConfigService,
+      private readonly stepsService: StepsService
     ) {}
 
     async createProject(
@@ -148,6 +157,29 @@ export class ProjectsService {
       });
     }
     return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
+  }
+
+  async createStepAndGetAll(
+    projectId: number,
+    dto: CreateStepDto,
+    userId: number
+  ):Promise<CommonResponse<ProjectWithStepsDto>> {
+    const project = await this.assertProjectExists(projectId);
+    const createStep = await this.stepsService.createStep(dto, projectId, userId);
+    const steps = await this.stepRepository.find({ 
+      where: { project: { id: projectId } },
+      relations: ['tasks'],
+      order:{ createdAt: 'ASC' }
+    });
+    const stepDtos = steps.map(step => StepWithTaskDto.fromEntity(step));
+
+    return CommonResponse.success(
+      ProjectWithStepsDto.fromEntity({
+        id: project.id,
+        name: project.name,
+        steps: steps
+      })
+    );
   }
 
   // 프로젝트가 수정 가능한 상태인지 확인하는 메서드

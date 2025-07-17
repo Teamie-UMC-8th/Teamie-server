@@ -2,6 +2,7 @@ import { Controller, Get, Post, UploadedFile, UseInterceptors } from '@nestjs/co
 import { UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { User } from 'src/common/decorators/user.decorator';
 @Controller('upload')
 export class UploadController {
     constructor(private readonly uploadService: UploadService) {}
