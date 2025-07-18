@@ -1,10 +1,7 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post , Body } from '@nestjs/common';
 import { StepsService } from './steps.service';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-    ApiCommonResponse,
-    ApiCommonErrorResponse,
-} from '../../common/response/swagger-response.helper';
+import { ApiCommonResponse, ApiCommonErrorResponse } from '../../common/response/swagger-response.helper';
 import { CreateStepDto } from './dtos/create-step.dto';
 import { User } from 'src/common/decorators/user.decorator';
 @ApiTags('Steps')
@@ -12,4 +9,5 @@ import { User } from 'src/common/decorators/user.decorator';
 @Controller('/steps')
 export class StepsController {
     constructor(private readonly stepsService: StepsService) {}
+
 }

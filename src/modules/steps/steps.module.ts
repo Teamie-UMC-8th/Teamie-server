@@ -9,12 +9,13 @@ import { RedisModule } from '../../infra/redis/redis.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Step, Project]),
+        TypeOrmModule.forFeature([Step, Project]), 
         forwardRef(() => ProjectsModule), // Circular dependency handling
         RedisModule,
     ],
     controllers: [StepsController],
     providers: [StepsService],
-    exports: [StepsService],
+    exports: [StepsService], 
 })
 export class StepsModule {}
+

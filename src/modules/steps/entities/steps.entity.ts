@@ -18,4 +18,5 @@ export class Step extends BaseEntity {
 
     @OneToMany(() => Task, (task) => task.step)
     tasks: Task[];
+
 }

@@ -10,14 +10,14 @@ import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.en
 import { StepsModule } from '../steps/steps.module';
 import { Step } from '../steps/entities/steps.entity';
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step]),
-        RedisModule,
-        PersonalRecallsModule,
-        forwardRef(() => StepsModule), // Circular dependency handling
-    ],
-    controllers: [ProjectsController],
-    providers: [ProjectsService],
-    exports: [ProjectsService], // 다른 모듈에서 사용 가능하게 할 경우
+  imports: [
+    TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step]),
+    RedisModule,
+    PersonalRecallsModule,
+    forwardRef(() => StepsModule), // Circular dependency handling
+  ],
+  controllers: [ProjectsController],
+  providers: [ProjectsService],
+  exports: [ProjectsService], // 다른 모듈에서 사용 가능하게 할 경우
 })
 export class ProjectsModule {}

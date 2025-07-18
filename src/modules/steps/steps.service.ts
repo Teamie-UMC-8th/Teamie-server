@@ -1,9 +1,9 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject  } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Step } from './entities/steps.entity';
 import { Project } from '../projects/entities/projects.entity';
 import { Repository } from 'typeorm';
-import { CreateStepDto } from './dtos/create-step.dto';
+import { CreateStepDto} from './dtos/create-step.dto';
 import { StepWithTaskDto } from './dtos/step-with-task.dto';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -21,11 +21,7 @@ export class StepsService {
         private readonly configService: ConfigService
     ) {}
 
-    async createStep(
-        dto: CreateStepDto,
-        proejectId: Number,
-        userId: number
-    ): Promise<CommonResponse<StepWithTaskDto>> {
+    async createStep(dto: CreateStepDto, proejectId:Number, userId: number): Promise<CommonResponse<StepWithTaskDto>> {
         const { name, projectId } = dto;
 
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
