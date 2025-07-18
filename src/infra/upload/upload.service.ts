@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuid } from 'uuid';
 
 @Injectable()
@@ -23,5 +23,14 @@ export class UploadService {
 
         await this.s3.send(command);
         return key;
+    }
+
+    async deleteFile(key: string): Promise<void> {
+        const command = new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET!,
+            Key: key,
+        });
+
+        await this.s3.send(command);
     }
 }
