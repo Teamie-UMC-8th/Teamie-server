@@ -9,6 +9,7 @@ import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.
 import { Manager } from '../mappings/managers/managers.entity';
 import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
+import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { UploadService } from '../../infra/upload/upload.service';
 import {
     ProjectForbiddenException,
@@ -181,7 +182,7 @@ export class TasksService {
 
         return UpdateTaskResponseDto.from(fullTask, managers);
     }
-    async deleteTask(userId: number, taskId: number) {
+    async deleteTask(userId: number, taskId: number): Promise<DeleteTaskResponseDto> {
         const task = await this.taskRepository.findOne({
             where: { id: taskId },
             relations: ['step', 'step.project'],
@@ -231,5 +232,34 @@ export class TasksService {
             message: '업무가 성공적으로 삭제되었습니다.',
             taskId,
         };
+    }
+
+    async getTask(userId: number, taskId: number): Promise<GetTaskResponseDto> {
+        const task = await this.taskRepository.findOne({
+            where: { id: taskId },
+            relations: ['step', 'step.project', 'taskFiles', 'managers', 'managers.user'],
+        });
+
+        if (!task) {
+            throw new TaskNotFoundException();
+        }
+
+        // 프로젝트 참여 여부 검증
+        const projectId = task.step.project.id;
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
+
+        if (!userProject) {
+            throw new ProjectForbiddenException();
+        }
+
+        // Manager[] 형태 가공
+        const managers = task.managers;
+
+        return GetTaskResponseDto.from(task, managers);
     }
 }
