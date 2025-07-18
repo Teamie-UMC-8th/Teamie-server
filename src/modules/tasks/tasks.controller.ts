@@ -13,7 +13,7 @@ import { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto } from './dtos/create-task.dto';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
-import { ApiCommonResponse } from '../../common/response/swagger-responce.helper';
+import { ApiCommonResponse } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';

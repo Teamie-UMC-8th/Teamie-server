@@ -5,7 +5,7 @@ import { Plan } from '../../plans/plans.entity';
 import { UserProject } from '../../mappings/user-projects/userProjects.entity';
 import { ProjectFile } from '../../mappings/project-files/project-files.entity';
 import { MasterPortfolio } from '../../master-portfolios/master-portfolios.entity';
-import { Step } from '../../steps/steps.entity';
+import { Step } from '../../steps/entities/steps.entity';
 
 @Entity()
 export class Project extends BaseEntity {

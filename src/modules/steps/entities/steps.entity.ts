@@ -1,7 +1,7 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { Project } from '../projects/entities/projects.entity';
-import { Task } from '../tasks/tasks.entity';
+import { Project } from '../../projects/entities/projects.entity';
+import { Task } from '../../tasks/tasks.entity';
 
 @Entity()
 export class Step extends BaseEntity {

@@ -1,29 +1,30 @@
 services:
-    app:
-        image: '${DOCKER_USERNAME}/${DOCKER_REPO}:latest'
-        container_name: teamie-server
-        env_file:
-            - .env
-        ports:
-            - '3000:3000'
-        mem_limit: 512m
-        cpus: 0.6
-        memswap_limit: 1g
-    redis_container:
-        image: redis:latest
-        container_name: teamie-redis
-        hostname: redis
-        ports:
-            - '6379:6379'
-        environment:
-            - REDIS_MAXMEMORY=2gb
-            - REDIS_MAXMEMORY_POLICY=allkeys-lru
-        volumes:
-            - redis-data:/data
-        restart: unless-stopped
-        mem_limit: 256m
-        cpus: 0.3
-        memswap_limit: 512m
+  app:
+    image: "${DOCKER_USERNAME}/${DOCKER_REPO}:latest"
+    container_name: teamie-server
+    network_mode: host
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    mem_limit: 512m
+    cpus: 0.6
+    memswap_limit: 1g
+  redis_container:
+    image: redis:latest
+    container_name: teamie-redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_MAXMEMORY=2gb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.3
+    memswap_limit: 512m
 
 volumes:
     redis-data:
