@@ -27,4 +27,4 @@ services:
     memswap_limit: 512m
 
 volumes:
-  redis-data:
+    redis-data:

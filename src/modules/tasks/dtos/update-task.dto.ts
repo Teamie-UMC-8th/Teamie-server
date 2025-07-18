@@ -6,16 +6,17 @@ import { Type } from 'class-transformer';
 import { TaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { Task } from '../tasks.entity';
 import { Manager } from '../../mappings/managers/managers.entity';
+import { TaskFile } from '../../mappings/task-files/task-files.entity';
 export class UpdateTaskRequestDto {
     @ApiProperty({
         example: 'api명세서 작성',
         description: '생성할 업무명 이름',
     })
-    @IsOptional()
+    @IsNotEmpty()
     name: string;
 
     @ApiProperty({
-        example: '2024-07-10 00:00:00 ',
+        example: '2024-07-10 00:00:00',
         description: '마감기한',
     })
     @IsNotEmpty()
@@ -33,6 +34,7 @@ export class UpdateTaskRequestDto {
         example: '문서 검토가 필요합니다',
         description: '비고',
     })
+    @IsNotEmpty()
     memo: string;
 
     @ApiProperty({
@@ -41,31 +43,33 @@ export class UpdateTaskRequestDto {
         type: [Number],
     })
     @IsArray()
-    @IsNumber({}, { each: true }) // 각 원소 숫자
+    @IsNumber({}, { each: true })
     @Type(() => Number)
     managerIds: number[];
 
+    @IsOptional()
+    @ApiProperty({
+        type: [String],
+        description: '기존 파일 URL 목록 (수정 시 유지할 기존 파일들)',
+    })
+    existingFileUrls?: string[];
+
+    @IsOptional()
     @ApiProperty({
         type: 'array',
-        items: {
-            type: 'string',
-            format: 'binary',
-        },
-        description: '첨부파일 목록 (나중에 S3 저장 예정)',
-        required: false,
+        items: { type: 'string', format: 'binary' },
+        description: '새로 추가된 파일들 (FormData로 전송)',
     })
-    @IsOptional()
     files?: Express.Multer.File[];
 
     @ApiProperty({
         example: 5,
         description: '이동할 step의 ID',
-        required: false,
     })
-    @IsOptional()
+    @IsNotEmpty()
     @IsNumber()
     @Type(() => Number)
-    stepId?: number;
+    stepId: number;
 }
 
 export class UpdateTaskResponseDto {
@@ -112,7 +116,10 @@ export class UpdateTaskResponseDto {
     })
     stepId: number;
 
-    static from(task: Task, managers: Manager[]): UpdateTaskResponseDto {
+    static from(
+        task: Task & { taskFiles: TaskFile[] },
+        managers: Manager[]
+    ): UpdateTaskResponseDto {
         const dto = new UpdateTaskResponseDto();
         dto.name = task.name;
         dto.deadline = task.deadline;

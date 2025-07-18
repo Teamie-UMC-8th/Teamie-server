@@ -8,6 +8,8 @@ import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { Manager } from '../mappings/managers/managers.entity';
 import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
+import { TaskFile } from '../mappings/task-files/task-files.entity';
+import { UploadService } from '../../infra/upload/upload.service';
 import {
     ProjectForbiddenException,
     StepNotFoundException,
@@ -27,7 +29,12 @@ export class TasksService {
         private readonly userProjectRepository: Repository<UserProject>,
 
         @InjectRepository(Manager)
-        private readonly managerRepository: Repository<Manager>
+        private readonly managerRepository: Repository<Manager>,
+
+        private readonly uploadService: UploadService,
+
+        @InjectRepository(TaskFile)
+        private readonly taskFileRepository: Repository<TaskFile>
     ) {}
 
     async createTask(
@@ -74,64 +81,105 @@ export class TasksService {
             relations: ['taskFiles', 'step', 'step.project'],
         });
 
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
+        if (!task) throw new TaskNotFoundException();
 
-        if (dto.stepId && dto.stepId !== task.step.id) {
-            const newStep = await this.stepRepository.findOne({
-                where: { id: dto.stepId },
-                relations: ['project'],
-            });
+        // step 무조건 덮어쓰기
+        const newStep = await this.stepRepository.findOne({
+            where: { id: dto.stepId },
+            relations: ['project'],
+        });
 
-            if (!newStep) {
-                throw new StepNotFoundException();
-            }
+        if (!newStep) throw new StepNotFoundException();
 
-            // 이동할 step의 프로젝트 기준으로 참여자 검증
-            const userProject = await this.userProjectRepository.findOne({
-                where: {
-                    user: { id: userId },
-                    project: { id: newStep.project.id },
-                },
-            });
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: newStep.project.id },
+            },
+        });
 
-            if (!userProject) {
-                throw new ProjectForbiddenException();
-            }
+        if (!userProject) throw new ProjectForbiddenException();
 
-            task.step = newStep;
-        }
-
-        if (dto.name !== undefined) task.name = dto.name;
-        if (dto.deadline !== undefined) task.deadline = new Date(dto.deadline);
-        if (dto.status !== undefined) task.status = dto.status;
-        if (dto.memo !== undefined) task.memo = dto.memo;
+        task.step = newStep;
+        task.name = dto.name;
+        task.deadline = new Date(dto.deadline);
+        task.status = dto.status;
+        task.memo = dto.memo;
 
         const updatedTask = await this.taskRepository.save(task);
-        if (dto.managerIds !== undefined) {
-            await this.managerRepository.delete({
-                task: { id: updatedTask.id },
-            });
 
-            if (dto.managerIds.length > 0) {
-                for (const managerId of dto.managerIds) {
-                    const manager = this.managerRepository.create({
-                        user: { id: managerId },
-                        task: updatedTask,
-                    });
-                    await this.managerRepository.save(manager);
+        // managerIds 무조건 덮어쓰기
+        await this.managerRepository.delete({ task: { id: updatedTask.id } });
+
+        for (const managerId of dto.managerIds) {
+            const manager = this.managerRepository.create({
+                user: { id: managerId },
+                task: updatedTask,
+            });
+            await this.managerRepository.save(manager);
+        }
+
+        // 기존 taskFiles 조회
+        const prevFiles = await this.taskFileRepository.find({
+            where: { task: { id: updatedTask.id } },
+        });
+
+        // 삭제할 파일 URL 계산
+        const keepUrls = dto.existingFileUrls || [];
+        const toDelete = prevFiles.filter((file) => !keepUrls.includes(file.fileUrl));
+
+        // 1. DB 및 S3에서 제거
+        for (const file of toDelete) {
+            try {
+                const key = file.fileUrl.split('.amazonaws.com/')[1];
+                if (!key) {
+                    continue;
                 }
+                await this.uploadService.deleteFile(key); // S3 삭제
+                console.log(`[S3] 삭제 완료: ${key}`);
+
+                await this.taskFileRepository.delete({ id: file.id }); // DB 삭제
+            } catch (err) {
+                console.error(`[파일 삭제 실패] fileUrl: ${file.fileUrl}`);
+                console.error(err);
+                continue;
             }
         }
 
+        // 2. 새 파일 업로드 및 DB 저장
+        if (dto.files && dto.files.length > 0) {
+            for (const file of dto.files) {
+                const key = await this.uploadService.uploadFile(file);
+                const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+                const taskFile = this.taskFileRepository.create({
+                    fileUrl,
+                    task: updatedTask,
+                    user: { id: userId },
+                });
+
+                await this.taskFileRepository.save(taskFile);
+            }
+        }
+
+        const taskFiles = await this.taskFileRepository.find({
+            where: { task: { id: updatedTask.id } },
+        });
+
+        const fullTask = await this.taskRepository.findOne({
+            where: { id: updatedTask.id },
+            relations: ['step', 'step.project'],
+        });
+
+        if (!fullTask) throw new TaskNotFoundException();
+
+        fullTask.taskFiles = taskFiles;
         const managers = await this.managerRepository.find({
             where: { task: { id: updatedTask.id } },
             relations: ['user'],
         });
 
-        const responseDto = UpdateTaskResponseDto.from(updatedTask, managers);
-        return responseDto;
+        return UpdateTaskResponseDto.from(fullTask, managers);
     }
     async deleteTask(userId: number, taskId: number) {
         const task = await this.taskRepository.findOne({
@@ -156,6 +204,27 @@ export class TasksService {
             throw new ProjectForbiddenException();
         }
 
+        // 관련 TaskFile 가져오기
+        const taskFiles = await this.taskFileRepository.find({
+            where: { task: { id: taskId } },
+        });
+
+        // S3 및 DB에서 파일 삭제
+        for (const file of taskFiles) {
+            try {
+                const key = file.fileUrl.split('.amazonaws.com/')[1];
+                if (key) {
+                    await this.uploadService.deleteFile(key); // S3 삭제
+                }
+                await this.taskFileRepository.delete({ id: file.id }); // DB 삭제
+            } catch (err) {
+                console.error(`[파일 삭제 실패] ${file.fileUrl}`);
+                console.error(err);
+                // 실패하더라도 전체 삭제는 계속 진행
+            }
+        }
+
+        // 업무 삭제
         await this.taskRepository.delete(taskId);
 
         return {

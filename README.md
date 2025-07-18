@@ -26,7 +26,9 @@ $ npm run start:prod
 ```
 
 ## 컨벤션
+
 ### 브랜치 컨벤션
+
 ```
 - main
     - 실제 배포 CI/CD용 branch
@@ -36,8 +38,11 @@ $ npm run start:prod
     - 기능 구현용 branch
     - 반드시 `develop`에서 뻗어나와 `develop`으로 `merge` 되어야한다.
 ```
+
 ### 커밋 컨벤션
+
 - 본문은 한 줄 당 72자 내로 작성.
+
 ```
 Issue_종류: 구현 내용
 
@@ -48,18 +53,24 @@ ex) feat: 로그인 구현
 카카오톡 소셜 로그인 구현
 서버 자체 JWT 기술 사용
 ```
+
 ### PR 컨벤션
+
 - **PR 작성 시 API의 테스트 결과를 스크린샷으로 포함하도록 한다.**
 - `dev` branch로의 `merge`는 1명 이상의 Approve가 필요함.
 - 머지 전략으로 `Squash and Merge` 사용
 - `merge` 이후 개발용 브랜치 삭제
+
 ```
 [Issue_종류] 구현_내용
 
 ex) [Feature] 로그인 구현
 ```
+
 ### 패키지 컨벤션
+
 - 도메인 기반(Domain-Driven Design, DDD)의 레이어드 아키텍처
+
 ```
 - common : 애플리케이션 전반의 공통 로직(인터셉터, ENUM 등)
 - config : 환경변수 및 설정 파일
@@ -74,6 +85,7 @@ ex) [Feature] 로그인 구현
     - {sub-domain} : 상위 도메인과 연관된 하위 도메인
 - infra : 외부 시스템과 연동되는 코드를 포함
 ```
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
