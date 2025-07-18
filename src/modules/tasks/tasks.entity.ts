@@ -1,31 +1,30 @@
-import { Status } from "src/common/enums/status.enum";
-import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
-import { Comment } from "../comments/comments.entity";
-import { BaseEntity } from "src/common/entities/base.entity";
-import { Manager } from "../mappings/managers/managers.entity";
-import { TaskFile } from "../mappings/taskFiles/taskFiles.entity";
-import { Step } from "../steps/steps.entity";
+import { Status } from 'src/common/enums/status.enum';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Comment } from '../comments/comments.entity';
+import { BaseEntity } from 'src/common/entities/base.entity';
+import { Manager } from '../mappings/managers/managers.entity';
+import { TaskFile } from '../mappings/task-files/task-files.entity';
+import { Step } from '../steps/steps.entity';
 
 @Entity()
-export class Task extends BaseEntity{
+export class Task extends BaseEntity {
     @Column({ length: 35, default: '빈 업무' })
     name: string;
 
     @Column()
     deadline: Date;
 
-    
     @Column({
         type: 'enum',
         enum: Status,
         default: Status.NOTSTART,
     })
-    status: Status;   
+    status: Status;
 
-    @Column({length: 500})
+    @Column({ length: 500 })
     memo: string;
 
-    @ManyToOne(() => Step, (step) => step.tasks, {onDelete: 'CASCADE'})
+    @ManyToOne(() => Step, (step) => step.tasks, { onDelete: 'CASCADE' })
     step: Step;
 
     @OneToMany(() => Comment, (comment) => comment.task)
