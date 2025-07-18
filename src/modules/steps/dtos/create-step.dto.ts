@@ -18,3 +18,18 @@ export class CreateStepDto {
     @IsNotEmpty()
     projectId: number;
 }
+
+export class CreateStepResponseDto {
+    @ApiProperty({ example: 1, description: '생성된 Step ID' })
+    stepId: number;
+
+    @ApiProperty({ example: '기획 단계', description: '생성된 Step의 이름' })
+    name: string;
+
+    static fromEntity(entity: Step): CreateStepResponseDto {
+        const dto = new CreateStepResponseDto();
+        dto.stepId = entity.id;
+        dto.name = entity.name;
+        return dto;
+    }
+}
