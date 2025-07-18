@@ -2,6 +2,7 @@ services:
   app:
     image: "${DOCKER_USERNAME}/${DOCKER_REPO}:latest"
     container_name: teamie-server
+    network_mode: host
     env_file:
       - .env
     ports:
