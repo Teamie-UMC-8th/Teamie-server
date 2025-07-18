@@ -2,23 +2,40 @@ import { Controller, Post, Get, Patch, Body, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags, ApiParam, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiBody,
+    ApiQuery,
+    ApiTags,
+    ApiParam,
+    ApiOperation,
+    ApiResponse,
+} from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
-} from '../../common/response/swagger-responce.helper';
+} from '../../common/response/swagger-response.helper';
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
 import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
 import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
-import { InvalidInvitecodeException, ProjectForbiddenException, ProjectUpdateForbiddenException } from 'src/common/exceptions/custom.errors';
-
+import {
+    InvalidInvitecodeException,
+    ProjectForbiddenException,
+    ProjectUpdateForbiddenException,
+} from 'src/common/exceptions/custom.errors';
+import { CreateStepDto } from '../steps/dtos/create-step.dto';
+import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
+import { StepsService } from '../steps/steps.service';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
-    constructor(private readonly projectsService: ProjectsService) {}
+    constructor(
+        private readonly projectsService: ProjectsService,
+        private readonly stepsService: StepsService
+    ) {}
 
     @Post()
     @ApiBody({ type: CreateProjectDto })
@@ -47,59 +64,79 @@ export class ProjectsController {
         return await this.projectsService.getProjectFullData(projectId);
     }
 
-  @Get('/:projectId')
-  @ApiOperation({ summary: '프로젝트 상세 조회', description: '프로젝트의 상세 정보를 조회합니다.' })
-  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-  @ApiCommonResponse(AllProjectResponseDto)
-  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.',404)
-  @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '해당 프로젝트에 접근 권한이 없습니다.',403)
-  async getProjectFullData(
-    @ProjectIdWithUser('projectId',ValidateProjectAccessPipe) projectId: number,
-    @User('id') userId: number,
-  ) {
-    return await this.projectsService.getProjectFullData(projectId);
-  }
+    @Get('/:projectId')
+    @ApiOperation({
+        summary: '프로젝트 상세 조회',
+        description: '프로젝트의 상세 정보를 조회합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(AllProjectResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_USER_FOR_UPDATE',
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        403
+    )
+    async getProjectFullData(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.getProjectFullData(projectId);
+    }
 
-  @Patch('/:projectId')
-  @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
-  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-  @ApiBody({ type: UpdateProjectDto })
-  @ApiCommonResponse(AllProjectResponseDto)
-  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
-  @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '해당 항목을 수정할 권한이 없습니다.', 403)
-  async updateProject(
-    @ProjectIdWithUser('projectId',ValidateProjectAccessPipe) projectId: number,
-    @Body() dto: UpdateProjectDto,
-    @User('id') userId: number,
-  ) {
-    const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
+    @Patch('/:projectId')
+    @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: UpdateProjectDto })
+    @ApiCommonResponse(AllProjectResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '해당 항목을 수정할 권한이 없습니다.', 403)
+    async updateProject(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body() dto: UpdateProjectDto,
+        @User('id') userId: number
+    ) {
+        const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
 
         // rule, goal은 팀장만 수정 가능
         if ((!isLead && dto.rule !== undefined) || (!isLead && dto.goal !== undefined)) {
             throw new ProjectUpdateForbiddenException();
         }
 
-    return await this.projectsService.updateProject(projectId, dto);
+        return await this.projectsService.updateProject(projectId, dto);
+    }
 
-  }
+    @Patch(':projectId/complete')
+    @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(CompleteProjectResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_USER_FOR_UPDATE',
+        '프로젝트는 팀장만 완료할 수 있습니다.',
+        403
+    )
+    async completeProject(
+        @IsProjectLeader('projectId', IsProjectLeaderPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.completeProject(projectId);
+    }
 
-  @Patch(':projectId/complete')
-  @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
-  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-  @ApiCommonResponse(CompleteProjectResponseDto)
-  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
-  @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '프로젝트는 팀장만 완료할 수 있습니다.', 403)
-  async completeProject(
-    @IsProjectLeader('projectId',IsProjectLeaderPipe) projectId: number,
-    @User('id') userId: number,
-  ) {
-
-
-  return await this.projectsService.completeProject(projectId);
+    @Post(':projectId/stepts')
+    @ApiOperation({
+        summary: '프로젝트 step 생성',
+        description: '프로젝트에 새로운 stpe을 추가합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: CreateStepDto })
+    @ApiCommonResponse(StepWithTaskDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    async createStep(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body() dto: CreateStepDto,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.createStepAndGetAll(projectId, dto, userId);
+    }
 }
-  
-
-
-}
-
-
