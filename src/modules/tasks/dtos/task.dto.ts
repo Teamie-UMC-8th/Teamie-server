@@ -1,13 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class TaskDto {
-  @ApiProperty()
-  taskId: number;
+    @ApiProperty()
+    taskId: number;
 
-  @ApiProperty()
-  title: string;
+    @ApiProperty()
+    title: string;
 
-  @ApiProperty()
-  status: string;
-
+    @ApiProperty()
+    status: string;
 }

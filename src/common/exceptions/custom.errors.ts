@@ -49,13 +49,13 @@ export class ProjectUpdateForbiddenException extends CustomHttpException {
     }
 }
 
-export class AlreadyProjectCompletedException extends CustomHttpException{
-    constructor(data?: any){    
+export class AlreadyProjectCompletedException extends CustomHttpException {
+    constructor(data?: any) {
         super(
             ErrorCode.PROJECT_ALREADY_COMPLETED,
             '이미 완료된 프로젝트입니다.',
             HttpStatus.FORBIDDEN,
-            data,
+            data
         );
     }
 }
