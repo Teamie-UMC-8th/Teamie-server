@@ -1,18 +1,20 @@
 import { Step } from 'src/modules/steps/entities/steps.entity';
+import { CreateStepDto, CreateStepResponseDto } from 'src/modules/steps/dtos/create-step.dto';
 
-export class ProjectWithStepsDto {
+export class StepResponseDto {
     id: number;
     name: string;
-    steps: Array<{ taskId: number; name: string }>;
+    step: CreateStepResponseDto;
 
-    static fromEntity(project: { id: number; name: string; steps: Step[] }): ProjectWithStepsDto {
-        const dto = new ProjectWithStepsDto();
-        dto.id = project.id;
-        dto.name = project.name;
-        dto.steps = project.steps.map((step) => ({
-            taskId: step.id,
-            name: step.name,
-        }));
+    static fromEntity(input: {
+        id: number;
+        name: string;
+        step: CreateStepResponseDto;
+    }): StepResponseDto {
+        const dto = new StepResponseDto();
+        dto.id = input.id;
+        dto.name = input.name;
+        dto.step = input.step;
         return dto;
     }
 }

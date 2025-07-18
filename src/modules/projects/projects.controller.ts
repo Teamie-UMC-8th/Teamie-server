@@ -137,6 +137,6 @@ export class ProjectsController {
         @Body() dto: CreateStepDto,
         @User('id') userId: number
     ) {
-        return await this.projectsService.createStepAndGetAll(projectId, dto, userId);
+        return await this.projectsService.createStep(dto, projectId, userId);
     }
 }

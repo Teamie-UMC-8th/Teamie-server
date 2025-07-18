@@ -17,9 +17,9 @@ import {
     ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
-import { CreateStepDto } from '../steps/dtos/create-step.dto';
+import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
 import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
-import { ProjectWithStepsDto } from './dtos/project-with-steps.dto';
+import { StepResponseDto } from './dtos/project-with-steps.dto';
 import { StepsService } from '../steps/steps.service';
 @Injectable()
 export class ProjectsService {
@@ -172,27 +172,25 @@ export class ProjectsService {
         return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
     }
 
-    async createStepAndGetAll(
-        projectId: number,
+    async createStep(
         dto: CreateStepDto,
+        projectId: number,
         userId: number
-    ): Promise<CommonResponse<ProjectWithStepsDto>> {
-        const project = await this.assertProjectExists(projectId);
-        const createStep = await this.stepsService.createStep(dto, projectId, userId);
-        const steps = await this.stepRepository.find({
-            where: { project: { id: projectId } },
-            relations: ['tasks'],
-            order: { createdAt: 'ASC' },
+    ): Promise<CreateStepResponseDto> {
+        // 1) 엔티티 생성
+        const step = this.stepRepository.create({
+            ...dto,
         });
-        const stepDtos = steps.map((step) => StepWithTaskDto.fromEntity(step));
 
-        return CommonResponse.success(
-            ProjectWithStepsDto.fromEntity({
-                id: project.id,
-                name: project.name,
-                steps: steps,
-            })
-        );
+        // Assign relations separately if needed
+        (step as any).project = { id: projectId };
+        (step as any).createdBy = { id: userId };
+
+        // 2) 실제로 DB에 저장
+        const saved = await this.stepRepository.save(step);
+
+        // 3) 저장된 엔티티 전체를 DTO로 변환해 반환
+        return CreateStepResponseDto.fromEntity(saved);
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드
