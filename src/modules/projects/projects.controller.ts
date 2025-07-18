@@ -20,8 +20,12 @@ import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
 import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
 import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
-import { InvalidInvitecodeException, ProjectForbiddenException, ProjectUpdateForbiddenException } from 'src/common/exceptions/custom.errors';
-import { CreateStepDto} from '../steps/dtos/create-step.dto';
+import {
+    InvalidInvitecodeException,
+    ProjectForbiddenException,
+    ProjectUpdateForbiddenException,
+} from 'src/common/exceptions/custom.errors';
+import { CreateStepDto } from '../steps/dtos/create-step.dto';
 import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
 import { StepsService } from '../steps/steps.service';
 @ApiTags('Projects')
@@ -102,35 +106,37 @@ export class ProjectsController {
         return await this.projectsService.updateProject(projectId, dto);
     }
 
-  @Patch(':projectId/complete')
-  @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
-  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-  @ApiCommonResponse(CompleteProjectResponseDto)
-  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
-  @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '프로젝트는 팀장만 완료할 수 있습니다.', 403)
-  async completeProject(
-    @IsProjectLeader('projectId',IsProjectLeaderPipe) projectId: number,
-    @User('id') userId: number,
-  ) {
+    @Patch(':projectId/complete')
+    @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(CompleteProjectResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_USER_FOR_UPDATE',
+        '프로젝트는 팀장만 완료할 수 있습니다.',
+        403
+    )
+    async completeProject(
+        @IsProjectLeader('projectId', IsProjectLeaderPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.completeProject(projectId);
+    }
 
-
-  return await this.projectsService.completeProject(projectId);
+    @Post(':projectId/stepts')
+    @ApiOperation({
+        summary: '프로젝트 step 생성',
+        description: '프로젝트에 새로운 stpe을 추가합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: CreateStepDto })
+    @ApiCommonResponse(StepWithTaskDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    async createStep(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body() dto: CreateStepDto,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.createStepAndGetAll(projectId, dto, userId);
+    }
 }
-
-  @Post(':projectId/stepts')
-  @ApiOperation({ summary: '프로젝트 step 생성', description: '프로젝트에 새로운 stpe을 추가합니다.' })
-  @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-  @ApiBody({ type: CreateStepDto })
-  @ApiCommonResponse(StepWithTaskDto)
-  @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
-  async createStep(
-    @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
-    @Body() dto: CreateStepDto,
-    @User('id') userId: number
-  ){
-    return await this.projectsService.createStepAndGetAll(projectId, dto, userId);
-  }
-
-}
-
-
