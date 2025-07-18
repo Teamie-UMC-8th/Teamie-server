@@ -54,5 +54,6 @@ jobs:
             docker image rm ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }} || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
             docker compose up -d --no-deps app
+            docker compose exec app npm run migrate:run
             docker compose logs
             docker image prune -f
