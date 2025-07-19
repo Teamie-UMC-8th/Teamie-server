@@ -84,6 +84,18 @@ export class StepNotFoundException extends CustomHttpException {
     }
 }
 
+//409
+export class PostsExceededException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.POSTS_EXCEEDED,
+            '포스트잇은 10개까지 생성될 수 있습니다.',
+            HttpStatus.CONFLICT,
+            data
+        );
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {

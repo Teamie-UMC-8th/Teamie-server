@@ -15,14 +15,19 @@ import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.en
 import {
     AlreadyProjectCompletedException,
     ProjectNotFoundException,
+    PostsExceededException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
 import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
 import { StepResponseDto } from './dtos/project-with-steps.dto';
 import { StepsService } from '../steps/steps.service';
+import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
+import { RedisClientType } from 'redis';
 @Injectable()
 export class ProjectsService {
+    private readonly POSTS_KEY = (projectId: number) => `posts:${projectId}`;
+    private readonly TTL_SECONDS = 48 * 3600; // 48시간
     constructor(
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
@@ -37,7 +42,7 @@ export class ProjectsService {
         private readonly stepRepository: Repository<Step>,
 
         @Inject('REDIS_CLIENT')
-        private readonly redis: Cache,
+        private readonly redis: RedisClientType,
         private readonly configService: ConfigService,
         private readonly stepsService: StepsService
     ) {}
@@ -69,7 +74,8 @@ export class ProjectsService {
         const code = generateRandomCode();
         const key = `invite:${code}`;
         const ttlSeconds = 60 * 60 * 24 * 7; //7일
-        await this.redis.set(key, savedProject.id.toString(), ttlSeconds);
+        await this.redis.set(key, savedProject.id.toString());
+        await this.redis.expire(key, ttlSeconds);
 
         const baseUrl = this.configService.get('BASE_URL');
         const inviteCode = `${baseUrl}/projects/join/${code}`;
@@ -79,8 +85,9 @@ export class ProjectsService {
 
     async getProjectByInviteCode(inviteCode: string): Promise<Project | null> {
         const key = `invite:${inviteCode}`;
-        const projectId = await this.redis.get<Project>(key);
-        return projectId || null;
+        const projectId = await this.redis.get(key);
+        const project = await this.projectRepository.findOne({ where: { id: Number(projectId) } });
+        return project;
     }
 
     async isUserInProject(userId: number, projectId: number): Promise<boolean> {
@@ -176,7 +183,7 @@ export class ProjectsService {
         dto: CreateStepDto,
         projectId: number,
         userId: number
-    ): Promise<CreateStepResponseDto> {
+    ): Promise<CommonResponse<CreateStepResponseDto>> {
         // 1) 엔티티 생성
         const step = this.stepRepository.create({
             ...dto,
@@ -190,7 +197,37 @@ export class ProjectsService {
         const saved = await this.stepRepository.save(step);
 
         // 3) 저장된 엔티티 전체를 DTO로 변환해 반환
-        return CreateStepResponseDto.fromEntity(saved);
+        return CommonResponse.success(CreateStepResponseDto.fromEntity(saved));
+    }
+
+    async createPost(
+        dto: CreatePostDto,
+        userId: number,
+        projectId: number
+    ): Promise<CommonResponse<CreatePostResponseDto>> {
+        //프로젝트 존재 확인
+        const project = await this.assertProjectExists(projectId);
+        // 기존 포스트잇 배열 로드
+        const key = this.POSTS_KEY(projectId);
+        const postsRaw = (await this.redis.get(key)) || [];
+        const posts = Array.isArray(postsRaw) ? postsRaw : [];
+        //최대 10개 제한
+        if (posts.length >= 10) {
+            throw new PostsExceededException();
+        }
+        // 새로운 포스트잇 생성
+        const post: CreatePostResponseDto = {
+            id: posts.length + 1, // 간단한 ID 생성 로직
+            userId: userId,
+            content: dto.content,
+            projectId: project.id,
+            createdAt: new Date().toISOString(),
+        };
+        // 1) 키-값 저장
+        await this.redis.set(key, JSON.stringify(posts));
+        await this.redis.expire(key, this.TTL_SECONDS);
+
+        return CommonResponse.success(CreatePostResponseDto.fromEntity(post));
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드
