@@ -9,6 +9,13 @@ import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    app.enableCors({
+        origin: process.env.CORS_ORIGIN || '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        credentials: true,
+    });
+
     const configService = app.get(ConfigService);
     const config = defaultConfig(configService);
 
