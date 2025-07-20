@@ -7,14 +7,21 @@ import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { Manager } from '../mappings/managers/managers.entity';
+import { Project } from '../projects/entities/projects.entity';
 import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { UploadService } from '../../infra/upload/upload.service';
+import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
+import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
+import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
+import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
+import { Status } from '../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
     StepNotFoundException,
     TaskNotFoundException,
+    ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
@@ -25,6 +32,9 @@ export class TasksService {
 
         @InjectRepository(Step)
         private readonly stepRepository: Repository<Step>,
+
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>,
 
         @InjectRepository(UserProject)
         private readonly userProjectRepository: Repository<UserProject>,
@@ -261,5 +271,106 @@ export class TasksService {
         const managers = task.managers;
 
         return GetTaskResponseDto.from(task, managers);
+    }
+
+    async getTaskDashBoard(
+        userId: number,
+        projectId: number,
+        view: string
+    ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        // 1. 프로젝트 존재 및 참여자 검증
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: ['userProjects'],
+        });
+
+        if (!project) throw new ProjectNotFoundException();
+
+        const isMember = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+
+        if (!isMember) throw new ProjectForbiddenException();
+
+        // 2. 프로젝트 전체 업무 조회 (step 포함)
+        const tasks = await this.taskRepository.find({
+            where: { step: { project: { id: projectId } } },
+            relations: ['step', 'managers', 'managers.user'],
+        });
+
+        // 3. view 값에 따라 응답 구조 조립
+        if (view === 'status') {
+            const statusGroups = this.groupByStatus(tasks);
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                statusGroups,
+            };
+        } else {
+            const stepGroups = this.groupByStep(tasks);
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                steps: stepGroups,
+            };
+        }
+    }
+
+    private groupByStep(tasks: Task[]): StepGroupDto[] {
+        const map = new Map<number, StepGroupDto>();
+
+        for (const task of tasks) {
+            const stepId = task.step.id;
+            if (!map.has(stepId)) {
+                map.set(stepId, {
+                    stepId,
+                    stepName: task.step.name,
+                    tasks: [],
+                });
+            }
+
+            const taskDto: TaskInStepDto = {
+                taskId: task.id,
+                taskName: task.name,
+                status: task.status,
+                managers: task.managers.map((m) => ({
+                    userId: m.user.id,
+                    userName: m.user.name,
+                })),
+            };
+
+            map.get(stepId)!.tasks.push(taskDto);
+        }
+
+        return [...map.values()];
+    }
+
+    private groupByStatus(tasks: Task[]): StatusGroupDto[] {
+        const map = new Map<Status, StatusGroupDto>();
+
+        for (const task of tasks) {
+            const status = task.status;
+            if (!map.has(status)) {
+                map.set(status, {
+                    status,
+                    tasks: [],
+                });
+            }
+
+            const taskDto: TaskInStatusDto = {
+                taskId: task.id,
+                taskName: task.name,
+                stepId: task.step.id,
+                stepName: task.step.name,
+                managers: task.managers.map((m) => ({
+                    userId: m.user.id,
+                    userName: m.user.name,
+                })),
+            };
+
+            map.get(status)!.tasks.push(taskDto);
+        }
+
+        return [...map.values()];
     }
 }

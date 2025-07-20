@@ -1,8 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
-import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber } from 'class-validator';
 import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
-import { Type } from 'class-transformer';
 import { TaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { Task } from '../tasks.entity';
 import { Manager } from '../../mappings/managers/managers.entity';
