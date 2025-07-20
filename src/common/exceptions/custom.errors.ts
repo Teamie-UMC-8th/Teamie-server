@@ -84,6 +84,17 @@ export class StepNotFoundException extends CustomHttpException {
     }
 }
 
+export class PersonalRecallNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PERSONAL_RECALL_NOT_FOUND,
+            '개인 회고를 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
+    }
+}
+
 //409
 export class PostsExceededException extends CustomHttpException {
     constructor(data?: any) {
