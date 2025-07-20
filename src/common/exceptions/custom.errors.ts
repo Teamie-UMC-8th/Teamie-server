@@ -96,6 +96,12 @@ export class PostsExceededException extends CustomHttpException {
     }
 }
 
+export class UserNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.USER_NOT_FOUND, '사용자를 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {
