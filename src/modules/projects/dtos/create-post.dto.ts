@@ -10,15 +10,6 @@ export class CreatePostDto {
     @IsString()
     @MaxLength(32)
     content: string;
-
-    @ApiProperty({
-        example: 1,
-        description: '프로젝트 ID',
-    })
-    @IsInt()
-    @Min(1)
-    @Max(1000)
-    projectId: number;
 }
 
 export class CreatePostResponseDto {

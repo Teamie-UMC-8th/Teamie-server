@@ -19,15 +19,14 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
-import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
-import { StepResponseDto } from './dtos/project-with-steps.dto';
 import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { RedisClientType } from 'redis';
 @Injectable()
 export class ProjectsService {
-    private readonly POSTS_KEY = (projectId: number) => `posts:${projectId}`;
-    private readonly TTL_SECONDS = 48 * 3600; // 48시간
+    private readonly postsKeyPrefix: string;
+    private readonly POSTS_KEY = (projectId: number) => `${this.postsKeyPrefix}:${projectId}`;
+    private readonly POST_TTL_SECONDS: number;
     constructor(
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
@@ -45,7 +44,12 @@ export class ProjectsService {
         private readonly redis: RedisClientType,
         private readonly configService: ConfigService,
         private readonly stepsService: StepsService
-    ) {}
+    ) {
+        this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
+        const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
+        //숫자로 변환해서 실제 필드에 할당
+        this.POST_TTL_SECONDS = parseInt(ttlStr, 10);
+    }
 
     async createProject(
         dto: CreateProjectDto,
@@ -225,7 +229,7 @@ export class ProjectsService {
         };
         // 1) 키-값 저장
         await this.redis.set(key, JSON.stringify(posts));
-        await this.redis.expire(key, this.TTL_SECONDS);
+        await this.redis.expire(key, this.POST_TTL_SECONDS);
 
         return CommonResponse.success(CreatePostResponseDto.fromEntity(post));
     }
