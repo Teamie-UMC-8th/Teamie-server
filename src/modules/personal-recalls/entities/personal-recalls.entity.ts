@@ -6,13 +6,13 @@ import { Project } from '../../projects/entities/projects.entity';
 @Entity()
 export class PersonalRecall extends BaseEntity {
     @Column({ length: 5000 })
-    q1: string;
+    Q1: string;
 
     @Column({ length: 5000 })
-    q2: string;
+    Q2: string;
 
     @Column({ length: 5000 })
-    q3: string;
+    Q3: string;
 
     @ManyToOne(() => User, (user) => user.personalRecalls, {
         onDelete: 'CASCADE',
