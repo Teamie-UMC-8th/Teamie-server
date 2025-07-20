@@ -84,6 +84,18 @@ export class StepNotFoundException extends CustomHttpException {
     }
 }
 
+//409
+export class PostsExceededException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.POSTS_EXCEEDED,
+            '포스트잇은 10개까지 생성될 수 있습니다.',
+            HttpStatus.CONFLICT,
+            data
+        );
+    }
+}
+
 export class UserNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.USER_NOT_FOUND, '사용자를 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
