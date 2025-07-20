@@ -15,7 +15,8 @@ export enum ErrorCode {
     POSTS_EXCEEDED = 'PROJECT4091',
     //업무
     TASK_NOT_FOUND = 'TASK4041',
-
+    //개인회고
+    PERSONAL_RECALL_NOT_FOUND = 'PERSONALRECALL4041',
     //스텝
     STEP_NOT_FOUND = 'STEP4041',
 }
