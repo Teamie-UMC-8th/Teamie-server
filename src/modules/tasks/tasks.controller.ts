@@ -4,6 +4,7 @@ import {
     Post,
     Param,
     Req,
+    Get,
     Patch,
     Delete,
     UploadedFiles,
@@ -17,6 +18,7 @@ import { ApiCommonResponse } from '../../common/response/swagger-response.helper
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { GetTaskResponseDto } from './dtos/get-task.dto';
 
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
@@ -52,5 +54,11 @@ export class TasksController {
     @ApiCommonResponse(UpdateTaskResponseDto)
     async deleteTask(@Param('taskId') taskId: number, @User('id') userId: number) {
         return await this.tasksService.deleteTask(userId, taskId);
+    }
+
+    @Get('/:taskId')
+    @ApiCommonResponse(GetTaskResponseDto)
+    async getTask(@Param('taskId') taskId: number, @User('id') userId: number) {
+        return await this.tasksService.getTask(userId, taskId);
     }
 }
