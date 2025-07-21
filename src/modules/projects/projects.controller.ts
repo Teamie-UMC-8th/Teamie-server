@@ -28,6 +28,7 @@ import {
 import { CreateStepDto } from '../steps/dtos/create-step.dto';
 import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
 import { StepsService } from '../steps/steps.service';
+import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -138,5 +139,23 @@ export class ProjectsController {
         @User('id') userId: number
     ) {
         return await this.projectsService.createStep(dto, projectId, userId);
+    }
+
+    @Post(':projectId/posts')
+    @ApiOperation({
+        summary: '게시글 포스트잇 생성',
+        description: '게시판에 새로운 포스트잇을 추가합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number })
+    @ApiBody({ type: CreatePostDto })
+    @ApiCommonResponse(CreatePostResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('POSTS_EXCEEDED', '포스트잇은 10개까지 생성될 수 있습니다.', 409)
+    async createPost(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body() dto: CreatePostDto,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.createPost(dto, userId, projectId);
     }
 }
