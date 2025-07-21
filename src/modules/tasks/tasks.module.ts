@@ -9,9 +9,13 @@ import { ConfigModule } from '@nestjs/config';
 import { Manager } from '../mappings/managers/managers.entity';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
 import { UploadService } from '../../infra/upload/upload.service';
+import { Project } from '../projects/entities/projects.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile]), ConfigModule],
+    imports: [
+        TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project]),
+        ConfigModule,
+    ],
     controllers: [TasksController],
     providers: [TasksService, UploadService],
 })
