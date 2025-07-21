@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
 import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
+import { Task } from '../tasks.entity';
 
 export class TaskInStatusDto {
     @ApiProperty({
@@ -32,6 +33,19 @@ export class TaskInStatusDto {
         description: '담당자 목록',
     })
     managers: ManagerResponseDto[];
+
+    static from(task: Task): TaskInStatusDto {
+        const dto = new TaskInStatusDto();
+        dto.taskId = task.id;
+        dto.taskName = task.name;
+        dto.stepId = task.step.id;
+        dto.stepName = task.step.name;
+        dto.managers = (task.managers ?? []).map((m) => ({
+            userId: m.user.id,
+            userName: m.user.name,
+        }));
+        return dto;
+    }
 }
 
 export class StatusGroupDto {

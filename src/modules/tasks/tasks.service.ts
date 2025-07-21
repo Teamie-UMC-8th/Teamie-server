@@ -22,6 +22,7 @@ import {
     StepNotFoundException,
     TaskNotFoundException,
     ProjectNotFoundException,
+    BadRequestException
 } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
@@ -278,6 +279,9 @@ export class TasksService {
         projectId: number,
         view: string
     ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        if (view !== 'step' && view !== 'status') {
+            throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
+}
         // 1. 프로젝트 존재 및 참여자 검증
         const project = await this.projectRepository.findOne({
             where: { id: projectId },
@@ -298,7 +302,7 @@ export class TasksService {
             .leftJoinAndSelect('task.step', 'step')
             .leftJoin('task.managers', 'manager')
             .leftJoin('manager.user', 'user')
-            .addSelect(['user.id', 'user.name']) 
+            .addSelect(['user.id', 'user.name'])
             .where('step.projectId = :projectId', { projectId })
             .getMany();
 
@@ -333,19 +337,9 @@ export class TasksService {
                 });
             }
 
-            const taskDto: TaskInStepDto = {
-                taskId: task.id,
-                taskName: task.name,
-                status: task.status,
-                managers: (task.managers ?? []).map((m) => ({
-                    userId: m.user.id,
-                    userName: m.user.name,
-                })),
-            };
-
+            const taskDto = TaskInStepDto.from(task);
             map.get(stepId)!.tasks.push(taskDto);
         }
-
         return [...map.values()];
     }
 
@@ -361,17 +355,7 @@ export class TasksService {
                 });
             }
 
-            const taskDto: TaskInStatusDto = {
-                taskId: task.id,
-                taskName: task.name,
-                stepId: task.step.id,
-                stepName: task.step.name,
-                managers: (task.managers ?? []).map((m) => ({
-                    userId: m.user.id,
-                    userName: m.user.name,
-                })),
-            };
-
+            const taskDto = TaskInStatusDto.from(task);
             map.get(status)!.tasks.push(taskDto);
         }
 
