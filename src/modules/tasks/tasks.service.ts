@@ -293,10 +293,14 @@ export class TasksService {
         if (!isMember) throw new ProjectForbiddenException();
 
         // 2. 프로젝트 전체 업무 조회 (step 포함)
-        const tasks = await this.taskRepository.find({
-            where: { step: { project: { id: projectId } } },
-            relations: ['step', 'managers', 'managers.user'],
-        });
+        const tasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoin('task.managers', 'manager')
+            .leftJoin('manager.user', 'user')
+            .addSelect(['user.id', 'user.name']) 
+            .where('step.projectId = :projectId', { projectId })
+            .getMany();
 
         // 3. view 값에 따라 응답 구조 조립
         if (view === 'status') {
@@ -333,7 +337,7 @@ export class TasksService {
                 taskId: task.id,
                 taskName: task.name,
                 status: task.status,
-                managers: task.managers.map((m) => ({
+                managers: (task.managers ?? []).map((m) => ({
                     userId: m.user.id,
                     userName: m.user.name,
                 })),
@@ -362,7 +366,7 @@ export class TasksService {
                 taskName: task.name,
                 stepId: task.step.id,
                 stepName: task.step.name,
-                managers: task.managers.map((m) => ({
+                managers: (task.managers ?? []).map((m) => ({
                     userId: m.user.id,
                     userName: m.user.name,
                 })),
