@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Patch, Body, Query } from '@nestjs/common';
+import {
+    Controller,
+    Post,
+    Get,
+    Patch,
+    Body,
+    Query,
+    Delete,
+    Param,
+    ParseIntPipe,
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
@@ -29,6 +39,8 @@ import { CreateStepDto } from '../steps/dtos/create-step.dto';
 import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
 import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
+import { CommonResponse } from 'src/common/response/common-response.dto';
+import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -157,5 +169,34 @@ export class ProjectsController {
         @User('id') userId: number
     ) {
         return await this.projectsService.createPost(dto, userId, projectId);
+    }
+
+    @Delete(':projectId/posts/:postId')
+    @ApiOperation({
+        summary: '게시글 포스트잇 삭제',
+        description: '게시판에서 포스트잇을 삭제합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number })
+    @ApiParam({ name: 'postId', type: Number })
+    @ApiCommonResponse(DeletePostResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('POST_NOT_FOUND', '포스트잇을 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('NOT_POST_AUTHOR', '포스트잇 작성자만 삭제할 수 있습니다.', 403)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_USER_FOR_PROJECT',
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        403
+    )
+    @ApiCommonErrorResponse(
+        'REDIS_DATA_PARSE_ERROR',
+        'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
+        500
+    )
+    async deletePost(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('postId', ParseIntPipe) postId: number,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.deletePost(postId, userId, projectId);
     }
 }

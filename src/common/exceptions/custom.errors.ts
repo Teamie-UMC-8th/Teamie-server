@@ -60,6 +60,16 @@ export class AlreadyProjectCompletedException extends CustomHttpException {
     }
 }
 
+export class NotPostAuthorException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.NOT_POST_AUTHOR,
+            '포스트잇 작성자만 삭제할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
@@ -69,6 +79,12 @@ export class ProjectNotFoundException extends CustomHttpException {
             HttpStatus.NOT_FOUND,
             data
         );
+    }
+}
+
+export class PostNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.POST_NOT_FOUND, '포스트잇을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
     }
 }
 
@@ -130,6 +146,17 @@ export class UserInvariantViolationException extends CustomHttpException {
         super(
             ErrorCode.USER_INVARIANT_VIOLATION,
             'userId는 null일 수 없습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
+export class RedisDataParseException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.POST_NOT_PARSED,
+            'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
             HttpStatus.INTERNAL_SERVER_ERROR,
             data
         );
