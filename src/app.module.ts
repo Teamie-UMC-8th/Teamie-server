@@ -15,6 +15,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 import { S3TestController } from './infra/upload/upload.controller';
 import { StepsModule } from './modules/steps/steps.module';
+import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -42,6 +43,7 @@ import { StepsModule } from './modules/steps/steps.module';
         AuthModule,
         UsersModule,
         StepsModule,
+        MasterPortfoliosModule,
     ],
     controllers: [S3TestController],
     providers: [
