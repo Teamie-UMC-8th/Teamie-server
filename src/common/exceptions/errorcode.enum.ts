@@ -19,4 +19,6 @@ export enum ErrorCode {
     PERSONAL_RECALL_NOT_FOUND = 'PERSONALRECALL4041',
     //스텝
     STEP_NOT_FOUND = 'STEP4041',
+    //일정
+    PLAN_NOT_FOUND = 'PLAN4041',
 }

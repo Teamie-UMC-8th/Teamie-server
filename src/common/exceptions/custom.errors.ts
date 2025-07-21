@@ -84,6 +84,12 @@ export class StepNotFoundException extends CustomHttpException {
     }
 }
 
+export class PlanNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.PLAN_NOT_FOUND, 'PLAN을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
 export class PersonalRecallNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
