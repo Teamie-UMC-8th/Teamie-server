@@ -9,16 +9,19 @@ import {
     Delete,
     UploadedFiles,
     UseInterceptors,
+    Query
 } from '@nestjs/common';
 import { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto } from './dtos/create-task.dto';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags, ApiQuery, ApiOkResponse, ApiOperation, getSchemaPath, ApiExtraModels } from '@nestjs/swagger';
 import { ApiCommonResponse } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
+import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
+import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
 
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
@@ -60,5 +63,33 @@ export class TasksController {
     @ApiCommonResponse(GetTaskResponseDto)
     async getTask(@Param('taskId') taskId: number, @User('id') userId: number) {
         return await this.tasksService.getTask(userId, taskId);
+    }
+
+    @ApiExtraModels(TaskDashboardStepViewDto, TaskDashboardStatusViewDto)
+    @ApiQuery({
+    name: 'view',
+    required: false,
+    description: '조회 방식: step 또는 status',
+    })
+    @ApiOperation({
+    summary: '업무 대시보드',
+	  description: '프로젝트 별 업무 대시보드입니다.'
+})
+    @ApiOkResponse({
+    description: '단계별 또는 상태별로 업무를 그룹화한 대시보드 응답',
+    schema: {
+        oneOf: [
+        { $ref: getSchemaPath(TaskDashboardStepViewDto) },
+        { $ref: getSchemaPath(TaskDashboardStatusViewDto) },
+        ],
+    },
+    })
+    @Get('/:projectId/dashboard')
+    async getTaskDashboard(
+    @Param('projectId') projectId: number,
+    @User('id') userId: number,
+    @Query('view') view: string,
+    ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+    return this.tasksService.getTaskDashBoard(userId, projectId, view);
     }
 }
