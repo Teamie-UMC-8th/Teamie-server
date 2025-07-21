@@ -5,14 +5,14 @@ import { Project } from '../../projects/entities/projects.entity';
 
 @Entity()
 export class PersonalRecall extends BaseEntity {
-    @Column({ length: 5000 })
-    Q1: string;
+    @Column({ length: 2000, nullable: true })
+    collaborationProfile: string;
 
-    @Column({ length: 5000 })
-    Q2: string;
+    @Column({ length: 2000, nullable: true })
+    memorableExperience: string;
 
-    @Column({ length: 5000 })
-    Q3: string;
+    @Column({ length: 2000, nullable: true })
+    strengthsAndGrowth: string;
 
     @ManyToOne(() => User, (user) => user.personalRecalls, {
         onDelete: 'CASCADE',
