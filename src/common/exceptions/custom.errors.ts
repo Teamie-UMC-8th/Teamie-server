@@ -101,6 +101,17 @@ export class PersonalRecallNotFoundException extends CustomHttpException {
     }
 }
 
+export class MasterPortfolioNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.MASTER_PORTFOLIO_NOT_FOUND,
+            '마스터 포트폴리오를 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
+    }
+}
+
 //409
 export class PostsExceededException extends CustomHttpException {
     constructor(data?: any) {

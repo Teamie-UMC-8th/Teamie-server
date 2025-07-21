@@ -8,7 +8,7 @@ import { TaskFile } from '../../mappings/task-files/task-files.entity';
 import { ProjectFile } from '../../mappings/project-files/project-files.entity';
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
-import { MasterPortfolio } from '../../master-portfolios/master-portfolios.entity';
+import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { FinalPortfolio } from '../../final-portfolios/final-portfolios.entity';
 
 @Entity()

@@ -22,7 +22,7 @@ import {
     StepNotFoundException,
     TaskNotFoundException,
     ProjectNotFoundException,
-    BadRequestException
+    BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
@@ -281,7 +281,7 @@ export class TasksService {
     ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
         if (view !== 'step' && view !== 'status') {
             throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
-}
+        }
         // 1. 프로젝트 존재 및 참여자 검증
         const project = await this.projectRepository.findOne({
             where: { id: projectId },

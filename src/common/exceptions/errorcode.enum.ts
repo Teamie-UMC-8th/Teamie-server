@@ -21,4 +21,6 @@ export enum ErrorCode {
     STEP_NOT_FOUND = 'STEP4041',
     //일정
     PLAN_NOT_FOUND = 'PLAN4041',
+    //마스터 포트폴리오
+    MASTER_PORTFOLIO_NOT_FOUND = 'MASTERPORTFOLIO4041',
 }
