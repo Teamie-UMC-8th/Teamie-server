@@ -21,7 +21,7 @@ export class PersonalRecallsController {
         summary: '개인 회고 조회',
         description: '프로젝트에 대한 개인 회고를 조회합니다.',
     })
-    @Get(':projectId/personalRecalls') // 개인 회고 조회
+    @Get(':projectId/personal-recalls') // 개인 회고 조회
     async getPersonalRecalls(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
@@ -36,7 +36,7 @@ export class PersonalRecallsController {
         summary: '개인 회고 수정',
         description: '프로젝트에 대한 개인 회고를 수정합니다.',
     })
-    @Patch(':projectId/personalRecalls') // 개인 회고 수정
+    @Patch(':projectId/personal-recalls') // 개인 회고 수정
     async updatePersonalRecalls(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number,
