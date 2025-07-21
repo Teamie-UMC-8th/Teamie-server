@@ -1,10 +1,10 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { Plan } from '../../plans/plans.entity';
 import { UserProject } from '../../mappings/user-projects/userProjects.entity';
 import { ProjectFile } from '../../mappings/project-files/project-files.entity';
-import { MasterPortfolio } from '../../master-portfolios/master-portfolios.entity';
+import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { Step } from '../../steps/entities/steps.entity';
 
 @Entity()
@@ -36,8 +36,8 @@ export class Project extends BaseEntity {
     @OneToMany(() => ProjectFile, (projectFile) => projectFile.project)
     projectFiles: ProjectFile[];
 
-    @OneToMany(() => MasterPortfolio, (masterPF) => masterPF.project)
-    masterPFs: MasterPortfolio[];
+    @OneToOne(() => MasterPortfolio, (masterPortfolio) => masterPortfolio.project)
+    masterPortfolio: MasterPortfolio;
 
     @OneToMany(() => Step, (step) => step.project)
     steps: Step[];
