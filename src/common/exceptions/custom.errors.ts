@@ -140,6 +140,17 @@ export class UserNotFoundException extends CustomHttpException {
     }
 }
 
+export class MasterPortfolioDuplicateException extends CustomHttpException {
+    constructor(userId: number, projectId: number, data?: any) {
+        super(
+            ErrorCode.MASTER_PORTFOLIO_DUPLICATE,
+            `유저 ID ${userId}는 이미 프로젝트 ID ${projectId}에 대한 마스터 포트폴리오가 존재합니다.`,
+            HttpStatus.CONFLICT,
+            data
+        );
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {

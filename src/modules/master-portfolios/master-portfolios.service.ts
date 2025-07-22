@@ -1,11 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
-import { MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
+import {
+    MasterPortfolioDuplicateException,
+    MasterPortfolioNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -17,10 +20,10 @@ export class MasterPortfoliosService {
         private readonly llmService: LLMService
     ) {}
 
-    async createQuestions(projectId: number) {
+    async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { project: { id: projectId } },
+            where: { project: { id: projectId }, user: { id: userId } },
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -55,6 +58,13 @@ export class MasterPortfoliosService {
     }
 
     async createMasterPortfolio(userId: number, projectId: number) {
+        const existingPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (existingPortfolio) {
+            throw new MasterPortfolioDuplicateException(userId, projectId);
+        }
+
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },
