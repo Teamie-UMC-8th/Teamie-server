@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { Plan } from '../../plans/plans.entity';
@@ -36,8 +36,8 @@ export class Project extends BaseEntity {
     @OneToMany(() => ProjectFile, (projectFile) => projectFile.project)
     projectFiles: ProjectFile[];
 
-    @OneToOne(() => MasterPortfolio, (masterPortfolio) => masterPortfolio.project)
-    masterPortfolio: MasterPortfolio;
+    @OneToMany(() => MasterPortfolio, (masterPortfolio) => masterPortfolio.project)
+    masterPortfolio: MasterPortfolio[];
 
     @OneToMany(() => Step, (step) => step.project)
     steps: Step[];

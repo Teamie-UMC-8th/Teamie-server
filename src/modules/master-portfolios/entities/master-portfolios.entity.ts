@@ -1,5 +1,5 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { Project } from '../../projects/entities/projects.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
@@ -35,8 +35,7 @@ export class MasterPortfolio extends BaseEntity {
     @ManyToOne(() => User, (user) => user.masterPFs, { onDelete: 'CASCADE' })
     user: User;
 
-    @JoinColumn()
-    @OneToOne(() => Project, (project) => project.masterPortfolio, {
+    @ManyToOne(() => Project, (project) => project.masterPortfolio, {
         onDelete: 'CASCADE',
     })
     project: Project;

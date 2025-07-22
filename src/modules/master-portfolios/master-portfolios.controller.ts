@@ -7,8 +7,11 @@ export class MasterPortfoliosController {
     constructor(private readonly masterPortfoliosService: MasterPortfoliosService) {}
 
     @Post(':projectId/questions')
-    async createQuestions(@Param('projectId', ParseIntPipe) projectId: number) {
-        return this.masterPortfoliosService.createQuestions(projectId);
+    async createQuestions(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.createQuestions(userId, projectId);
     }
 
     @Post(':projectId/')

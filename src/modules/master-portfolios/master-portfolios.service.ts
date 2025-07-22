@@ -48,10 +48,10 @@ export class MasterPortfoliosService {
         this.baseURL = process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1';
     }
 
-    async createQuestions(projectId: number) {
+    async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { project: { id: projectId } },
+            where: { project: { id: projectId }, user: { id: userId } },
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
