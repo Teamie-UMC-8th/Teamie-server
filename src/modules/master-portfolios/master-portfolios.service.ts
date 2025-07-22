@@ -141,16 +141,16 @@ export class MasterPortfoliosService {
     async getMasterPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.masterPortfolioRepository
             .createQueryBuilder('mp')
-            .leftJoinAndSelect('mp.project', 'project')
-            .select([
+            .leftJoin('mp.project', 'project')
+            .addSelect([
                 'mp.id',
-                'project.name',
                 'mp.category',
                 'mp.contributionRate',
-                'project.createdAt',
-                'project.completedAt',
                 'mp.mainTask',
             ])
+            .addSelect('project.name', 'name')
+            .addSelect('project.createdAt', 'createdAt')
+            .addSelect('project.completedAt', 'completedAt')
             .where('mp.userId = :userId', { userId })
             .andWhere('project.createdAt < :cursorDate', { cursorDate })
             .orderBy('project.createdAt', 'DESC')
