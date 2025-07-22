@@ -5,7 +5,6 @@ import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
-import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../common/response/common-response.dto';
 import { UserInProjectDto, AllProjectResponseDto, PostDto } from './dtos/all-project-response.dto';
@@ -16,11 +15,15 @@ import {
     AlreadyProjectCompletedException,
     ProjectNotFoundException,
     PostsExceededException,
+    RedisDataParseException,
+    PostNotFoundException,
+    NotPostAuthorException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
 import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
+import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
 @Injectable()
 export class ProjectsService {
@@ -209,31 +212,87 @@ export class ProjectsService {
         userId: number,
         projectId: number
     ): Promise<CommonResponse<CreatePostResponseDto>> {
-        //프로젝트 존재 확인
-        const project = await this.assertProjectExists(projectId);
-        // 기존 포스트잇 배열 로드
+        // 1) 프로젝트 존재 확인
+        await this.assertProjectExists(projectId);
+
+        // 2) Redis에서 기존 포스트잇 로드 (string or null)
         const key = this.POSTS_KEY(projectId);
-        const postsRaw = (await this.redis.get(key)) || [];
-        const posts = Array.isArray(postsRaw) ? postsRaw : [];
-        //최대 10개 제한
+        const raw = await this.redis.get(key);
+
+        // 3) string → 객체 배열로 파싱
+        let posts: RedisPost[] = [];
+        if (raw) {
+            try {
+                posts = JSON.parse(raw) as CreatePostResponseDto[];
+            } catch {
+                throw new RedisDataParseException();
+            }
+        }
+
+        // 4) 최대 10개 제한
         if (posts.length >= 10) {
             throw new PostsExceededException();
         }
-        // 새로운 포스트잇 생성
-        const post: CreatePostResponseDto = {
-            id: posts.length + 1, // 간단한 ID 생성 로직
-            userId: userId,
+
+        // 5) 새 ID 생성
+        const newId = posts.length > 0 ? Math.max(...posts.map((p) => p.id)) + 1 : 1;
+
+        // 6) 새 포스트잇 객체
+        const newPost: RedisPost = {
+            id: newId,
+            userId,
             content: dto.content,
-            projectId: project.id,
             createdAt: new Date().toISOString(),
         };
-        // 1) 키-값 저장
+
+        // 7) 배열에 추가
+        posts.push(newPost);
+
+        // 8) 다시 JSON.stringify 후 저장
         await this.redis.set(key, JSON.stringify(posts));
         await this.redis.expire(key, this.POST_TTL_SECONDS);
 
-        return CommonResponse.success(CreatePostResponseDto.fromEntity(post));
+        // 9) 생성된 객체 반환
+        return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost, projectId));
     }
 
+    async deletePost(
+        postId: number,
+        userId: number,
+        projectId: number
+    ): Promise<CommonResponse<DeletePostResponseDto>> {
+        const key = this.POSTS_KEY(projectId);
+        const postsRaw = await this.redis.get(key);
+
+        if (!postsRaw) {
+            throw new PostNotFoundException();
+        }
+
+        let posts: any[];
+        try {
+            posts = JSON.parse(postsRaw);
+        } catch {
+            throw new RedisDataParseException();
+        }
+
+        const postIndex = posts.findIndex((post) => post.id === postId);
+
+        if (postIndex === -1) {
+            throw new PostNotFoundException();
+        }
+
+        const post = posts[postIndex];
+        if (post.userId !== userId) {
+            throw new NotPostAuthorException();
+        }
+
+        posts.splice(postIndex, 1); // 삭제
+
+        await this.redis.set(key, JSON.stringify(posts)); // 갱신
+        await this.redis.expire(key, this.POST_TTL_SECONDS); // TTL 재설정
+
+        return CommonResponse.success({ message: '포스트잇이 삭제되었습니다.' });
+    }
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드
     // 이미 완료된 프로젝트는 수정할 수 없음
     private async assertProjectIsEditable(projectId: number): Promise<Project> {
