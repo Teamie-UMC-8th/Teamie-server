@@ -5,7 +5,10 @@ import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
-import { MasterPortfolioDuplicateException, MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
+import {
+    MasterPortfolioDuplicateException,
+    MasterPortfolioNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 
 export const QuestionResponseFormat = {
     type: 'json_object',
