@@ -1,5 +1,5 @@
-import { portfolioType } from "src/common/enums/portfolio-type.enum";
-import { MasterPortfolio } from "../entities/master-portfolios.entity";
+import { portfolioType } from 'src/common/enums/portfolio-type.enum';
+import { MasterPortfolio } from '../entities/master-portfolios.entity';
 
 export class MasterPortfolioResponseDto {
     id: number;

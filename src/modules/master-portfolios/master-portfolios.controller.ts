@@ -21,4 +21,12 @@ export class MasterPortfoliosController {
     ) {
         return this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
     }
+
+    @Post(':projectId/generate')
+    async generateMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+    }
 }
