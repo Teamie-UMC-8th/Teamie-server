@@ -1,11 +1,12 @@
 import { QuestionType } from 'src/common/enums/question-type.enum';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, Unique } from 'typeorm';
 import { MasterPortfolio } from './master-portfolios.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 
 @Entity()
+@Unique(['questionId', 'masterPortfolio'])
 export class Questions extends BaseEntity {
-    @Column({ unique: true })
+    @Column()
     questionId: number;
     @Column({
         type: 'enum',
