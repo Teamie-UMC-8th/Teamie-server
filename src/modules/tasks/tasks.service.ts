@@ -5,11 +5,16 @@ import { Task } from './tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
+import {
+    CreateCommentResponseDto,
+    CreateCommentRequestDto,
+} from '../comments/dto/create-comment.dto';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { Manager } from '../mappings/managers/managers.entity';
 import { Project } from '../projects/entities/projects.entity';
 import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
+import { Comment as CommentEntity } from '../comments/comments.entity';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { UploadService } from '../../infra/upload/upload.service';
 import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
@@ -46,7 +51,10 @@ export class TasksService {
         private readonly uploadService: UploadService,
 
         @InjectRepository(TaskFile)
-        private readonly taskFileRepository: Repository<TaskFile>
+        private readonly taskFileRepository: Repository<TaskFile>,
+
+        @InjectRepository(CommentEntity )
+        private readonly commentRepository: Repository<CommentEntity >
     ) {}
 
     async createTask(
@@ -360,5 +368,46 @@ export class TasksService {
         }
 
         return [...map.values()];
+    }
+
+    async createComment(
+        userId: number,
+        taskId: number,
+        createCommentRequestDto: CreateCommentRequestDto
+    ): Promise<CreateCommentResponseDto> {
+        // 1. 업무 존재 여부 및 프로젝트 가져오기
+        const task = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .leftJoin('step.project', 'project')
+            .where('task.id = :taskId', { taskId })
+            .select([
+                'step.id AS stepId',
+                'project.id AS projectId',
+            ])
+            .getRawOne();
+
+        if (!task) throw new TaskNotFoundException();
+
+        // 2. 프로젝트 참여자 여부 확인
+        const { projectId } = task;
+        const isMember = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
+        if (!isMember) throw new ProjectForbiddenException();
+
+        // 3. 댓글 생성 및 저장
+        const comment = this.commentRepository.create({
+            user: { id: userId },
+            task: { id: taskId },
+            content: createCommentRequestDto.content,
+        });
+        const saved = await this.commentRepository.save(comment);
+
+        // 4. 응답 반환
+        return CreateCommentResponseDto.from(saved);
     }
 }

@@ -10,10 +10,11 @@ import { Manager } from '../mappings/managers/managers.entity';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
 import { UploadService } from '../../infra/upload/upload.service';
 import { Project } from '../projects/entities/projects.entity';
+import { Comment } from '../comments/comments.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project]),
+        TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project, Comment]),
         ConfigModule,
     ],
     controllers: [TasksController],
