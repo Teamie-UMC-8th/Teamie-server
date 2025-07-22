@@ -4,6 +4,6 @@ import { LLMService } from './llm.service';
 
 @Module({
     providers: [LLMService, PromptLoader],
-    exports: [LLMService]
+    exports: [LLMService],
 })
 export class LLMModule {}

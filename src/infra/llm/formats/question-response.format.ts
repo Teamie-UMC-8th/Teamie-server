@@ -1,4 +1,4 @@
-import { QuestionType } from "src/common/enums/question-type.enum";
+import { QuestionType } from 'src/common/enums/question-type.enum';
 
 export const QuestionResponseFormat = {
     type: 'json_object',
