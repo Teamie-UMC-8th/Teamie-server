@@ -41,6 +41,7 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
+import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -198,5 +199,22 @@ export class ProjectsController {
         @User('id') userId: number
     ) {
         return await this.projectsService.deletePost(postId, userId, projectId);
+    }
+
+    @Patch(':projectId/leaders')
+    @ApiOperation({
+        summary: '프로젝트 팀장 변경',
+        description: '프로젝트의 팀장을 변경합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: ChangeLeaderDto })
+    @ApiCommonResponse(ChangeLeaderResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    async changeProjectLeader(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body('userId', ParseIntPipe) userId: number,
+        @User('id') currentUserId: number
+    ) {
+        return await this.projectsService.changeProjectLeader(projectId, userId, currentUserId);
     }
 }

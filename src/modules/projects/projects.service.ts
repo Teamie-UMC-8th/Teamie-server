@@ -18,6 +18,9 @@ import {
     RedisDataParseException,
     PostNotFoundException,
     NotPostAuthorException,
+    NotMemberException,
+    AlreadyLeaderException,
+    ForbiddenSelfAssignException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -25,6 +28,7 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
+import { ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -292,6 +296,62 @@ export class ProjectsService {
         await this.redis.expire(key, this.POST_TTL_SECONDS); // TTL 재설정
 
         return CommonResponse.success({ message: '포스트잇이 삭제되었습니다.' });
+    }
+
+    async changeProjectLeader(
+        projectId: number,
+        userId: number,
+        currentUserId: number
+    ): Promise<CommonResponse<ChangeLeaderResponseDto>> {
+        await this.assertProjectIsEditable(projectId);
+
+        // 1) 자기 자신 지목 방지
+        if (userId === currentUserId) {
+            throw new ForbiddenSelfAssignException();
+        }
+
+        // 2) 현재 팀장 ID만 조회
+        const currentLeaderRaw = await this.userProjectRepository
+            .createQueryBuilder('up')
+            .select('up.userId', 'oldLeaderId') // alias: oldLeaderId
+            .where('up.projectId = :projectId', { projectId })
+            .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
+            .getRawOne<{ oldLeaderId: number }>();
+
+        // 3) 이미 팀장인 경우 방지
+        if (currentLeaderRaw?.oldLeaderId === userId) {
+            throw new AlreadyLeaderException();
+        }
+
+        // 4) 기존 팀장 MEMBER로 강등
+        if (currentLeaderRaw) {
+            await this.userProjectRepository.update(
+                {
+                    user: { id: currentLeaderRaw.oldLeaderId },
+                    project: { id: projectId },
+                },
+                { permission: projectPermission.MEMBER }
+            );
+        }
+
+        // 5) 새 팀장이 프로젝트 멤버인지 확인
+        const membership = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!membership) {
+            throw new NotMemberException();
+        }
+
+        // 6) 새 팀장 LEAD로 업데이트
+        await this.userProjectRepository.update(
+            { user: { id: userId }, project: { id: projectId } },
+            { permission: projectPermission.LEAD }
+        );
+
+        // 7) 응답 반환 (permission은 LEAD로 고정)
+        return CommonResponse.success(
+            ChangeLeaderResponseDto.fromEntity(userId, projectPermission.LEAD)
+        );
     }
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드
     // 이미 완료된 프로젝트는 수정할 수 없음
