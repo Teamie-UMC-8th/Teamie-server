@@ -53,8 +53,8 @@ export class TasksService {
         @InjectRepository(TaskFile)
         private readonly taskFileRepository: Repository<TaskFile>,
 
-        @InjectRepository(CommentEntity )
-        private readonly commentRepository: Repository<CommentEntity >
+        @InjectRepository(CommentEntity)
+        private readonly commentRepository: Repository<CommentEntity>
     ) {}
 
     async createTask(
@@ -381,10 +381,7 @@ export class TasksService {
             .leftJoin('task.step', 'step')
             .leftJoin('step.project', 'project')
             .where('task.id = :taskId', { taskId })
-            .select([
-                'step.id AS stepId',
-                'project.id AS projectId',
-            ])
+            .select(['step.id AS stepId', 'project.id AS projectId'])
             .getRawOne();
 
         if (!task) throw new TaskNotFoundException();
