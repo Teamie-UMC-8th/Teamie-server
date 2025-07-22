@@ -6,6 +6,8 @@ import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
 import { MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
+import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
+import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 
 export const QuestionResponseFormat = {
     type: 'json_object',
@@ -133,5 +135,36 @@ export class MasterPortfoliosService {
             project: { id: projectId },
         });
         return this.masterPortfolioRepository.save(masterPortfolio);
+    }
+
+    //사용자 별 마스터 포트폴리오 조회
+    async getMasterPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
+        const portfolios = await this.masterPortfolioRepository
+            .createQueryBuilder('mp')
+            .leftJoinAndSelect('mp.project', 'project')
+            .select([
+                'mp.id',
+                'project.name',
+                'mp.category',
+                'mp.contributionRate',
+                'project.createdAt',
+                'project.completedAt',
+                'mp.mainTask',
+            ])
+            .where('mp.userId = :userId', { userId })
+            .andWhere('project.createdAt < :cursorDate', { cursorDate })
+            .orderBy('project.createdAt', 'DESC')
+            .take(pageSize + 1)
+            .getRawMany();
+
+        const hasNextPage: boolean = portfolios.length > pageSize;
+        const nextCursor: string | null =
+            portfolios.length > 0 && hasNextPage
+                ? portfolios[portfolios.length - 1].createdAt.toISOString()
+                : null;
+        const result = portfolios
+            .slice(0, pageSize)
+            .map((entity) => UserMasterPortfoliosResponseDto.fromEntity(entity));
+        return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 }
