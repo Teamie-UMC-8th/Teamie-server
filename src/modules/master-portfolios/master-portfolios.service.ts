@@ -1,11 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QuestionType } from 'src/common/enums/question-type.enum';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
-import { MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
+import {
+    MasterPortfolioDuplicateException,
+    MasterPortfolioNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 
 export const QuestionResponseFormat = {
     type: 'json_object',
@@ -48,10 +51,10 @@ export class MasterPortfoliosService {
         this.baseURL = process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1';
     }
 
-    async createQuestions(projectId: number) {
+    async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { project: { id: projectId } },
+            where: { project: { id: projectId }, user: { id: userId } },
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -128,6 +131,13 @@ export class MasterPortfoliosService {
     }
 
     async createMasterPortfolio(userId: number, projectId: number) {
+        const existingPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (existingPortfolio) {
+            throw new MasterPortfolioDuplicateException(userId, projectId);
+        }
+
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },

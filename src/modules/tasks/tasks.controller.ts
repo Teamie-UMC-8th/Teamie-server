@@ -31,7 +31,10 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
-import { CreateCommentResponseDto, CreateCommentRequestDto } from '../comments/dto/create-comment.dto';
+import {
+    CreateCommentResponseDto,
+    CreateCommentRequestDto,
+} from '../comments/dto/create-comment.dto';
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
 @Controller('/tasks')
@@ -43,10 +46,7 @@ export class TasksController {
         description: '새로운 업무를 생성합니다.',
     })
     @Post()
-    async createTask(
-        @Body() dto: CreateTaskRequestDto,
-        @User('id') userId: number
-    ) {
+    async createTask(@Body() dto: CreateTaskRequestDto, @User('id') userId: number) {
         return await this.tasksService.createTask(userId, dto);
     }
 
@@ -120,13 +120,13 @@ export class TasksController {
     @Post('/:taskId/comments')
     @ApiOperation({
         summary: '댓글 추가',
-        description: '업무 상세페이지에서 댓글을 추가합니다.'
+        description: '업무 상세페이지에서 댓글을 추가합니다.',
     })
     @ApiCommonResponse(CreateCommentResponseDto)
     async createComment(
         @Param('taskId') taskId: number,
         @User('id') userId: number,
-        @Body() dto: CreateCommentRequestDto,
+        @Body() dto: CreateCommentRequestDto
     ): Promise<CreateCommentResponseDto> {
         return await this.tasksService.createComment(userId, taskId, dto);
     }
