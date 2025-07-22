@@ -220,7 +220,7 @@ export class ProjectsService {
         const raw = await this.redis.get(key);
 
         // 3) string → 객체 배열로 파싱
-        let posts: CreatePostResponseDto[] = [];
+        let posts: RedisPost[] = [];
         if (raw) {
             try {
                 posts = JSON.parse(raw) as CreatePostResponseDto[];
@@ -238,11 +238,10 @@ export class ProjectsService {
         const newId = posts.length > 0 ? Math.max(...posts.map((p) => p.id)) + 1 : 1;
 
         // 6) 새 포스트잇 객체
-        const newPost: CreatePostResponseDto = {
+        const newPost: RedisPost = {
             id: newId,
             userId,
             content: dto.content,
-            projectId,
             createdAt: new Date().toISOString(),
         };
 
@@ -254,7 +253,7 @@ export class ProjectsService {
         await this.redis.expire(key, this.POST_TTL_SECONDS);
 
         // 9) 생성된 객체 반환
-        return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost));
+        return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost, projectId));
     }
 
     async deletePost(
