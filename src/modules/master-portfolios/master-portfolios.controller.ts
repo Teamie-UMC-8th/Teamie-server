@@ -1,6 +1,7 @@
-import { Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
+import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 
 @Controller('master-portfolios')
 export class MasterPortfoliosController {
@@ -28,5 +29,22 @@ export class MasterPortfoliosController {
         @User('id') userId: number
     ) {
         return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+    }
+
+    @Get(':projectId')
+    async getMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.getMasterPortfolio(userId, projectId);
+    }
+
+    @Patch(':projectId')
+    async updateMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number,
+        @Body() updateDataDto: MasterPortfolioRequestDto
+    ) {
+        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
     }
 }

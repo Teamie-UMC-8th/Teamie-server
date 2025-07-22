@@ -14,6 +14,7 @@ import {
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
 import { UpdateMasterPortfolioDto } from './dtos/update-master-portfolio.dto';
+import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -112,6 +113,37 @@ export class MasterPortfoliosService {
             project: { id: projectId },
         });
         await this.masterPortfolioRepository.save(masterPortfolio);
+        return MasterPortfolioResponseDto.from(masterPortfolio);
+    }
+
+    async getMasterPortfolio(userId: number, projectId: number) {
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+        return MasterPortfolioResponseDto.from(masterPortfolio);
+    }
+
+    async updateMasterPortfolio(
+        userId: number,
+        projectId: number,
+        updateDataDto: MasterPortfolioRequestDto
+    ) {
+        await this.masterPortfolioRepository.update(
+            {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+            updateDataDto
+        );
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 }
