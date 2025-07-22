@@ -48,16 +48,13 @@ export class CreatePostResponseDto {
     @IsDateString()
     createdAt: string;
 
-    static fromEntity(entity: any): CreatePostResponseDto {
+    static fromEntity(entity: RedisPost, projectId: number): CreatePostResponseDto {
         const dto = new CreatePostResponseDto();
         dto.id = entity.id;
         dto.content = entity.content;
-        dto.projectId = entity.projectId;
+        dto.projectId = projectId;
         dto.userId = entity.userId;
-        dto.createdAt =
-            typeof entity.createdAt === 'string'
-                ? entity.createdAt
-                : entity.createdAt.toISOString();
+        dto.createdAt = entity.createdAt;
         return dto;
     }
 }
