@@ -1,11 +1,12 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, Unique } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { Project } from '../../projects/entities/projects.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Questions } from './questions.entity';
 
 @Entity()
+@Unique(['user', 'project'])
 export class MasterPortfolio extends BaseEntity {
     @Column({ length: 2000, nullable: true })
     detailInfo: string;

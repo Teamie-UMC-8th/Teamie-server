@@ -1,11 +1,11 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QuestionType } from 'src/common/enums/question-type.enum';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
-import { MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
+import { MasterPortfolioDuplicateException, MasterPortfolioNotFoundException } from 'src/common/exceptions/custom.errors';
 
 export const QuestionResponseFormat = {
     type: 'json_object',
@@ -128,6 +128,13 @@ export class MasterPortfoliosService {
     }
 
     async createMasterPortfolio(userId: number, projectId: number) {
+        const existingPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (existingPortfolio) {
+            throw new MasterPortfolioDuplicateException(userId, projectId);
+        }
+
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },
