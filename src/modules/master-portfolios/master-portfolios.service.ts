@@ -152,12 +152,7 @@ export class MasterPortfoliosService {
         const portfolios = await this.masterPortfolioRepository
             .createQueryBuilder('mp')
             .leftJoin('mp.project', 'project')
-            .addSelect([
-                'mp.id',
-                'mp.category',
-                'mp.contributionRate',
-                'mp.mainTask',
-            ])
+            .addSelect(['mp.id', 'mp.category', 'mp.contributionRate', 'mp.mainTask'])
             .addSelect('project.name', 'name')
             .addSelect('project.createdAt', 'createdAt')
             .addSelect('project.completedAt', 'completedAt')

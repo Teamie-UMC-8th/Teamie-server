@@ -2,7 +2,10 @@ import { Controller, Param, ParseIntPipe, Post, Get, Query } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { Cursor, UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
+import {
+    Cursor,
+    UserMasterPortfoliosResponseDto,
+} from './dtos/user-master-portfolios-response.dto';
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';

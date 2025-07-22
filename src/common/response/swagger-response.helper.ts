@@ -38,25 +38,25 @@ export const ApiCommonResponseWithPagination = <T extends Type<any>>(model: T) =
                             error: { type: 'null', example: null },
                             result: {
                                 allOf: [
-                                    {$ref: getSchemaPath(PaginatedResponseDto)},
+                                    { $ref: getSchemaPath(PaginatedResponseDto) },
                                     {
                                         properties: {
                                             data: {
                                                 type: 'array',
-                                                items: { $ref: getSchemaPath(model)},
+                                                items: { $ref: getSchemaPath(model) },
                                             },
-                                            pageInfo: { $ref: getSchemaPath(PageInfoDto)},
-                                        }
-                                    }
-                                ]
+                                            pageInfo: { $ref: getSchemaPath(PageInfoDto) },
+                                        },
+                                    },
+                                ],
                             },
                         },
                     },
-                ]
-            }
+                ],
+            },
         })
-    )
-}
+    );
+};
 
 export const ApiCommonErrorResponse = (
     errorCode: string,
