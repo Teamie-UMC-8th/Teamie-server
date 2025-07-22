@@ -165,7 +165,7 @@ export class MasterPortfoliosService {
         const hasNextPage: boolean = portfolios.length > pageSize;
         const nextCursor: string | null =
             portfolios.length > 0 && hasNextPage
-                ? portfolios[portfolios.length - 1].createdAt.toISOString()
+                ? portfolios[portfolios.length - 2].createdAt.toISOString()
                 : null;
         const result = portfolios
             .slice(0, pageSize)
