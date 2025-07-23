@@ -2,6 +2,8 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Question } from '../../common/types/question.type';
 import { QuestionResponseFormat } from './formats/question-response.format';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
+import { MasterPortfolioResponseFormat } from './formats/master-portfolio-response.format';
+import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 
 @Injectable()
 export class LLMService {
@@ -74,5 +76,41 @@ export class LLMService {
         }
 
         return questions;
+    }
+
+    async generateMasterPortfolio(projectData: any) {
+        let masterPortfolioPrompt: string;
+        try {
+            masterPortfolioPrompt = await this.promptLoader.load('master-portfolio.prompt.md');
+            projectData = await this.promptLoader.load('dummy-input.json');
+        } catch (e) {
+            throw new Error('Failed to load master portfolio prompt');
+        }
+        masterPortfolioPrompt = masterPortfolioPrompt.replace(
+            '{project_data}',
+            JSON.stringify(projectData, null, 4)
+        );
+
+        const model =
+            process.env.MASTER_PORTFOLIO_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17';
+        const messages = [
+            {
+                role: 'system',
+                content: masterPortfolioPrompt,
+            },
+        ];
+
+        const completions = await this.generate(model, messages, MasterPortfolioResponseFormat);
+        const responseData = await completions.json();
+        let responseJsonData: MasterPortfolioOutput;
+
+        try {
+            responseJsonData = JSON.parse(responseData.choices[0].message.content);
+        } catch (e) {
+            // 별도 처리 필요
+            throw new InternalServerErrorException(`Failed to parse response: ${e.message}`);
+        }
+
+        return responseJsonData;
     }
 }
