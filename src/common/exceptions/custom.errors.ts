@@ -169,6 +169,17 @@ export class AlreadyLeaderException extends CustomHttpException {
     }
 }
 
+export class AssigneeNotMemberException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.ASSIGNEE_NOT_MEMBER,
+            '해당 사람은 프로젝트 멤버가 아닙니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 export class MasterPortfolioDuplicateException extends CustomHttpException {
     constructor(userId: number, projectId: number, data?: any) {
         super(

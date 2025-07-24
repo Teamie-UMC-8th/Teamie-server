@@ -210,6 +210,13 @@ export class ProjectsController {
     @ApiBody({ type: ChangeLeaderDto })
     @ApiCommonResponse(ChangeLeaderResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_SELF_ASSIGN',
+        '자기 자신을 팀장으로 지목할 수 없습니다.',
+        403
+    )
+    @ApiCommonErrorResponse('ASIGNEE_NOT_MEMBER', '해당 사람은 프로젝트 멤버가 아닙니다.', 409)
+    @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
     async changeProjectLeader(
         @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
         @Body('userId', ParseIntPipe) userId: number,

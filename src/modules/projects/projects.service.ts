@@ -21,6 +21,7 @@ import {
     NotMemberException,
     AlreadyLeaderException,
     ForbiddenSelfAssignException,
+    AssigneeNotMemberException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -339,7 +340,7 @@ export class ProjectsService {
             where: { user: { id: userId }, project: { id: projectId } },
         });
         if (!membership) {
-            throw new NotMemberException();
+            throw new AssigneeNotMemberException();
         }
 
         // 6) 새 팀장 LEAD로 업데이트
