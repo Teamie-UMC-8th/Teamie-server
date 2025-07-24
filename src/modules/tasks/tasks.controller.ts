@@ -7,11 +7,10 @@ import {
     Get,
     Patch,
     Delete,
-    UploadedFiles,
+    UploadedFile,
     UseInterceptors,
     Query,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto } from './dtos/create-task.dto';
 import {
@@ -27,7 +26,7 @@ import {
 import { ApiCommonResponse } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
@@ -35,6 +34,7 @@ import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
 } from '../comments/dto/create-comment.dto';
+import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
 @Controller('/tasks')
@@ -51,7 +51,6 @@ export class TasksController {
     }
 
     @Patch('/:taskId')
-    @UseInterceptors(FilesInterceptor('files'))
     @ApiOperation({
         summary: '업무 수정',
         description: '기존 업무를 수정합니다.',
@@ -60,12 +59,9 @@ export class TasksController {
     @ApiCommonResponse(UpdateTaskResponseDto)
     async updateTask(
         @Param('taskId') taskId: number,
-        @UploadedFiles() files: Express.Multer.File[],
         @Body() dto: UpdateTaskRequestDto,
         @User('id') userId: number
     ) {
-        dto.files = files;
-
         return await this.tasksService.updateTask(dto, userId, taskId);
     }
 
@@ -129,5 +125,20 @@ export class TasksController {
         @Body() dto: CreateCommentRequestDto
     ): Promise<CreateCommentResponseDto> {
         return await this.tasksService.createComment(userId, taskId, dto);
+    }
+
+    @Post('/:taskId/task-files')
+    @UseInterceptors(FileInterceptor('file'))
+    @ApiOperation({
+        summary: '업무 파일 추가',
+        description: '업무 상세페이지에서 파일을 추가합니다.',
+    })
+    @ApiCommonResponse(CreateTaskFileResponseDto)
+    async createTaskFile(
+        @Param('taskId') taskId: number,
+        @UploadedFile() file: Express.Multer.File,
+        @User('id') userId: number
+    ): Promise<CreateTaskFileResponseDto> {
+        return await this.tasksService.createTaskFile(userId, taskId, file);
     }
 }

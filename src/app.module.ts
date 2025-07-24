@@ -16,6 +16,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 import { S3TestController } from './infra/upload/upload.controller';
 import { StepsModule } from './modules/steps/steps.module';
 import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';
+import { TaskFilesModule } from './modules/mappings/task-files/task-files.module';
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -44,6 +45,7 @@ import { MasterPortfoliosModule } from './modules/master-portfolios/master-portf
         UsersModule,
         StepsModule,
         MasterPortfoliosModule,
+        TaskFilesModule,
     ],
     controllers: [S3TestController],
     providers: [
