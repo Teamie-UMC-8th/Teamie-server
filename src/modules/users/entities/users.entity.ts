@@ -37,6 +37,7 @@ export class User extends BaseEntity {
     @Column({
         type: 'bigint',
         unique: true,
+        select: false,
     })
     kakaoId: string;
 
