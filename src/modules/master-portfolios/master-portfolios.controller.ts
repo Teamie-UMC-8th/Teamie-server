@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import {
     Cursor,
@@ -9,7 +9,12 @@ import {
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
-import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
+import {
+    ApiCommonErrorResponse,
+    ApiCommonResponse,
+    ApiCommonResponseWithPagination,
+} from 'src/common/response/swagger-response.helper';
+import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 
 @ApiTags('MasterPortfolios')
 @ApiBearerAuth('access-token')
@@ -42,6 +47,25 @@ export class MasterPortfoliosController {
         @User('id') userId: number
     ) {
         return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+    }
+
+    @Get(':projectId/generation-result')
+    @ApiOperation({
+        summary: '마스터 포트폴리오 AI 생성 결과 조회 API',
+        description: '프로젝트의 마스터 포트폴리오 AI 생성 결과를 조회합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(MasterPortfolioAIResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
+    async getMasterPortfolioGenerationResult(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.getMasterPortfolioGenerationResult(userId, projectId);
     }
 
     @Get(':projectId')

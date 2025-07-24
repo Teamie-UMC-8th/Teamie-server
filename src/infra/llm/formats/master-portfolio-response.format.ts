@@ -11,7 +11,7 @@ export const MasterPortfolioResponseFormat = {
                 type: 'string',
                 description: '프로젝트에서 담당한 업무',
             },
-            keyAchievment: {
+            keyAchievement: {
                 type: 'string',
                 description: '프로젝트의 주요 성과',
             },
