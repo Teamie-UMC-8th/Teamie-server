@@ -10,13 +10,6 @@ export class CreateStepDto {
     })
     @IsNotEmpty()
     name: string;
-
-    @ApiProperty({
-        example: 1,
-        description: '프로젝트 ID',
-    })
-    @IsNotEmpty()
-    projectId: number;
 }
 
 export class CreateStepResponseDto {

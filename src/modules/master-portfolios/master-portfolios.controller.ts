@@ -1,4 +1,4 @@
-import { Controller, Param, ParseIntPipe, Post, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
@@ -8,6 +8,7 @@ import {
 } from './dtos/user-master-portfolios-response.dto';
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
+import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
 
 @ApiTags('MasterPortfolios')
@@ -33,6 +34,31 @@ export class MasterPortfoliosController {
         @User('id') userId: number
     ) {
         return this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
+    }
+
+    @Post(':projectId/generate')
+    async generateMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+    }
+
+    @Get(':projectId')
+    async getMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number
+    ) {
+        return this.masterPortfoliosService.getMasterPortfolio(userId, projectId);
+    }
+
+    @Patch(':projectId')
+    async updateMasterPortfolio(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @User('id') userId: number,
+        @Body() updateDataDto: MasterPortfolioRequestDto
+    ) {
+        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
     }
 
     @Get('/me')
