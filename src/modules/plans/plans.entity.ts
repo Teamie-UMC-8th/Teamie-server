@@ -6,22 +6,22 @@ import { Attendee } from '../mappings/attendees/attendees.entity';
 
 @Entity()
 export class Plan extends BaseEntity {
-    @Column({ length: 35 })
+    @Column({ length: 35, nullable: true })
     name: string;
 
     @Column()
     date: Date;
 
-    @Column({ length: 20 })
+    @Column({ length: 20, nullable: true })
     location: string;
 
-    @Column({ length: 500 })
+    @Column({ length: 500, nullable: true })
     memo: string; //비고
 
-    @Column()
+    @Column({ nullable: true })
     startHour: Date;
 
-    @Column({ length: 5000 })
+    @Column({ length: 5000, nullable: true })
     meetingRecords: string;
 
     @ManyToOne(() => Project, (project) => project.plans, {
