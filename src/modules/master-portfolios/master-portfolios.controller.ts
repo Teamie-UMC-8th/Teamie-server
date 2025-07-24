@@ -1,13 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-    ApiBearerAuth,
-    ApiBody,
-    ApiOperation,
-    ApiParam,
-    ApiProperty,
-    ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import {
     Cursor,
@@ -41,6 +34,11 @@ export class MasterPortfoliosController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponseArray(QuestionResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async createQuestions(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
@@ -55,6 +53,11 @@ export class MasterPortfoliosController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(MasterPortfolioResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async generateMasterPortfolio(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
