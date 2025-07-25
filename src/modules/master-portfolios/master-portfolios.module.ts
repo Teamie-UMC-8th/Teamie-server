@@ -10,5 +10,6 @@ import { LLMModule } from 'src/infra/llm/llm.module';
     imports: [TypeOrmModule.forFeature([Questions, MasterPortfolio]), LLMModule],
     controllers: [MasterPortfoliosController],
     providers: [MasterPortfoliosService],
+    exports: [MasterPortfoliosService],
 })
 export class MasterPortfoliosModule {}

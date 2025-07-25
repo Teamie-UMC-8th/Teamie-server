@@ -25,6 +25,8 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
+import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
+import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -46,7 +48,8 @@ export class ProjectsService {
         @Inject('REDIS_CLIENT')
         private readonly redis: RedisClientType,
         private readonly configService: ConfigService,
-        private readonly stepsService: StepsService
+        private readonly stepsService: StepsService,
+        private readonly masterPortfoliosService: MasterPortfoliosService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
@@ -183,6 +186,12 @@ export class ProjectsService {
                 q3: '',
             });
         }
+
+        // 각 멤버에 대해 master-portfolio 생성
+        for (const member of members) {
+            await this.masterPortfoliosService.createMasterPortfolio(member.id, projectId);
+        }
+
         return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
     }
 
