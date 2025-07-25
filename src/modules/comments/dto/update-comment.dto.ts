@@ -12,12 +12,6 @@ export class UpdateCommentRequestDto {
 
 export class UpdateCommentResponseDto {
     @ApiProperty({
-        example: 1,
-        description: '댓글 ID',
-    })
-    commentId: number;
-
-    @ApiProperty({
         example: '업무 기한 다음주로 바꿔야할 것 같아요',
         description: '댓글 내용',
     })
@@ -26,7 +20,6 @@ export class UpdateCommentResponseDto {
 
     static from(comment: Comment): UpdateCommentResponseDto {
         const dto = new UpdateCommentResponseDto();
-        dto.commentId = comment.id;
         dto.content = comment.content;
         return dto;
     }

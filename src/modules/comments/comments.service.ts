@@ -21,7 +21,7 @@ export class CommentsService {
             .leftJoin('comment.user', 'user')
             .addSelect(['user.id'])
             .where('comment.id = :commentId', { commentId })
-            .select(['comment.id', 'comment.content', 'user.id'])
+            .select(['comment.content', 'user.id'])
             .getOne();
         if (!comment) {
             throw new CommentNotFoundException('댓글을 찾을 수 없습니다.');
