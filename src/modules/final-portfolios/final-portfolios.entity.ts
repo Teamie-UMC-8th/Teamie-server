@@ -9,26 +9,27 @@ export class FinalPortfolio extends BaseEntity {
     @Column({ length: 20 })
     title: string;
 
-    @Column({ length: 20 })
+    @Column({ length: 20, select: false })
     submissionTarget: string;
 
     @Column({
         type: 'enum',
         enum: ApplicationType,
         default: ApplicationType.INTERN,
+        select: false,
     })
     applicationType: ApplicationType;
 
     @Column({ length: 15 })
     jobTitle: string;
 
-    @Column({ length: 80 })
+    @Column({ length: 80, select: false })
     highlight: string;
 
-    @Column({ length: 400 })
+    @Column({ length: 400, select: false })
     companyInsight: string;
 
-    @Column({ length: 500 })
+    @Column({ length: 500, select: false })
     jd: string;
 
     @ManyToOne(() => User, (user) => user.finalPortfolios, {
