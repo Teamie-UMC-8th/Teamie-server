@@ -21,6 +21,7 @@ services:
       - REDIS_MAXMEMORY_POLICY=allkeys-lru
     volumes:
       - redis-data:/data
+      - /home/ubuntu/prompts:/app/src/common/prompts
     restart: unless-stopped
     mem_limit: 256m
     cpus: 0.3
