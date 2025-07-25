@@ -48,6 +48,16 @@ export class ProjectUpdateForbiddenException extends CustomHttpException {
         );
     }
 }
+export class CommentUpdateForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COMMENT_FOR_UPDATE,
+            '해당 항목을 수정할 권한이 없습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
 
 export class AlreadyProjectCompletedException extends CustomHttpException {
     constructor(data?: any) {
@@ -130,7 +140,18 @@ export class MasterPortfolioNotFoundException extends CustomHttpException {
 
 export class TaskFileNotFoundException extends CustomHttpException {
     constructor(data?: any) {
-        super(ErrorCode.STEP_NOT_FOUND, '업무파일을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+        super(
+            ErrorCode.TASK_FILE_NOT_FOUND,
+            '업무파일을 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
+    }
+}
+
+export class CommentNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.COMMENT_NOT_FOUND, '댓글을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
     }
 }
 
