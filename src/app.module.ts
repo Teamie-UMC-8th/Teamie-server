@@ -18,6 +18,7 @@ import { StepsModule } from './modules/steps/steps.module';
 import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';
 import { TaskFilesModule } from './modules/mappings/task-files/task-files.module';
 import { PlansModule } from './modules/plans/plans.module';
+import { CommentsModule } from './modules/comments/comments.module';
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -48,6 +49,7 @@ import { PlansModule } from './modules/plans/plans.module';
         MasterPortfoliosModule,
         TaskFilesModule,
         PlansModule,
+        CommentsModule,
     ],
     controllers: [S3TestController],
     providers: [
