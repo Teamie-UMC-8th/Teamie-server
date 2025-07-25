@@ -11,5 +11,6 @@ import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
     imports: [TypeOrmModule.forFeature([Questions, MasterPortfolio, MasterPortfolioAI]), LLMModule],
     controllers: [MasterPortfoliosController],
     providers: [MasterPortfoliosService],
+    exports: [MasterPortfoliosService],
 })
 export class MasterPortfoliosModule {}

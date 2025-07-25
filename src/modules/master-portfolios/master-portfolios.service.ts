@@ -32,6 +32,7 @@ export class MasterPortfoliosService {
         private readonly llmService: LLMService
     ) {}
 
+    // 마스터 포트폴리오 질문 생성
     async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
@@ -72,6 +73,7 @@ export class MasterPortfoliosService {
         return questionEntities;
     }
 
+    // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
@@ -121,6 +123,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioAIResponseDto.from(masterPortfolioAI);
     }
 
+    // 프로젝트 종료 쪽으로 이동 후, 삭제 예정
     async createMasterPortfolio(userId: number, projectId: number) {
         const existingPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
@@ -137,6 +140,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
+    // 마스터 포트폴리오 조회
     async getMasterPortfolio(userId: number, projectId: number) {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
@@ -147,6 +151,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
+    // 마스터 포트폴리오 업데이트
     async updateMasterPortfolio(
         userId: number,
         projectId: number,
