@@ -18,8 +18,8 @@ export class Plan extends BaseEntity {
     @Column({ length: 500, nullable: true })
     memo: string; //비고
 
-    @Column({ nullable: true })
-    startHour: Date;
+    @Column({ type: 'time', nullable: true })
+    startHour: string;  // NOTE: 'HH:mm:ss' 형태로 저장
 
     @Column({ length: 5000, nullable: true })
     meetingRecords: string;
