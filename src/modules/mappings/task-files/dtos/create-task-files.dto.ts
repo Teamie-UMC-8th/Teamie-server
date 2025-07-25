@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TaskFile } from  '../task-files.entity';
+import { TaskFile } from '../task-files.entity';
 export class TaskFileResponseDto {
     @ApiProperty({
         example: 'https://s3.amazonaws.com/bucket/file.jpg',

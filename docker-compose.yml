@@ -10,6 +10,8 @@ services:
     mem_limit: 512m
     cpus: 0.6
     memswap_limit: 1g
+    volumes:
+      - /home/ubuntu/prompts:/app/src/common/prompts
   redis_container:
     image: redis:latest
     container_name: teamie-redis
@@ -21,7 +23,6 @@ services:
       - REDIS_MAXMEMORY_POLICY=allkeys-lru
     volumes:
       - redis-data:/data
-      - /home/ubuntu/prompts:/app/src/common/prompts
     restart: unless-stopped
     mem_limit: 256m
     cpus: 0.3

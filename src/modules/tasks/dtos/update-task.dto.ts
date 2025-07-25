@@ -100,10 +100,7 @@ export class UpdateTaskResponseDto {
     })
     stepId: number;
 
-    static from(
-        task: Task,
-        managers: Manager[]
-    ): UpdateTaskResponseDto {
+    static from(task: Task, managers: Manager[]): UpdateTaskResponseDto {
         const dto = new UpdateTaskResponseDto();
         dto.name = task.name;
         dto.deadline = task.deadline;
