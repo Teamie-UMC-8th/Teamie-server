@@ -24,6 +24,30 @@ export const ApiCommonResponse = <T extends Type<any>>(model: T) => {
     );
 };
 
+export const ApiCommonResponseArray = <T extends Type<any>>(model: T) => {
+    return applyDecorators(
+        ApiExtraModels(CommonResponse, model),
+        ApiOkResponse({
+            description: '성공 응답',
+            schema: {
+                allOf: [
+                    { $ref: getSchemaPath(CommonResponse) },
+                    {
+                        properties: {
+                            isSuccess: { type: 'boolean', example: true },
+                            error: { type: 'null', example: null },
+                            result: {
+                                type: 'array',
+                                items: { $ref: getSchemaPath(model) },
+                            },
+                        },
+                    },
+                ],
+            },
+        })
+    );
+};
+
 export const ApiCommonResponseWithPagination = <T extends Type<any>>(model: T) => {
     return applyDecorators(
         ApiExtraModels(CommonResponse, PaginatedResponseDto, PageInfoDto, model),

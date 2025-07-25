@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import {
     Cursor,
@@ -9,7 +9,14 @@ import {
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
-import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
+import {
+    ApiCommonErrorResponse,
+    ApiCommonResponse,
+    ApiCommonResponseArray,
+    ApiCommonResponseWithPagination,
+} from 'src/common/response/swagger-response.helper';
+import { QuestionResponseDto } from './dtos/question-response.dto';
+import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 
 @ApiTags('MasterPortfolios')
 @ApiBearerAuth('access-token')
@@ -21,6 +28,17 @@ export class MasterPortfoliosController {
     ) {}
 
     @Post(':projectId/questions')
+    @ApiOperation({
+        summary: '마스터 포트폴리오 질문 AI 생성 API',
+        description: '프로젝트의 마스터 포트폴리오 질문을 AI로 생성합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponseArray(QuestionResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async createQuestions(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
@@ -28,15 +46,18 @@ export class MasterPortfoliosController {
         return this.masterPortfoliosService.createQuestions(userId, projectId);
     }
 
-    @Post(':projectId/')
-    async createMasterPortfolio(
-        @Param('projectId', ParseIntPipe) projectId: number,
-        @User('id') userId: number
-    ) {
-        return this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
-    }
-
     @Post(':projectId/generate')
+    @ApiOperation({
+        summary: '마스터 포트폴리오 AI 생성 API',
+        description: '프로젝트의 마스터 포트폴리오를 AI로 생성합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(MasterPortfolioResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async generateMasterPortfolio(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
@@ -45,6 +66,17 @@ export class MasterPortfoliosController {
     }
 
     @Get(':projectId')
+    @ApiOperation({
+        summary: '마스터 포트폴리오 조회 API',
+        description: '프로젝트의 마스터 포트폴리오를 조회합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(MasterPortfolioResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async getMasterPortfolio(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
@@ -53,6 +85,18 @@ export class MasterPortfoliosController {
     }
 
     @Patch(':projectId')
+    @ApiOperation({
+        summary: '마스터 포트폴리오 업데이트 API',
+        description: '프로젝트의 마스터 포트폴리오를 업데이트합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: MasterPortfolioRequestDto })
+    @ApiCommonResponse(MasterPortfolioResponseDto)
+    @ApiCommonErrorResponse(
+        'MASTER_PORTFOLIO_NOT_FOUND',
+        '마스터 포트폴리오를 찾을 수 없습니다.',
+        404
+    )
     async updateMasterPortfolio(
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number,
