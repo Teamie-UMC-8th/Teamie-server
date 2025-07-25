@@ -1,15 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 
-export class Cursor {
-    @ApiProperty({
-        required: false,
-        example: '2025-03-08',
-        description: '프로젝트 생성일자 기준(ISO 8301 형식)',
-    })
-    cursor: string;
-}
-
 export class UserMasterPortfoliosResponseDto {
     @ApiProperty({
         example: 123,
