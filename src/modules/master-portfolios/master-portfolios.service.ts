@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';
 import { Repository } from 'typeorm';
@@ -15,6 +15,8 @@ import { QuestionResponseDto } from './dtos/question-response.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
 import { UpdateMasterPortfolioDto } from './dtos/update-master-portfolio.dto';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
+import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
+import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -26,6 +28,7 @@ export class MasterPortfoliosService {
         private readonly llmService: LLMService
     ) {}
 
+    // 마스터 포트폴리오 질문 생성
     async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
@@ -66,6 +69,7 @@ export class MasterPortfoliosService {
         return questionEntities;
     }
 
+    // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(userId: number, projectId: number) {
         // 임시로 더미 데이터 사용
         let projectData: any;
@@ -100,6 +104,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioResponseDto.from(generatedPortfolioResponse);
     }
 
+    // 프로젝트 종료 쪽으로 이동 후, 삭제 예정
     async createMasterPortfolio(userId: number, projectId: number) {
         const existingPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
@@ -116,6 +121,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
+    // 마스터 포트폴리오 조회
     async getMasterPortfolio(userId: number, projectId: number) {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
@@ -126,6 +132,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
+    // 마스터 포트폴리오 업데이트
     async updateMasterPortfolio(
         userId: number,
         projectId: number,
@@ -145,5 +152,31 @@ export class MasterPortfoliosService {
             throw new MasterPortfolioNotFoundException();
         }
         return MasterPortfolioResponseDto.from(masterPortfolio);
+    }
+
+    //사용자 별 마스터 포트폴리오 조회
+    async getMasterPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
+        const portfolios = await this.masterPortfolioRepository
+            .createQueryBuilder('mp')
+            .leftJoin('mp.project', 'project')
+            .addSelect(['mp.id', 'mp.category', 'mp.contributionRate', 'mp.mainTask'])
+            .addSelect('project.name', 'name')
+            .addSelect('project.createdAt', 'createdAt')
+            .addSelect('project.completedAt', 'completedAt')
+            .where('mp.userId = :userId', { userId })
+            .andWhere('project.createdAt < :cursorDate', { cursorDate })
+            .orderBy('project.createdAt', 'DESC')
+            .take(pageSize + 1)
+            .getRawMany();
+
+        const hasNextPage: boolean = portfolios.length > pageSize;
+        const nextCursor: string | null =
+            portfolios.length > 0 && hasNextPage
+                ? portfolios[portfolios.length - 2].createdAt.toISOString()
+                : null;
+        const result = portfolios
+            .slice(0, pageSize)
+            .map((entity) => UserMasterPortfoliosResponseDto.fromEntity(entity));
+        return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 }
