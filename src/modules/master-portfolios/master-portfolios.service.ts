@@ -100,7 +100,14 @@ export class MasterPortfoliosService {
             keyAchievement: generatedPortfolio.keyAchievement,
             insight: generatedPortfolio.insight,
         });
-        await this.masterPortfolioAIRepository.save(createdPortfolio);
+        try {
+            await this.masterPortfolioAIRepository.save(createdPortfolio);
+        } catch (e) {
+            console.error(`마스터 포트폴리오 AI 생성 중 오류 발생: ${e.message}`);
+            throw new InternalServerErrorException(
+                `Failed to save master portfolio AI: ${e.message}`
+            );
+        }
 
         // 생성된 마스터 포트폴리오 AI 결과를 반환합니다.
         const generatedPortfolioResponse = await this.masterPortfolioAIRepository.findOne({

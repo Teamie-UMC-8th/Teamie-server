@@ -25,5 +25,3 @@ export const QuestionResponseFormat = {
         required: ['questions'],
     },
 };
-
-console.log('QuestionResponseFormat:', JSON.stringify(QuestionResponseFormat, null, 2));
