@@ -8,15 +8,17 @@ import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import {
+    MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
-import { UpdateMasterPortfolioDto } from './dtos/update-master-portfolio.dto';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
+import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
+import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -25,6 +27,8 @@ export class MasterPortfoliosService {
         private readonly questionsRepository: Repository<Questions>,
         @InjectRepository(MasterPortfolio)
         private readonly masterPortfolioRepository: Repository<MasterPortfolio>,
+        @InjectRepository(MasterPortfolioAI)
+        private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
         private readonly llmService: LLMService
     ) {}
 
@@ -71,6 +75,14 @@ export class MasterPortfoliosService {
 
     // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(userId: number, projectId: number) {
+        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { project: { id: projectId }, user: { id: userId } },
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+
         // 임시로 더미 데이터 사용
         let projectData: any;
         const generatedPortfolio: MasterPortfolioOutput =
@@ -79,29 +91,36 @@ export class MasterPortfoliosService {
             throw new InternalServerErrorException('Failed to generate master portfolio');
         }
 
-        const updateData: UpdateMasterPortfolioDto = {
+        // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
+        const createdPortfolio = this.masterPortfolioAIRepository.create({
+            user: { id: userId },
+            project: { id: projectId },
             detailInfo: generatedPortfolio.detailInfo,
             assignedTask: generatedPortfolio.assignedTask,
             keyAchievement: generatedPortfolio.keyAchievement,
             insight: generatedPortfolio.insight,
-        };
+        });
+        await this.masterPortfolioAIRepository.save(createdPortfolio);
 
-        // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
-        // affected 검증 필요
-        await this.masterPortfolioRepository.update(
-            {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-            updateData
-        );
-        const generatedPortfolioResponse = await this.masterPortfolioRepository.findOne({
+        // 생성된 마스터 포트폴리오 AI 결과를 반환합니다.
+        const generatedPortfolioResponse = await this.masterPortfolioAIRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
         });
         if (!generatedPortfolioResponse) {
-            throw new MasterPortfolioNotFoundException();
+            throw new MasterPortfolioAINotFoundException();
         }
-        return MasterPortfolioResponseDto.from(generatedPortfolioResponse);
+        return MasterPortfolioAIResponseDto.from(generatedPortfolioResponse);
+    }
+
+    // 마스터 포트폴리오 AI 생성 결과 조회
+    async getMasterPortfolioGenerationResult(userId: number, projectId: number) {
+        const masterPortfolioAI = await this.masterPortfolioAIRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!masterPortfolioAI) {
+            throw new MasterPortfolioAINotFoundException();
+        }
+        return MasterPortfolioAIResponseDto.from(masterPortfolioAI);
     }
 
     // 프로젝트 종료 쪽으로 이동 후, 삭제 예정
