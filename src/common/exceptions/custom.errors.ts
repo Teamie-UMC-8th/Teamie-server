@@ -128,6 +128,12 @@ export class MasterPortfolioNotFoundException extends CustomHttpException {
     }
 }
 
+export class TaskFileNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.STEP_NOT_FOUND, '업무파일을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
 //409
 export class PostsExceededException extends CustomHttpException {
     constructor(data?: any) {

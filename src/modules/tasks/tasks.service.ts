@@ -21,6 +21,7 @@ import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
 import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
 import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
+import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
 import { Status } from '../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
@@ -98,7 +99,7 @@ export class TasksService {
     async updateTask(dto: UpdateTaskRequestDto, userId: number, taskId: number) {
         const task = await this.taskRepository.findOne({
             where: { id: taskId },
-            relations: ['taskFiles', 'step', 'step.project'],
+            relations: ['step', 'step.project'],
         });
 
         if (!task) throw new TaskNotFoundException();
@@ -139,67 +140,12 @@ export class TasksService {
             await this.managerRepository.save(manager);
         }
 
-        // 기존 taskFiles 조회
-        const prevFiles = await this.taskFileRepository.find({
-            where: { task: { id: updatedTask.id } },
-        });
-
-        // 삭제할 파일 URL 계산
-        const keepUrls = dto.existingFileUrls || [];
-        const toDelete = prevFiles.filter((file) => !keepUrls.includes(file.fileUrl));
-
-        // 1. DB 및 S3에서 제거
-        for (const file of toDelete) {
-            try {
-                const key = file.fileUrl.split('.amazonaws.com/')[1];
-                if (!key) {
-                    continue;
-                }
-                await this.uploadService.deleteFile(key); // S3 삭제
-                console.log(`[S3] 삭제 완료: ${key}`);
-
-                await this.taskFileRepository.delete({ id: file.id }); // DB 삭제
-            } catch (err) {
-                console.error(`[파일 삭제 실패] fileUrl: ${file.fileUrl}`);
-                console.error(err);
-                continue;
-            }
-        }
-
-        // 2. 새 파일 업로드 및 DB 저장
-        if (dto.files && dto.files.length > 0) {
-            for (const file of dto.files) {
-                const key = await this.uploadService.uploadFile(file);
-                const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-
-                const taskFile = this.taskFileRepository.create({
-                    fileUrl,
-                    task: updatedTask,
-                    user: { id: userId },
-                });
-
-                await this.taskFileRepository.save(taskFile);
-            }
-        }
-
-        const taskFiles = await this.taskFileRepository.find({
-            where: { task: { id: updatedTask.id } },
-        });
-
-        const fullTask = await this.taskRepository.findOne({
-            where: { id: updatedTask.id },
-            relations: ['step', 'step.project'],
-        });
-
-        if (!fullTask) throw new TaskNotFoundException();
-
-        fullTask.taskFiles = taskFiles;
         const managers = await this.managerRepository.find({
             where: { task: { id: updatedTask.id } },
             relations: ['user'],
         });
 
-        return UpdateTaskResponseDto.from(fullTask, managers);
+        return UpdateTaskResponseDto.from(updatedTask, managers);
     }
     async deleteTask(userId: number, taskId: number): Promise<DeleteTaskResponseDto> {
         const task = await this.taskRepository.findOne({
@@ -406,5 +352,40 @@ export class TasksService {
 
         // 4. 응답 반환
         return CreateCommentResponseDto.from(saved);
+    }
+
+    async createTaskFile(
+        userId: number,
+        taskId: number,
+        file: Express.Multer.File
+    ): Promise<CreateTaskFileResponseDto> {
+        const task = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .leftJoin('step.project', 'project')
+            .select(['task.id', 'step.id', 'project.id AS project_id'])
+            .where('task.id = :taskId', { taskId })
+            .getRawOne();
+        if (!task) throw new TaskNotFoundException();
+
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: task.project_id },
+            },
+        });
+        if (!userProject) throw new ProjectForbiddenException();
+
+        const key = await this.uploadService.uploadFile(file);
+        const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+        const taskFile = this.taskFileRepository.create({
+            fileUrl,
+            task,
+            user: { id: userId },
+        });
+
+        const saved = await this.taskFileRepository.save(taskFile);
+        return CreateTaskFileResponseDto.fromEntity(saved);
     }
 }
