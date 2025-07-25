@@ -29,7 +29,7 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
-import { ChangeLeaderResponseDto } from './dtos/change-leader.dto';
+import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -301,13 +301,15 @@ export class ProjectsService {
 
     async changeProjectLeader(
         projectId: number,
-        userId: number,
+        dto: ChangeLeaderDto,
         currentUserId: number
     ): Promise<CommonResponse<ChangeLeaderResponseDto>> {
         await this.assertProjectIsEditable(projectId);
+        const { newLeaderId } = dto;
+        const userId = newLeaderId;
 
         // 1) 자기 자신 지목 방지
-        if (userId === currentUserId) {
+        if (currentUserId === userId) {
             throw new ForbiddenSelfAssignException();
         }
 

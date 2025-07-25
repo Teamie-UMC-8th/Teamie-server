@@ -201,7 +201,7 @@ export class ProjectsController {
         return await this.projectsService.deletePost(postId, userId, projectId);
     }
 
-    @Patch(':projectId/leaders')
+    @Patch(':projectId/leader')
     @ApiOperation({
         summary: '프로젝트 팀장 변경',
         description: '프로젝트의 팀장을 변경합니다.',
@@ -219,9 +219,9 @@ export class ProjectsController {
     @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
     async changeProjectLeader(
         @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
-        @Body('userId', ParseIntPipe) userId: number,
+        @Body() dto: ChangeLeaderDto,
         @User('id') currentUserId: number
     ) {
-        return await this.projectsService.changeProjectLeader(projectId, userId, currentUserId);
+        return await this.projectsService.changeProjectLeader(projectId, dto, currentUserId);
     }
 }
