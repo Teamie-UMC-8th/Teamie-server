@@ -171,27 +171,21 @@ export class ProjectsService {
         // 프로젝트 완료 상태로 변경
         project.isCompleted = true;
         project.completedAt = new Date(); // 현재 시간으로 설정
-        const members = await this.userProjectRepository.find({
-            where: { project: { id: projectId } },
-            relations: ['user'],
-        });
+        // projectId 에 속한 userId들만 조회
+        const rawMembers = await this.userProjectRepository
+            .createQueryBuilder('up')
+            .select('up.userId', 'userId') // userId 컬럼만
+            .where('up.projectId = :projectId', { projectId })
+            .getRawMany<{ userId: number }>();
 
-        // 각 멤버에 대해 personalRecall 생성
-        for (const member of members) {
+        // 각 userId 에 대해 personalRecall + masterPortfolio 생성
+        for (const { userId } of rawMembers) {
             await this.personalRecallRepository.save({
-                user: { id: member.user.id },
+                user: { id: userId },
                 project: { id: projectId },
-                q1: '',
-                q2: '',
-                q3: '',
             });
+            await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
         }
-
-        // 각 멤버에 대해 master-portfolio 생성
-        for (const member of members) {
-            await this.masterPortfoliosService.createMasterPortfolio(member.id, projectId);
-        }
-
         return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
     }
 
