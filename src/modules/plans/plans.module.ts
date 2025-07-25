@@ -7,10 +7,7 @@ import { Plan } from './plans.entity';
 import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Plan]),
-        ProjectsModule
-    ],
+    imports: [TypeOrmModule.forFeature([Plan]), ProjectsModule],
     controllers: [PlansController],
     providers: [PlansGateway, PlansService],
 })

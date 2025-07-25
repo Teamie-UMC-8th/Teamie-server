@@ -33,9 +33,9 @@ export class PlansService {
         const plan = await this.plansRepository.findOne({
             where: { id: planId },
             relations: { project: true },
-            select: { id: true }
-        })
-        if (!plan) throw new PlanNotFoundException({planId: Number(planId)});
+            select: { id: true },
+        });
+        if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
         return await this.projectsService.checkProjectMembership(userId, projectId);
     }

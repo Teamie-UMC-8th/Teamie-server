@@ -1,11 +1,11 @@
-import { describe } from "node:test";
-import { PlansController } from "./plans.controller";
-import { PlansService } from "./plans.service";
-import { TestingModule, Test } from "@nestjs/testing";
-import { PlanDetails } from "./dtos/plan-details.dto";
-import { ProjectForbiddenException } from "src/common/exceptions/custom.errors";
-import { PlansGateway } from "./gateways/plans.gateway";
-import { Plan } from "./plans.entity";
+import { describe } from 'node:test';
+import { PlansController } from './plans.controller';
+import { PlansService } from './plans.service';
+import { TestingModule, Test } from '@nestjs/testing';
+import { PlanDetails } from './dtos/plan-details.dto';
+import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
+import { PlansGateway } from './gateways/plans.gateway';
+import { Plan } from './plans.entity';
 
 describe('PlansController', () => {
     let controller: PlansController;
@@ -25,7 +25,7 @@ describe('PlansController', () => {
         attendees: [],
         memo: 'test',
         writers: [],
-    }
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -38,7 +38,7 @@ describe('PlansController', () => {
                 {
                     provide: PlansGateway,
                     useValue: {},
-                }
+                },
             ],
         }).compile();
 
@@ -51,24 +51,24 @@ describe('PlansController', () => {
     });
 
     // 권한 O, 정상 반환
-    it('should return PlanDetails when user has permission', async() => {
+    it('should return PlanDetails when user has permission', async () => {
         const mockPlanDetails = PlanDetails.from(mockPlanEntity as any);
         mockPlansService.checkPermission.mockResolvedValue(true);
         mockPlansService.getDetails.mockResolvedValue(mockPlanDetails);
 
         const result = await controller.getDetails(1, 10);
 
-        expect(mockPlansService.checkPermission).toHaveBeenCalledWith(10,1);
+        expect(mockPlansService.checkPermission).toHaveBeenCalledWith(10, 1);
         expect(mockPlansService.getDetails).toHaveBeenCalledWith(1);
         expect(result).toBe(mockPlanDetails);
     });
 
     // 권한 X, 예외 반환
-    it('should throw ProjectForbiddenException when user has no permission', async() => {
+    it('should throw ProjectForbiddenException when user has no permission', async () => {
         mockPlansService.checkPermission.mockResolvedValue(false);
 
         await expect(controller.getDetails(1, 10)).rejects.toThrow(ProjectForbiddenException);
-        expect(mockPlansService.checkPermission).toHaveBeenCalledWith(10,1);
+        expect(mockPlansService.checkPermission).toHaveBeenCalledWith(10, 1);
         expect(mockPlansService.getDetails).not.toHaveBeenCalled();
     });
 });

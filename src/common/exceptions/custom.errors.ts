@@ -138,7 +138,6 @@ export class MasterPortfolioNotFoundException extends CustomHttpException {
     }
 }
 
-
 export class MasterPortfolioAINotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -146,7 +145,7 @@ export class MasterPortfolioAINotFoundException extends CustomHttpException {
             '마스터 포트폴리오 AI 생성 결과를 찾을 수 없습니다.',
             HttpStatus.NOT_FOUND,
             data
-          );
+        );
     }
 }
 
@@ -166,7 +165,6 @@ export class CommentNotFoundException extends CustomHttpException {
         super(ErrorCode.COMMENT_NOT_FOUND, '댓글을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
     }
 }
-
 
 //409
 export class PostsExceededException extends CustomHttpException {
