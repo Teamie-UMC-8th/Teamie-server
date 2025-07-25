@@ -35,8 +35,7 @@ import {
     ProjectForbiddenException,
     ProjectUpdateForbiddenException,
 } from 'src/common/exceptions/custom.errors';
-import { CreateStepDto } from '../steps/dtos/create-step.dto';
-import { StepWithTaskDto } from '../steps/dtos/step-with-task.dto';
+import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
 import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { CommonResponse } from 'src/common/response/common-response.dto';
@@ -136,14 +135,14 @@ export class ProjectsController {
         return await this.projectsService.completeProject(projectId);
     }
 
-    @Post(':projectId/stepts')
+    @Post(':projectId/steps')
     @ApiOperation({
         summary: '프로젝트 step 생성',
-        description: '프로젝트에 새로운 stpe을 추가합니다.',
+        description: '프로젝트에 새로운 step을 추가합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiBody({ type: CreateStepDto })
-    @ApiCommonResponse(StepWithTaskDto)
+    @ApiCommonResponse(CreateStepResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     async createStep(
         @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
