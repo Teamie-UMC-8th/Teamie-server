@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import {
     Cursor,
@@ -17,6 +17,7 @@ import {
 } from 'src/common/response/swagger-response.helper';
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
+import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 
 @ApiTags('MasterPortfolios')
 @ApiBearerAuth('access-token')
