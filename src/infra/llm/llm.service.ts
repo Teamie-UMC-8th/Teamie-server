@@ -4,6 +4,7 @@ import { QuestionResponseFormat } from './formats/question-response.format';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { MasterPortfolioResponseFormat } from './formats/master-portfolio-response.format';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
+import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class LLMService {
@@ -51,7 +52,7 @@ export class LLMService {
         try {
             questionPrompt = await this.promptLoader.load('question.prompt.md');
         } catch (e) {
-            throw new Error('Failed to load question generation prompt');
+            throw new PromptLoadingException('question.prompt.md');
         }
 
         const model =
@@ -84,7 +85,7 @@ export class LLMService {
             masterPortfolioPrompt = await this.promptLoader.load('master-portfolio.prompt.md');
             projectData = await this.promptLoader.load('dummy-input.json');
         } catch (e) {
-            throw new Error('Failed to load master portfolio prompt');
+            throw new PromptLoadingException('master-portfolio.prompt.md');
         }
         masterPortfolioPrompt = masterPortfolioPrompt.replace(
             '{project_data}',

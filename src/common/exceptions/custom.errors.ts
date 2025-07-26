@@ -257,3 +257,14 @@ export class RedisDataParseException extends CustomHttpException {
         );
     }
 }
+
+export class PromptLoadingException extends CustomHttpException {
+    constructor(filename: string, data?: any) {
+        super(
+            ErrorCode.PROMPT_LOADING_ERROR,
+            `프롬프트 파일을 로딩할 수 없습니다: ${filename}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
