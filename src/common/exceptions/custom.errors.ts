@@ -80,6 +80,18 @@ export class NotPostAuthorException extends CustomHttpException {
         );
     }
 }
+
+export class ForbiddenSelfAssignException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_SELF_ASSIGN,
+            '자기 자신을 팀장으로 지목할 수 없습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
@@ -183,6 +195,23 @@ export class PostsExceededException extends CustomHttpException {
 export class UserNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.USER_NOT_FOUND, '사용자를 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
+export class AlreadyLeaderException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.ALREDY_LEADER, '이미 팀장인 사용자입니다.', HttpStatus.CONFLICT, data);
+    }
+}
+
+export class AssigneeNotMemberException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.ASSIGNEE_NOT_MEMBER,
+            '해당 사람은 프로젝트 멤버가 아닙니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
     }
 }
 

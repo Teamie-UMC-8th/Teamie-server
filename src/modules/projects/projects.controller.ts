@@ -41,6 +41,7 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
+import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -198,5 +199,29 @@ export class ProjectsController {
         @User('id') userId: number
     ) {
         return await this.projectsService.deletePost(postId, userId, projectId);
+    }
+
+    @Patch(':projectId/leader')
+    @ApiOperation({
+        summary: '프로젝트 팀장 변경',
+        description: '프로젝트의 팀장을 변경합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: ChangeLeaderDto })
+    @ApiCommonResponse(ChangeLeaderResponseDto)
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_SELF_ASSIGN',
+        '자기 자신을 팀장으로 지목할 수 없습니다.',
+        403
+    )
+    @ApiCommonErrorResponse('ASIGNEE_NOT_MEMBER', '해당 사람은 프로젝트 멤버가 아닙니다.', 409)
+    @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
+    async changeProjectLeader(
+        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Body() dto: ChangeLeaderDto,
+        @User('id') currentUserId: number
+    ) {
+        return await this.projectsService.changeProjectLeader(projectId, dto, currentUserId);
     }
 }
