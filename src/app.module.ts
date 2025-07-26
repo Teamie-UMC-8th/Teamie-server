@@ -12,7 +12,7 @@ import { PersonalRecallsModule } from './modules/personal-recalls/personal-recal
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { S3TestController } from './infra/upload/upload.controller';
 import { StepsModule } from './modules/steps/steps.module';
 import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';

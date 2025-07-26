@@ -15,7 +15,12 @@ import {
 import { PlanDetails } from '../dtos/plan-details.dto';
 import { PlansService } from '../plans.service';
 import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
+import { UseFilters, UseGuards } from '@nestjs/common';
+import { WsAuthGuard } from 'src/modules/auth/guards/ws-auth.guard';
+import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
 
+@UseFilters(new WebSocketExceptionFilter())
+@UseGuards(WsAuthGuard)
 @WebSocketGateway({
     namespace: '/plans',
     cors: { origin: '*' },
@@ -36,6 +41,7 @@ export class PlansGateway {
     //일정 상세페이지 접속
     @SubscribeMessage('join')
     handleJoin(@MessageBody() payload: { planId: number }, @ConnectedSocket() client: Socket) {
+        console.log(client.data.userId);
         const planId = payload.planId;
         client.join(`plan-${planId}`);
         console.log(`join to plan-${planId}`);
@@ -52,7 +58,6 @@ export class PlansGateway {
             return RealTimeMessage.of(RealTimeType.SYNCED, RealTimeEntity.PLAN, detail);
         } catch (error) {
             if (error instanceof PlanNotFoundException) {
-                client.emit('error', { message: error.message });
                 throw new WsException(error.message);
             }
             throw error;
