@@ -18,7 +18,6 @@ import {
     RedisDataParseException,
     PostNotFoundException,
     NotPostAuthorException,
-    NotMemberException,
     AlreadyLeaderException,
     ForbiddenSelfAssignException,
     AssigneeNotMemberException,
