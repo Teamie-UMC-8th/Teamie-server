@@ -1,5 +1,11 @@
-import { SetMetadata } from '@nestjs/common';
+import { applyDecorators, UseInterceptors } from '@nestjs/common';
+import { TransactionInterceptor } from '../interceptors/transaction.interceptor';
+import { Request } from 'express';
 
-export const TRANSACTIONAL_KEY = 'transactional';
+export function Transactional() {
+    return applyDecorators(UseInterceptors(TransactionInterceptor));
+}
 
-export const Transactional = () => SetMetadata(TRANSACTIONAL_KEY, true);
+export interface TransactionalRequest extends Request {
+    queryRunner: import('typeorm').QueryRunner;
+}

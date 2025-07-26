@@ -11,7 +11,7 @@ import type { RedisClientOptions } from 'redis';
 import { PersonalRecallsModule } from './modules/personal-recalls/personal-recalls.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
 import { S3TestController } from './infra/upload/upload.controller';
 import { StepsModule } from './modules/steps/steps.module';
@@ -57,11 +57,7 @@ import { TransactionInterceptor } from './common/interceptors/transaction.interc
         {
             provide: APP_GUARD,
             useClass: JwtAuthGuard,
-        },
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: TransactionInterceptor,
-        },
+        }
     ],
 })
 export class AppModule {}

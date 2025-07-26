@@ -2,7 +2,6 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Reflector } from '@nestjs/core';
 import { catchError, finalize, Observable, tap } from 'rxjs';
 import { DataSource, QueryRunner } from 'typeorm';
-import { TRANSACTIONAL_KEY } from '../decorators/transaction.decorator';
 
 @Injectable()
 export class TransactionInterceptor implements NestInterceptor {
@@ -11,14 +10,6 @@ export class TransactionInterceptor implements NestInterceptor {
         private readonly reflector: Reflector
     ) {}
     async intercept(context: ExecutionContext, next: CallHandler<any>): Promise<Observable<any>> {
-        const isTransactional = this.reflector.get<boolean>(
-            TRANSACTIONAL_KEY,
-            context.getHandler()
-        );
-        if (!isTransactional) {
-            return next.handle(); // 트랜잭션이 필요 없는 경우 그냥 다음 핸들러로 넘긴다.
-        }
-
         // 현재 실행 컨텍스트에 따라 request 또는 client 객체를 가져온다.
         let contextObject: any;
         const contextType = context.getType();
@@ -32,22 +23,24 @@ export class TransactionInterceptor implements NestInterceptor {
         }
 
         const qr: QueryRunner = this.dataSource.createQueryRunner();
+
         await qr.connect();
         await qr.startTransaction();
 
+        // contextObject에 queryRunner를 추가하여 서비스에서 사용할 수 있도록 한다.
         contextObject.queryRunner = qr;
 
         return next.handle().pipe(
-            catchError(async (error) => {
-                await qr.rollbackTransaction();
-                throw error;
-            }),
             tap(async () => {
+                // 성공적으로 처리된 경우 트랜잭션을 커밋한다.
                 await qr.commitTransaction();
-            }),
-            finalize(async () => {
                 await qr.release();
-                delete contextObject.queryRunner;
+            }),
+            catchError(async (error) => {
+                // 에러가 발생한 경우 트랜잭션을 롤백한다.
+                await qr.rollbackTransaction();
+                await qr.release();
+                throw error;
             })
         );
     }
