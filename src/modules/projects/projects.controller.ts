@@ -28,8 +28,6 @@ import {
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
-import { IsProjectLeaderPipe, ValidateProjectAccessPipe } from 'src/common/pipes/project.pipe';
-import { IsProjectLeader, ProjectIdWithUser } from 'src/common/decorators/project.decorator';
 import {
     InvalidInvitecodeException,
     ProjectForbiddenException,
@@ -74,7 +72,7 @@ export class ProjectsController {
             await this.projectsService.addUserToProject(userId, projectId, 'member');
         }
 
-        return await this.projectsService.getProjectFullData(projectId);
+        return await this.projectsService.getProjectFullData(userId, projectId);
     }
 
     @Get('/:projectId')
@@ -91,10 +89,10 @@ export class ProjectsController {
         403
     )
     async getProjectFullData(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return await this.projectsService.getProjectFullData(projectId);
+        return await this.projectsService.getProjectFullData(userId, projectId);
     }
 
     @Patch('/:projectId')
@@ -105,7 +103,7 @@ export class ProjectsController {
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '해당 항목을 수정할 권한이 없습니다.', 403)
     async updateProject(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: UpdateProjectDto,
         @User('id') userId: number
     ) {
@@ -116,7 +114,7 @@ export class ProjectsController {
             throw new ProjectUpdateForbiddenException();
         }
 
-        return await this.projectsService.updateProject(projectId, dto);
+        return await this.projectsService.updateProject(userId, projectId, dto);
     }
 
     @Patch(':projectId/complete')
@@ -130,10 +128,10 @@ export class ProjectsController {
         403
     )
     async completeProject(
-        @IsProjectLeader('projectId', IsProjectLeaderPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return await this.projectsService.completeProject(projectId);
+        return await this.projectsService.completeProject(userId, projectId);
     }
 
     @Post(':projectId/steps')
@@ -146,7 +144,7 @@ export class ProjectsController {
     @ApiCommonResponse(CreateStepResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     async createStep(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: CreateStepDto,
         @User('id') userId: number
     ) {
@@ -164,7 +162,7 @@ export class ProjectsController {
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse('POSTS_EXCEEDED', '포스트잇은 10개까지 생성될 수 있습니다.', 409)
     async createPost(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: CreatePostDto,
         @User('id') userId: number
     ) {
@@ -193,7 +191,7 @@ export class ProjectsController {
         500
     )
     async deletePost(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @Param('postId', ParseIntPipe) postId: number,
         @User('id') userId: number
     ) {
@@ -217,7 +215,7 @@ export class ProjectsController {
     @ApiCommonErrorResponse('ASIGNEE_NOT_MEMBER', '해당 사람은 프로젝트 멤버가 아닙니다.', 409)
     @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
     async changeProjectLeader(
-        @ProjectIdWithUser('projectId', ValidateProjectAccessPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: ChangeLeaderDto,
         @User('id') currentUserId: number
     ) {

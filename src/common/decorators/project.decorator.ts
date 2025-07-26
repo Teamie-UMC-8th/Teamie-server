@@ -7,7 +7,7 @@ export const ProjectIdWithUser = createParamDecorator((data: unknown, ctx: Execu
     return { projectId, userId };
 });
 
-export const IsProjectLeader = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
+export const Param = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     return {
         projectId: Number(request.params.projectId),
