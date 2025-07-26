@@ -3,10 +3,8 @@ import { Status } from '../../../common/enums/status.enum';
 import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber } from 'class-validator';
 import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
 import { Type } from 'class-transformer';
-import { TaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { Task } from '../tasks.entity';
 import { Manager } from '../../mappings/managers/managers.entity';
-import { TaskFile } from '../../mappings/task-files/task-files.entity';
 export class UpdateTaskRequestDto {
     @ApiProperty({
         example: 'api명세서 작성',
@@ -54,14 +52,6 @@ export class UpdateTaskRequestDto {
     })
     existingFileUrls?: string[];
 
-    @IsOptional()
-    @ApiProperty({
-        type: 'array',
-        items: { type: 'string', format: 'binary' },
-        description: '새로 추가된 파일들 (FormData로 전송)',
-    })
-    files?: Express.Multer.File[];
-
     @ApiProperty({
         example: 5,
         description: '이동할 step의 ID',
@@ -105,21 +95,12 @@ export class UpdateTaskResponseDto {
     managers: ManagerResponseDto[];
 
     @ApiProperty({
-        type: [TaskFileResponseDto],
-        description: '첨부파일 목록',
-    })
-    files: TaskFileResponseDto[];
-
-    @ApiProperty({
         example: 5,
         description: '해당 업무가 속한 step의 ID',
     })
     stepId: number;
 
-    static from(
-        task: Task & { taskFiles: TaskFile[] },
-        managers: Manager[]
-    ): UpdateTaskResponseDto {
+    static from(task: Task, managers: Manager[]): UpdateTaskResponseDto {
         const dto = new UpdateTaskResponseDto();
         dto.name = task.name;
         dto.deadline = task.deadline;
@@ -128,9 +109,6 @@ export class UpdateTaskResponseDto {
         dto.managers = managers.map((m) => ({
             userId: m.user.id,
             userName: m.user.name,
-        }));
-        dto.files = task.taskFiles.map((f) => ({
-            fileUrl: f.fileUrl,
         }));
         dto.stepId = task.step.id;
         return dto;
