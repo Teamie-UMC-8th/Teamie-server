@@ -57,7 +57,7 @@ import { TransactionInterceptor } from './common/interceptors/transaction.interc
         {
             provide: APP_GUARD,
             useClass: JwtAuthGuard,
-        }
+        },
     ],
 })
 export class AppModule {}

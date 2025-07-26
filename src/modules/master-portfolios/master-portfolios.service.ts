@@ -165,18 +165,21 @@ export class MasterPortfoliosService {
 
     // 마스터 포트폴리오 업데이트
     async updateMasterPortfolio(
+        qr: QueryRunner,
         userId: number,
         projectId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
-        await this.masterPortfolioRepository.update(
+        await qr.manager.update(
+            MasterPortfolio,
             {
                 user: { id: userId },
                 project: { id: projectId },
             },
             updateDataDto
         );
-        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+
+        const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
             where: { user: { id: userId }, project: { id: projectId } },
         });
         if (!masterPortfolio) {

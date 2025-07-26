@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query,
+    Req,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
@@ -70,7 +80,11 @@ export class MasterPortfoliosController {
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.generateMasterPortfolio(req.queryRunner, userId, projectId);
+        return this.masterPortfoliosService.generateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId
+        );
     }
 
     @Get(':projectId/generation-result')
@@ -124,12 +138,19 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async updateMasterPortfolio(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
-        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
+        return this.masterPortfoliosService.updateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId,
+            updateDataDto
+        );
     }
 
     @Get('/me')
