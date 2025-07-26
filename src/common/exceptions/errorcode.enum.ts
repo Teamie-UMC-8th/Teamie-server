@@ -35,4 +35,6 @@ export enum ErrorCode {
     //댓글
     COMMENT_NOT_FOUND = 'COMMENT4041',
     FORBIDDEN_COMMENT_FOR_UPDATE = 'COMMENT4031',
+    // LLM
+    PROMPT_LOADING_ERROR = 'LLM5001',
 }
