@@ -19,6 +19,7 @@ import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-r
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { Transactional } from 'src/common/decorators/transaction.decorator';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -33,6 +34,7 @@ export class MasterPortfoliosService {
     ) {}
 
     // 마스터 포트폴리오 질문 생성
+    @Transactional()
     async createQuestions(userId: number, projectId: number) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
@@ -44,7 +46,11 @@ export class MasterPortfoliosService {
         const masterPortfolioId = masterPortfolio.id;
 
         // LLM을 호출하여 질문을 생성합니다.
-        const questions: Array<Question> = await this.llmService.generateQuestions();
+        // const questions: Array<Question> = await this.llmService.generateQuestions();
+        const questions: Array<Question> = [
+            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 1' },
+            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 2' },
+        ];
 
         // 생성된 질문들을 데이터베이스에 저장합니다.
         const questionEntities: QuestionResponseDto[] = [];
@@ -130,7 +136,7 @@ export class MasterPortfoliosService {
         return MasterPortfolioAIResponseDto.from(masterPortfolioAI);
     }
 
-    // 프로젝트 종료 쪽으로 이동 후, 삭제 예정
+    // 마스터 포트폴리오 생성 (project 종료할 때 사용)
     async createMasterPortfolio(userId: number, projectId: number) {
         const existingPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
