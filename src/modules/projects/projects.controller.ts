@@ -28,11 +28,6 @@ import {
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
-import {
-    InvalidInvitecodeException,
-    ProjectForbiddenException,
-    ProjectUpdateForbiddenException,
-} from 'src/common/exceptions/custom.errors';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
 import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
@@ -63,16 +58,7 @@ export class ProjectsController {
     @ApiCommonResponse(AllProjectResponseDto)
     @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
     async joinProject(@Query('inviteCode') inviteCode: string, @User('id') userId: number) {
-        const project = await this.projectsService.getProjectByInviteCode(inviteCode);
-        if (!project) throw new InvalidInvitecodeException();
-
-        const projectId = project.id;
-        const alreadyJoined = await this.projectsService.isUserInProject(userId, projectId);
-        if (!alreadyJoined) {
-            await this.projectsService.addUserToProject(userId, projectId, 'member');
-        }
-
-        return await this.projectsService.getProjectFullData(userId, projectId);
+        return await this.projectsService.joinProject(userId, inviteCode);
     }
 
     @Get('/:projectId')
@@ -107,13 +93,6 @@ export class ProjectsController {
         @Body() dto: UpdateProjectDto,
         @User('id') userId: number
     ) {
-        const isLead = await this.projectsService.checkProjectLeader(userId, projectId);
-
-        // rule, goal은 팀장만 수정 가능
-        if ((!isLead && dto.rule !== undefined) || (!isLead && dto.goal !== undefined)) {
-            throw new ProjectUpdateForbiddenException();
-        }
-
         return await this.projectsService.updateProject(userId, projectId, dto);
     }
 

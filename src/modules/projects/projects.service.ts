@@ -23,6 +23,7 @@ import {
     AssigneeNotMemberException,
     ProjectForbiddenException,
     ProjectUpdateForbiddenException,
+    InvalidInvitecodeException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -103,27 +104,17 @@ export class ProjectsService {
         return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
     }
 
-    async getProjectByInviteCode(inviteCode: string): Promise<Project | null> {
-        const key = `invite:${inviteCode}`;
-        const projectId = await this.redis.get(key);
-        const project = await this.projectRepository.findOne({ where: { id: Number(projectId) } });
-        return project;
-    }
+    async joinProject(userId: number, inviteCode: string): Promise<CommonResponse> {
+        const projectId = await this.getProjectByInviteCode(inviteCode);
+        if (!projectId) throw new InvalidInvitecodeException();
 
-    async isUserInProject(userId: number, projectId: number): Promise<boolean> {
-        return await this.userProjectRepository.exists({
-            where: { user: { id: userId }, project: { id: projectId } },
+        const alreadyJoined = await this.isUserInProject(userId, projectId);
+        if (!alreadyJoined) {
+            await this.addUserToProject(userId, projectId, 'member');
+        }
+        return CommonResponse.success({
+            message: `${userId}님이 ${projectId} 프로젝트에 참여되었습니다.`,
         });
-    }
-
-    async addUserToProject(userId: number, projectId: number, role: string): Promise<void> {
-        const userProject = this.userProjectRepository.create({
-            user: { id: userId },
-            project: { id: projectId },
-            permission: projectPermission.MEMBER,
-            role,
-        });
-        await this.userProjectRepository.save(userProject);
     }
 
     async getProjectFullData(
@@ -156,6 +147,13 @@ export class ProjectsService {
     ): Promise<CommonResponse<AllProjectResponseDto>> {
         //프로젝트 존재 검사
         const project = await this.assertProjectIsEditable(projectId);
+        //프로젝트 팀장 여부
+        const isLead = await this.checkProjectLeader(userId, projectId);
+
+        // rule, goal은 팀장만 수정 가능
+        if ((!isLead && dto.rule !== undefined) || (!isLead && dto.goal !== undefined)) {
+            throw new ProjectUpdateForbiddenException();
+        }
 
         // 해당 필드들만 조건부로 갱신
         if (dto.name !== undefined) project.name = dto.name;
@@ -388,7 +386,7 @@ export class ProjectsService {
         return project;
     }
     // 프로젝트 멤버 확인 + 팀장 권한 확인
-    async checkProjectLeader(userId: number, projectId: number) {
+    private async checkProjectLeader(userId: number, projectId: number) {
         const mapping = await this.userProjectRepository
             .createQueryBuilder('up')
             .select(['up.permission']) // permission만 조회
@@ -407,7 +405,7 @@ export class ProjectsService {
     }
 
     // 프로젝트 멤버인지만 확인
-    async checkProjectMember(userId: number, projectId: number) {
+    private async checkProjectMember(userId: number, projectId: number) {
         const mapping = await this.userProjectRepository.findOne({
             where: {
                 user: { id: userId },
@@ -415,6 +413,34 @@ export class ProjectsService {
             },
         });
         if (!mapping) throw new ProjectForbiddenException();
+    }
+
+    // 참여코드로 프로젝트 id 조회
+    private async getProjectByInviteCode(inviteCode: string) {
+        const key = `invite:${inviteCode}`;
+        const projectIdStr = await this.redis.get(key);
+        if (projectIdStr == null) return null; //키가 없으면 null 리턴
+        // 숫자로 변환
+        const projectId = Number(projectIdStr);
+        return projectId;
+    }
+
+    // user와 project 매핑 존재 확인
+    private async isUserInProject(userId: number, projectId: number): Promise<boolean> {
+        return await this.userProjectRepository.exists({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+    }
+
+    // user를 project 멤버로 추가
+    private async addUserToProject(userId: number, projectId: number, role: string): Promise<void> {
+        const userProject = this.userProjectRepository.create({
+            user: { id: userId },
+            project: { id: projectId },
+            permission: projectPermission.MEMBER,
+            role,
+        });
+        await this.userProjectRepository.save(userProject);
     }
 }
 
