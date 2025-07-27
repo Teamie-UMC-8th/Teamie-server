@@ -19,6 +19,7 @@ import { MasterPortfoliosModule } from './modules/master-portfolios/master-portf
 import { TaskFilesModule } from './modules/mappings/task-files/task-files.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 @Module({
     imports: [
         ConfigModule.forRoot({
