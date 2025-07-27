@@ -81,4 +81,10 @@ export class TaskDashboardStatusViewDto {
         description: '진행 상황별로 묶인 업무 정보',
     })
     statusGroups: StatusGroupDto[];
+
+    @ApiProperty({
+        example: 62,
+        description: '해당 프로젝트의 전체 업무 개수',
+    })
+    totalCount: number;
 }
