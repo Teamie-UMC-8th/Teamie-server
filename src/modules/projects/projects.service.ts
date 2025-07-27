@@ -373,20 +373,20 @@ export class ProjectsService {
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
-    private async assertProjectIsEditable(projectId: number): Promise<Project> {
+    async assertProjectIsEditable(projectId: number): Promise<Project> {
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
         if (!project) throw new ProjectNotFoundException();
         if (project.isCompleted) throw new AlreadyProjectCompletedException();
         return project;
     }
     // 프로젝트 존재 여부 확인
-    private async assertProjectExists(projectId: number): Promise<Project> {
+    async assertProjectExists(projectId: number): Promise<Project> {
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
         if (!project) throw new ProjectNotFoundException();
         return project;
     }
     // 프로젝트 멤버 확인 + 팀장 권한 확인
-    private async checkProjectLeader(userId: number, projectId: number) {
+    async checkProjectLeader(userId: number, projectId: number) {
         const mapping = await this.userProjectRepository
             .createQueryBuilder('up')
             .select(['up.permission']) // permission만 조회
@@ -405,7 +405,7 @@ export class ProjectsService {
     }
 
     // 프로젝트 멤버인지만 확인
-    private async checkProjectMember(userId: number, projectId: number) {
+    async checkProjectMember(userId: number, projectId: number) {
         const mapping = await this.userProjectRepository.findOne({
             where: {
                 user: { id: userId },
@@ -413,6 +413,7 @@ export class ProjectsService {
             },
         });
         if (!mapping) throw new ProjectForbiddenException();
+        return !!mapping;
     }
 
     // 참여코드로 프로젝트 id 조회
