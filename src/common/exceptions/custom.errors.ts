@@ -92,7 +92,7 @@ export class ForbiddenSelfAssignException extends CustomHttpException {
     }
 }
 
-export class StepDeleteForBiddenException extends CustomHttpException{
+export class StepDeleteForBiddenException extends CustomHttpException {
     constructor(data?: any) {
         super(
             ErrorCode.STEP_DELETE_FORBIDDEN,

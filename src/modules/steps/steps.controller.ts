@@ -53,13 +53,13 @@ export class StepsController {
 
     @Delete('/:stepId')
     @ApiOperation({
-        summary:'스텝 삭제',
-        description:'업무의 step을 수정합니다.'
+        summary: '스텝 삭제',
+        description: '업무의 step을 수정합니다.',
     })
     async DeleteTaskResponseDto(
-        @Param('stepId', ParseIntPipe) stepId:number,
-        @User() userId:number
-    ):Promise<CommonResponse>{
+        @Param('stepId', ParseIntPipe) stepId: number,
+        @User() userId: number
+    ): Promise<CommonResponse> {
         return this.stepsService.deleteStep(stepId);
-}
+    }
 }
