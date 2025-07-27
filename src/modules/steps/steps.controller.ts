@@ -1,4 +1,4 @@
-import { Controller, Body, ParseIntPipe, Patch, Param } from '@nestjs/common';
+import { Controller, Body, ParseIntPipe, Patch, Delete, Param } from '@nestjs/common';
 import { StepsService } from './steps.service';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -50,4 +50,16 @@ export class StepsController {
     ): Promise<CommonResponse<UpdateTaskStepResponseDto>> {
         return this.stepsService.updateTaskStep(dto, stepId, taskId);
     }
+
+    @Delete('/:stepId')
+    @ApiOperation({
+        summary:'스텝 삭제',
+        description:'업무의 step을 수정합니다.'
+    })
+    async DeleteTaskResponseDto(
+        @Param('stepId', ParseIntPipe) stepId:number,
+        @User() userId:number
+    ):Promise<CommonResponse>{
+        return this.stepsService.deleteStep(stepId);
+}
 }
