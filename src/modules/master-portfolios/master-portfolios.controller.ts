@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query,
+    Req,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
@@ -18,6 +28,9 @@ import {
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { Request } from 'express';
+import { QueryRunner } from 'typeorm';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('MasterPortfolios')
 @ApiBearerAuth('access-token')
@@ -40,11 +53,13 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async createQuestions(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.createQuestions(userId, projectId);
+        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId);
     }
 
     @Post(':projectId/generate')
@@ -59,11 +74,17 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async generateMasterPortfolio(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+        return this.masterPortfoliosService.generateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId
+        );
     }
 
     @Get(':projectId/generation-result')
@@ -117,12 +138,19 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async updateMasterPortfolio(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
-        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
+        return this.masterPortfoliosService.updateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId,
+            updateDataDto
+        );
     }
 
     @Get('/me')
