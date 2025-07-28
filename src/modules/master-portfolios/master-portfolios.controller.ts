@@ -1,11 +1,19 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query,
+    Req,
+    ValidationPipe,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import {
-    Cursor,
-    UserMasterPortfoliosResponseDto,
-} from './dtos/user-master-portfolios-response.dto';
+import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
 import { MasterPortfoliosService } from './master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
@@ -17,7 +25,9 @@ import {
 } from 'src/common/response/swagger-response.helper';
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
+import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('MasterPortfolios')
 @ApiBearerAuth('access-token')
@@ -27,6 +37,27 @@ export class MasterPortfoliosController {
         private readonly configService: ConfigService,
         private readonly masterPortfoliosService: MasterPortfoliosService
     ) {}
+
+    @Get('/me')
+    @ApiOperation({
+        summary: '마이페이지/사용자 별 마스터포트폴리오 조회 API',
+        description:
+            '사용자의 마스터포트폴리오 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 프로젝트 생성일자입니다.',
+    })
+    @ApiCommonResponseWithPagination(UserMasterPortfoliosResponseDto)
+    async getUsersMasterPortfolios(
+        @Query(new ValidationPipe({ transform: true })) req: DateCursor,
+        @User('id') userId: number
+    ): Promise<PaginatedResponseDto<UserMasterPortfoliosResponseDto>> {
+        //파라미터의 기본값 처리
+        const cursorDate = req.cursor ? new Date(req.cursor) : new Date(); //NOTE: 커서의 디폴트 값은 now
+        const pageSize = Number(this.configService.get('PAGE_SIZE')) || 20;
+        return await this.masterPortfoliosService.getMasterPortfoliosByUser(
+            userId,
+            cursorDate,
+            pageSize
+        );
+    }
 
     @Post(':projectId/questions')
     @ApiOperation({
@@ -40,11 +71,13 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async createQuestions(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.createQuestions(userId, projectId);
+        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId);
     }
 
     @Post(':projectId/generate')
@@ -59,11 +92,17 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async generateMasterPortfolio(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.generateMasterPortfolio(userId, projectId);
+        return this.masterPortfoliosService.generateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId
+        );
     }
 
     @Get(':projectId/generation-result')
@@ -117,32 +156,18 @@ export class MasterPortfoliosController {
         '마스터 포트폴리오를 찾을 수 없습니다.',
         404
     )
+    @Transactional()
     async updateMasterPortfolio(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @User('id') userId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
-        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
-    }
-
-    @Get('/me')
-    @ApiOperation({
-        summary: '마이페이지/사용자 별 마스터포트폴리오 조회 API',
-        description:
-            '사용자의 마스터포트폴리오 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 프로젝트 생성일자입니다.',
-    })
-    @ApiCommonResponseWithPagination(UserMasterPortfoliosResponseDto)
-    async getUsersMasterPortfolios(
-        @User('id') userId: number,
-        @Query() req: Cursor //NOTE: 프로젝트 생성일자 기준(ISO 8301 형식)
-    ): Promise<PaginatedResponseDto<UserMasterPortfoliosResponseDto> | null> {
-        //파라미터의 기본값 처리
-        const cursorDate = req.cursor ? new Date(req.cursor) : new Date(); //NOTE: 커서의 디폴트 값은 now
-        const pageSize = Number(this.configService.get('PAGE_SIZE')) || 20;
-        return await this.masterPortfoliosService.getMasterPortfoliosByUser(
+        return this.masterPortfoliosService.updateMasterPortfolio(
+            req.queryRunner,
             userId,
-            cursorDate,
-            pageSize
+            projectId,
+            updateDataDto
         );
     }
 }

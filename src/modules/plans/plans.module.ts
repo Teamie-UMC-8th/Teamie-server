@@ -4,10 +4,11 @@ import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Plan } from './plans.entity';
+import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Plan]), AuthModule],
+    imports: [TypeOrmModule.forFeature([Plan]), ProjectsModule, AuthModule],
     controllers: [PlansController],
     providers: [PlansGateway, PlansService],
 })
