@@ -12,7 +12,7 @@ export class FinalPortfoliosService {
         private readonly finalPortfolioRepository: Repository<FinalPortfolio>
     ) {}
 
-    async getFinalProtfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
+    async getFinalPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.finalPortfolioRepository
             .createQueryBuilder('fp')
             .where('fp.userId = :userId', { userId })
