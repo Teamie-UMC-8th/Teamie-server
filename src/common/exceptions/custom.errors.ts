@@ -235,6 +235,17 @@ export class MasterPortfolioDuplicateException extends CustomHttpException {
     }
 }
 
+export class PlanDateConflictException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_DATE_CONFLICT,
+            '프로젝트 생성일자 이전에는 일정 생성이 불가능합니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {

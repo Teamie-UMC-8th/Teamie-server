@@ -4,6 +4,7 @@ import { Plan } from './plans.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { PlanDetails } from './dtos/plan-details.dto';
 import {
+    PlanDateConflictException,
     PlanNotFoundException,
     PlanTransactionException,
     ProjectForbiddenException,
@@ -59,6 +60,14 @@ export class PlansService {
         const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
+        }
+
+        // 프로젝트 생성일자와 일정 생성일자 비교
+        if (project.createdAt > date) {
+            throw new PlanDateConflictException({
+                createdAt: project.createdAt.toISOString(),
+                date: date.toISOString(),
+            });
         }
 
         try {
