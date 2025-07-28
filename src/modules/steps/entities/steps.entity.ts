@@ -1,5 +1,5 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Project } from '../../projects/entities/projects.entity';
 import { Task } from '../../tasks/tasks.entity';
 
@@ -11,6 +11,7 @@ export class Step extends BaseEntity {
     @ManyToOne(() => Project, (project) => project.steps, {
         onDelete: 'CASCADE',
     })
+    @JoinColumn({ name: 'projectId' })
     project: Project;
 
     @OneToMany(() => Task, (task) => task.step)

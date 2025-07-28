@@ -37,6 +37,6 @@ export class PlansService {
         });
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
-        return await this.projectsService.checkProjectMembership(userId, projectId);
+        return await this.projectsService.checkProjectMember(userId, projectId);
     }
 }
