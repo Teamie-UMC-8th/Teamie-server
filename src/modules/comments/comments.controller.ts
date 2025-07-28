@@ -4,6 +4,9 @@ import { User } from 'src/common/decorators/user.decorator';
 import { CommentsService } from './comments.service';
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-comment.dto';
+import { Transactional } from 'src/common/decorators/transaction.decorator';
+import { CommonResponse } from 'src/common/response/common-response.dto';
+
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
 @Controller('/comments')
@@ -23,5 +26,19 @@ export class CommentsController {
         @User('id') userId: number
     ) {
         return await this.commentsService.updateComment(userId, commentId, dto);
+    }
+
+    @Delete('/:commentId')
+    @Transactional()
+    @ApiOperation({
+        summary: '댓글 삭제',
+        description: '댓글을 삭제합니다.',
+    })
+    @ApiOkResponse({ type: String, description: '댓글 삭제 성공' })
+    async deleteTask(
+        @Param('commentId') commentId: number,
+        @User('id') userId: number
+    ): Promise<CommonResponse> {
+        return this.commentsService.deleteComment(userId, commentId);
     }
 }
