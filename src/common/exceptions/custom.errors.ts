@@ -279,3 +279,14 @@ export class PromptLoadingException extends CustomHttpException {
         );
     }
 }
+
+export class PlanTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_TRANSACTION_ERROR,
+            '일정 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
