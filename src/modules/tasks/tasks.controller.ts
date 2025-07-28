@@ -3,7 +3,6 @@ import {
     Controller,
     Post,
     Param,
-    Req,
     Get,
     Patch,
     Delete,
@@ -34,6 +33,7 @@ import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
 } from '../comments/dto/create-comment.dto';
+import { Status } from '../../common/enums/status.enum';
 import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
@@ -42,7 +42,7 @@ export class TasksController {
     constructor(private readonly tasksService: TasksService) {}
 
     @ApiOperation({
-        summary: '업수 생성',
+        summary: '업무 생성',
         description: '새로운 업무를 생성합니다.',
     })
     @Post()
@@ -140,5 +140,34 @@ export class TasksController {
         @User('id') userId: number
     ): Promise<CreateTaskFileResponseDto> {
         return await this.tasksService.createTaskFile(userId, taskId, file);
+    }
+
+    @Get('/:projectId/dashboard/step/:stepId/more')
+    @ApiOperation({
+        summary: 'step별 업무 더보기',
+        description: 'step별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
+    })
+    @ApiCommonResponse(GetTaskResponseDto)
+    async getStepMore(
+        @Param('projectId') projectId: number,
+        @Param('stepId') stepId: number,
+        @Query('offset') offset: number,
+        @Query('limit') limit = 5
+    ) {
+        return this.tasksService.getMoreTasksByStep(projectId, stepId, offset, limit);
+    }
+
+    @Get('/:projectId/dashboard/status/:status/more')
+    @ApiOperation({
+        summary: '진행상황별 업무 더보기',
+        description: '진행상황별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
+    })
+    async getStatusMore(
+        @Param('projectId') projectId: number,
+        @Param('status') status: Status,
+        @Query('offset') offset: number,
+        @Query('limit') limit = 5
+    ) {
+        return this.tasksService.getMoreTasksByStatus(projectId, status, offset, limit);
     }
 }
