@@ -12,6 +12,7 @@ import { UpdateStepDto, UpdateStepResponseDto } from './dtos/update-step.dto';
 import {
     StepNotFoundException,
     TaskNotFoundException,
+    StepDeleteForBiddenException,
 } from '../../common/exceptions/custom.errors';
 import { Task } from '../tasks/tasks.entity';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
@@ -100,5 +101,30 @@ export class StepsService {
 
         // 4) DTO 생성하여 반환
         return CommonResponse.success(UpdateTaskStepResponseDto.fromEntity(taskId, newStepId));
+    }
+
+    async deleteStep(stepId: number): Promise<CommonResponse> {
+        //step 존재 여부 확인
+        const stepRaw = await this.stepRepository
+            .createQueryBuilder('step')
+            .where('step.id = :stepId', { stepId })
+            .getRawOne();
+        if (!stepRaw) throw new StepNotFoundException();
+        // stepId로 연결된 task 조회
+        const raw = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 's')
+            .select(['task.id AS task_id'])
+            .where('s.id = :stepId', { stepId })
+            .getRawMany();
+
+        // 연결된 task가 하나라도 있으면 삭제 불가
+        if (raw.length > 0) {
+            throw new StepDeleteForBiddenException();
+        }
+
+        // 실제 삭제 로직 (예: soft delete 또는 hard delete 등)
+        await this.stepRepository.delete({ id: stepId });
+        return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });
     }
 }

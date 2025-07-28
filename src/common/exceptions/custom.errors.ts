@@ -92,6 +92,17 @@ export class ForbiddenSelfAssignException extends CustomHttpException {
     }
 }
 
+export class StepDeleteForBiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.STEP_DELETE_FORBIDDEN,
+            'STEP 내부에 업무가 존재할 경우, 삭제가 불가능합니다',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {

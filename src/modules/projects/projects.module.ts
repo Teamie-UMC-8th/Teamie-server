@@ -11,9 +11,10 @@ import { StepsModule } from '../steps/steps.module';
 import { Step } from '../steps/entities/steps.entity';
 import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
 import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.module';
+import { User } from '../users/entities/users.entity';
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step]),
+        TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step, User]),
         RedisModule,
         PersonalRecallsModule,
         forwardRef(() => StepsModule), // Circular dependency handling
