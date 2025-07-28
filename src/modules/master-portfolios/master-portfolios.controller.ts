@@ -27,8 +27,6 @@ import { QuestionResponseDto } from './dtos/question-response.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
-import { Request } from 'express';
-import { QueryRunner } from 'typeorm';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('MasterPortfolios')
@@ -61,7 +59,7 @@ export class MasterPortfoliosController {
         );
     }
 
-    @Post(':projectId/questions')
+@Post(':projectId/questions')
     @ApiOperation({
         summary: '마스터 포트폴리오 질문 AI 생성 API',
         description: '프로젝트의 마스터 포트폴리오 질문을 AI로 생성합니다.',
@@ -165,6 +163,11 @@ export class MasterPortfoliosController {
         @User('id') userId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
-        return this.masterPortfoliosService.updateMasterPortfolio(userId, projectId, updateDataDto);
+        return this.masterPortfoliosService.updateMasterPortfolio(
+            req.queryRunner,
+            userId,
+            projectId,
+            updateDataDto
+        );
     }
 }
