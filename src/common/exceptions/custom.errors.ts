@@ -80,6 +80,29 @@ export class NotPostAuthorException extends CustomHttpException {
         );
     }
 }
+
+export class ForbiddenSelfAssignException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_SELF_ASSIGN,
+            '자기 자신을 팀장으로 지목할 수 없습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class StepDeleteForBiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.STEP_DELETE_FORBIDDEN,
+            'STEP 내부에 업무가 존재할 경우, 삭제가 불가능합니다',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
@@ -138,6 +161,17 @@ export class MasterPortfolioNotFoundException extends CustomHttpException {
     }
 }
 
+export class MasterPortfolioAINotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.MASTER_PORTFOLIO_AI_NOT_FOUND,
+            '마스터 포트폴리오 AI 생성 결과를 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
+    }
+}
+
 export class TaskFileNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -170,6 +204,23 @@ export class PostsExceededException extends CustomHttpException {
 export class UserNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.USER_NOT_FOUND, '사용자를 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
+export class AlreadyLeaderException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.ALREDY_LEADER, '이미 팀장인 사용자입니다.', HttpStatus.CONFLICT, data);
+    }
+}
+
+export class AssigneeNotMemberException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.ASSIGNEE_NOT_MEMBER,
+            '해당 사람은 프로젝트 멤버가 아닙니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
     }
 }
 
@@ -212,6 +263,17 @@ export class RedisDataParseException extends CustomHttpException {
         super(
             ErrorCode.POST_NOT_PARSED,
             'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
+export class PromptLoadingException extends CustomHttpException {
+    constructor(filename: string, data?: any) {
+        super(
+            ErrorCode.PROMPT_LOADING_ERROR,
+            `프롬프트 파일을 로딩할 수 없습니다: ${filename}`,
             HttpStatus.INTERNAL_SERVER_ERROR,
             data
         );

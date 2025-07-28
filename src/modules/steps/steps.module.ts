@@ -6,10 +6,11 @@ import { Step } from './entities/steps.entity';
 import { Project } from '../projects/entities/projects.entity';
 import { ProjectsModule } from '../projects/projects.module';
 import { RedisModule } from '../../infra/redis/redis.module';
+import { Task } from '../tasks/tasks.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Step, Project]),
+        TypeOrmModule.forFeature([Step, Project, Task]),
         forwardRef(() => ProjectsModule), // Circular dependency handling
         RedisModule,
     ],

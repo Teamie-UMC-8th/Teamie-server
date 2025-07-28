@@ -79,7 +79,7 @@ export class PlanDetails {
         const dto = new PlanDetails();
         dto.name = entity.name;
         dto.date = entity.date.toISOString();
-        dto.startHour = entity.startHour.getTime().toString();
+        dto.startHour = entity.startHour;
         dto.location = entity.location;
         dto.attendees = entity.attendees.map((attendee) => UserProfile.from(attendee.user));
         dto.memo = entity.memo;

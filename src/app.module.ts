@@ -20,6 +20,7 @@ import { TaskFilesModule } from './modules/mappings/task-files/task-files.module
 import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { FinalPortfoliosModule } from './modules/final-portfolios/final-portfolios.module';
+import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 @Module({
     imports: [
         ConfigModule.forRoot({
