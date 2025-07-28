@@ -258,7 +258,17 @@ export class TasksService {
             .leftJoin('manager.user', 'user')
             .addSelect(['user.id', 'user.name'])
             .where('step.projectId = :projectId', { projectId })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .limit(40)
             .getMany();
+
+        // 전체 업무 수 (더보기 버튼 표시 여부 판단)
+        const totalCount = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .where('step.projectId = :projectId', { projectId })
+            .getCount();
 
         // 3. view 값에 따라 응답 구조 조립
         if (view === 'status') {
@@ -267,6 +277,7 @@ export class TasksService {
                 projectId: project.id,
                 projectName: project.name,
                 statusGroups,
+                totalCount,
             };
         } else {
             const stepGroups = this.groupByStep(tasks);
@@ -274,6 +285,7 @@ export class TasksService {
                 projectId: project.id,
                 projectName: project.name,
                 steps: stepGroups,
+                totalCount,
             };
         }
     }
@@ -387,5 +399,84 @@ export class TasksService {
 
         const saved = await this.taskFileRepository.save(taskFile);
         return CreateTaskFileResponseDto.fromEntity(saved);
+    }
+
+    // STEP별 더보기 API 
+    async getMoreTasksByStep(
+        projectId: number,
+        stepId: number,
+        offset: number,
+        limit: number = 5
+    ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
+        const step = await this.stepRepository.findOne({
+            where: { id: stepId, project: { id: projectId } },
+        });
+        if (!step) throw new StepNotFoundException('존재하지 않는 Step입니다.');
+
+        if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
+        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
+
+        const tasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoin('task.managers', 'manager')
+            .leftJoin('manager.user', 'user')
+            .addSelect(['user.id', 'user.name'])
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('step.id = :stepId', { stepId })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .skip(offset) // 이전까지 불러온 개수
+            .take(limit) // 새로 불러올 개수
+            .getMany();
+
+        const totalCount = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('step.id = :stepId', { stepId })
+            .getCount();
+
+        return { tasks: tasks.map((t) => TaskInStepDto.from(t)), totalCount };
+    }
+
+    // STATUS별 더보기 API 
+    async getMoreTasksByStatus(
+        projectId: number,
+        status: Status,
+        offset: number,
+        limit: number = 5
+    ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        if (!Object.values(Status).includes(status)) {
+            throw new BadRequestException(
+                `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
+            );
+        }
+
+        if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
+        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
+
+        const tasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoin('task.managers', 'manager')
+            .leftJoin('manager.user', 'user')
+            .addSelect(['user.id', 'user.name'])
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('task.status = :status', { status })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .skip(offset)
+            .take(limit)
+            .getMany();
+
+        const totalCount = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('task.status = :status', { status })
+            .getCount();
+
+        return { tasks: tasks.map((t) => TaskInStatusDto.from(t)), totalCount };
     }
 }
