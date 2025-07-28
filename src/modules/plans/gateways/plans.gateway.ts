@@ -18,6 +18,7 @@ import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
 import { UseFilters, UseGuards } from '@nestjs/common';
 import { WsAuthGuard } from 'src/modules/auth/guards/ws-auth.guard';
 import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
+import { AuthService } from 'src/modules/auth/auth.service';
 
 @UseFilters(new WebSocketExceptionFilter())
 @UseGuards(WsAuthGuard)
@@ -27,10 +28,24 @@ import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.fil
     transports: ['websocket'],
 })
 export class PlansGateway {
-    constructor(private readonly plansService: PlansService) {}
+    constructor(
+        private readonly plansService: PlansService,
+        private readonly authService: AuthService
+    ) {}
 
     @WebSocketServer()
     server: Server;
+
+    //사용자 인증
+    @SubscribeMessage('authenticate')
+    async handleAuthenticate(
+        @MessageBody() payload: { token: string },
+        @ConnectedSocket() client: Socket
+    ) {
+        const token = payload.token;
+        client.data.user = await this.authService.verifyWsToken(token);
+        console.log(client.data.user);
+    }
 
     //수정사항 브로드캐스트
     broadCastUpdate(planId: number, msg: any) {
@@ -41,7 +56,6 @@ export class PlansGateway {
     //일정 상세페이지 접속
     @SubscribeMessage('join')
     handleJoin(@MessageBody() payload: { planId: number }, @ConnectedSocket() client: Socket) {
-        console.log(client.data.userId);
         const planId = payload.planId;
         client.join(`plan-${planId}`);
         console.log(`join to plan-${planId}`);

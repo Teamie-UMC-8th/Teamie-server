@@ -1,24 +1,19 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
 @Injectable()
 export class WsAuthGuard implements CanActivate {
-    constructor(private readonly jwtService: JwtService) {}
-
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const client: Socket = context.switchToWs().getClient();
-        const token = client.handshake.query.token as string;
+        const handler = context.getHandler();
 
-        if (!token) throw new WsException('Missiong token');
+        // authenticate 이벤트의 우회
+        if (handler.name === 'handleAuthenticate') return true;
 
-        try {
-            const payload = await this.jwtService.verifyAsync(token);
-            client.data.userId = payload.userId;
-            return true;
-        } catch (err) {
-            throw new WsException('Invalid token');
-        }
+        // 나머지 이벤트의 authenticate
+        const user = client.data?.user;
+        if (!user) throw new WsException('Unauthorized');
+        return true;
     }
 }

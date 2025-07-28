@@ -27,6 +27,6 @@ import { WsAuthGuard } from './guards/ws-auth.guard';
     ],
     controllers: [AuthController],
     providers: [AuthService, KakaoStrategy, JwtStrategy, JwtAuthGuard, WsAuthGuard],
-    exports: [JwtModule, WsAuthGuard],
+    exports: [JwtModule, WsAuthGuard, AuthService],
 })
 export class AuthModule {}
