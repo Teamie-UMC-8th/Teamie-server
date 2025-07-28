@@ -10,7 +10,7 @@ import {
     ProjectForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../projects/projects.service';
-import { CreatePlanReq, CreatePlanResponse } from './dtos/create-plan.dto';
+import { CreatePlanResponse } from './dtos/create-plan.dto';
 
 @Injectable()
 export class PlansService {
@@ -51,10 +51,9 @@ export class PlansService {
     async createPlan(
         qr: QueryRunner,
         userId: number,
-        req: CreatePlanReq
+        projectId: number,
+        date: Date
     ): Promise<CreatePlanResponse> {
-        const projectId: number = Number(req.projectId);
-        const date: Date = new Date(req.date);
         // 유효한 식별자인지 & 사용자 권한 check
         const project = await this.projectsService.assertProjectExists(projectId);
         const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);

@@ -35,7 +35,9 @@ export class PlansController {
         @Body() body: CreatePlanReq,
         @User('id') userId: number
     ): Promise<CreatePlanResponse> {
-        return await this.plansService.createPlan(req.queryRunner, userId, body);
+        const projectId: number = Number(body.projectId);
+        const date: Date = new Date(body.date);
+        return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
     }
 
     @Pulbic()
