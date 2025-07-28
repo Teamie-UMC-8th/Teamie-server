@@ -38,6 +38,7 @@ export class TaskInStepDto {
             userId: m.user.id,
             userName: m.user.name,
         }));
+
         return dto;
     }
 }
@@ -80,4 +81,10 @@ export class TaskDashboardStepViewDto {
         description: '단계별로 묶인 업무 정보',
     })
     steps: StepGroupDto[];
+
+    @ApiProperty({
+        example: 62,
+        description: '해당 프로젝트의 전체 업무 개수',
+    })
+    totalCount: number;
 }
