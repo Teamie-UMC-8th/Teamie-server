@@ -59,7 +59,7 @@ export class MasterPortfoliosController {
         );
     }
 
-@Post(':projectId/questions')
+    @Post(':projectId/questions')
     @ApiOperation({
         summary: '마스터 포트폴리오 질문 AI 생성 API',
         description: '프로젝트의 마스터 포트폴리오 질문을 AI로 생성합니다.',

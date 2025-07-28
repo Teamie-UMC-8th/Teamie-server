@@ -24,6 +24,7 @@ import {
     ProjectForbiddenException,
     ProjectUpdateForbiddenException,
     InvalidInvitecodeException,
+    ProfileForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -35,6 +36,7 @@ import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios
 import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { User } from '../users/entities/users.entity';
+import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -370,6 +372,46 @@ export class ProjectsService {
         return CommonResponse.success(
             ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD)
         );
+    }
+
+    async updateProfile(
+        projectId: number,
+        userId: number,
+        dto: UpdateProfileDto
+    ): Promise<CommonResponse<UpdateProfileResponseDto>> {
+        // 프로젝트 완료 여부 검사
+        await this.assertProjectIsEditable(projectId);
+        // 1. 본인 프로필 수정인지 확인
+        if (userId !== dto.id) {
+            throw new ProfileForbiddenException();
+        }
+
+        // 2. 해당 UserProject 매핑 가져오기
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                project: { id: projectId },
+                user: { id: dto.id },
+            },
+        });
+
+        if (!userProject) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 3. role 수정 후 저장
+        userProject.role = dto.role;
+        await this.userProjectRepository.save(userProject);
+
+        // 4. 전체 userProject 조회 (task 정보 포함)
+        const allUserProjects = await this.userProjectRepository.find({
+            where: { project: { id: projectId } },
+            relations: ['user', 'user.managers', 'user.managers.task'],
+        });
+
+        // 5. DTO 변환 및 응답 반환
+        const users = allUserProjects.map(UserInProjectDto.from);
+
+        return CommonResponse.success({ users });
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)

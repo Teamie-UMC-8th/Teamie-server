@@ -103,6 +103,17 @@ export class StepDeleteForBiddenException extends CustomHttpException {
     }
 }
 
+export class ProfileForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.NOT_YOUR_PROFILE,
+            '자신의 프로필만 수정할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {

@@ -34,6 +34,7 @@ import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
+import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -199,5 +200,23 @@ export class ProjectsController {
         @User('id') currentUserId: number
     ) {
         return await this.projectsService.changeProjectLeader(projectId, dto, currentUserId);
+    }
+
+    @Patch('/:projectId/profile')
+    @ApiOperation({
+        summary: '프로필 카드 수정',
+        description: '프로필 카드를 수정합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: UpdateProfileDto })
+    @ApiCommonResponse(UpdateProfileResponseDto)
+    @ApiCommonErrorResponse('NOT_YOUR_PROFILE', '자신의 프로필만 수정할 수 있습니다.')
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    async changeProfile(
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Body() dto: UpdateProfileDto,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.updateProfile(projectId, userId, dto);
     }
 }
