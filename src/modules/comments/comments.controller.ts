@@ -48,12 +48,12 @@ export class CommentsController {
         return this.commentsService.deleteComment(userId, commentId, req.queryRunner);
     }
 
-    @Transactional()
-    @Post('/:commentId')
     @ApiOperation({
         summary: '대댓글 생성',
         description: '대댓글을 생성합니다.',
     })
+    @Transactional()
+    @Post('/:commentId/cocomments')
     @ApiCommonResponse(CreateCocommentResponseDto)
     async createCocoment(
         @Param('commentId') commentId: number,
