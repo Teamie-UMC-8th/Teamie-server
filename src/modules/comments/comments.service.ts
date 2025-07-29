@@ -10,12 +10,20 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { QueryRunner } from 'typeorm';
+import { Cocomment } from './cocomments/cocomments.entity';
+import {
+    CreateCocommentRequestDto,
+    CreateCocommentResponseDto,
+} from './cocomments/dto/create-cocomment.dto';
 
 @Injectable()
 export class CommentsService {
     constructor(
         @InjectRepository(Comment)
-        private readonly commentRepository: Repository<Comment>
+        private readonly commentRepository: Repository<Comment>,
+
+        @InjectRepository(Cocomment)
+        private readonly cocommentRepository: Repository<Cocomment>
     ) {}
 
     async updateComment(userId: number, commentId: number, dto: UpdateCommentRequestDto) {
@@ -65,5 +73,31 @@ export class CommentsService {
         await this.commentRepository.delete({ id: commentId });
 
         return CommonResponse.success({ message: `댓글 ID ${commentId} 삭제 완료` });
+    }
+
+    async createCocomment(
+        userId: number,
+        commentId: number,
+        dto: CreateCocommentRequestDto,
+        queryRunner: QueryRunner
+    ): Promise<CreateCocommentResponseDto> {
+        // 1. 대댓글 작성할 댓글 있는지
+        const comment = await queryRunner.manager
+            .createQueryBuilder(Comment, 'comment')
+            .where('comment.id = :commentId', { commentId })
+            .getOne();
+
+        if (!comment) throw new CommentNotFoundException();
+
+        // 2. 댓글 생성 및 저장
+        const cocomment = queryRunner.manager.create(Cocomment, {
+            user: { id: userId },
+            comment: { id: commentId },
+            content: dto.content,
+        });
+        const saved = await queryRunner.manager.save(Cocomment, cocomment);
+
+        // 3. 응답 반환
+        return CreateCocommentResponseDto.from(saved);
     }
 }
