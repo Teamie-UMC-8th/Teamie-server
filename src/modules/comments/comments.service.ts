@@ -6,7 +6,10 @@ import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-
 import {
     CommentUpdateForbiddenException,
     CommentNotFoundException,
+    CommentDeleteForbiddenException,
 } from 'src/common/exceptions/custom.errors';
+import { CommonResponse } from 'src/common/response/common-response.dto';
+import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class CommentsService {
@@ -35,5 +38,32 @@ export class CommentsService {
 
         const updatedComment = await this.commentRepository.save(comment);
         return UpdateCommentResponseDto.from(updatedComment);
+    }
+
+    async deleteComment(
+        userId: number,
+        commentId: number,
+        queryRunner: QueryRunner
+    ): Promise<CommonResponse> {
+        // 댓글 존재 여부 확인
+        const comment = await queryRunner.manager
+            .createQueryBuilder(Comment, 'comment')
+            .leftJoinAndSelect('comment.user', 'user')
+            .where('comment.id = :commentId', { commentId })
+            .getOne();
+
+        if (!comment) {
+            throw new CommentNotFoundException();
+        }
+
+        // 댓글 작성자와 로그인한 유저가 같은지 확인
+        if (comment.user.id !== userId) {
+            throw new CommentDeleteForbiddenException();
+        }
+
+        // 댓글 삭제
+        await this.commentRepository.delete({ id: commentId });
+
+        return CommonResponse.success({ message: `댓글 ID ${commentId} 삭제 완료` });
     }
 }
