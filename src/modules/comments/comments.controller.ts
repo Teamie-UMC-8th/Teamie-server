@@ -1,4 +1,4 @@
-import { Controller, Param, Delete, Patch, Body, Req } from '@nestjs/common';
+import { Controller, Param, Delete, Patch, Body, Req, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { CommentsService } from './comments.service';
@@ -7,6 +7,10 @@ import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-
 import { Transactional } from 'src/common/decorators/transaction.decorator';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import {
+    CreateCocommentResponseDto,
+    CreateCocommentRequestDto,
+} from './cocomments/dto/create-cocomment.dto';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
@@ -36,11 +40,27 @@ export class CommentsController {
         description: '댓글을 삭제합니다.',
     })
     @ApiOkResponse({ type: String, description: '댓글 삭제 성공' })
-    async deleteTask(
+    async deleteComment(
         @Param('commentId') commentId: number,
         @User('id') userId: number,
-        @Req() req: TransactionalRequest, 
+        @Req() req: TransactionalRequest
     ): Promise<CommonResponse> {
         return this.commentsService.deleteComment(userId, commentId, req.queryRunner);
+    }
+
+    @Transactional()
+    @Post('/:commentId')
+    @ApiOperation({
+        summary: '대댓글 생성',
+        description: '대댓글을 생성합니다.',
+    })
+    @ApiCommonResponse(CreateCocommentResponseDto)
+    async createCocoment(
+        @Param('commentId') commentId: number,
+        @User('id') userId: number,
+        @Req() req: TransactionalRequest,
+        @Body() dto: CreateCocommentRequestDto
+    ): Promise<CreateCocommentResponseDto> {
+        return this.commentsService.createCocomment(userId, commentId, dto, req.queryRunner);
     }
 }
