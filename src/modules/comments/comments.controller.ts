@@ -1,4 +1,4 @@
-import { Controller, Param, Delete, Patch, Body } from '@nestjs/common';
+import { Controller, Param, Delete, Patch, Body, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { CommentsService } from './comments.service';
@@ -6,6 +6,7 @@ import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-comment.dto';
 import { Transactional } from 'src/common/decorators/transaction.decorator';
 import { CommonResponse } from 'src/common/response/common-response.dto';
+import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
@@ -28,8 +29,8 @@ export class CommentsController {
         return await this.commentsService.updateComment(userId, commentId, dto);
     }
 
-    @Delete('/:commentId')
     @Transactional()
+    @Delete('/:commentId')
     @ApiOperation({
         summary: '댓글 삭제',
         description: '댓글을 삭제합니다.',
@@ -37,8 +38,9 @@ export class CommentsController {
     @ApiOkResponse({ type: String, description: '댓글 삭제 성공' })
     async deleteTask(
         @Param('commentId') commentId: number,
-        @User('id') userId: number
+        @User('id') userId: number,
+        @Req() req: TransactionalRequest, 
     ): Promise<CommonResponse> {
-        return this.commentsService.deleteComment(userId, commentId);
+        return this.commentsService.deleteComment(userId, commentId, req.queryRunner);
     }
 }

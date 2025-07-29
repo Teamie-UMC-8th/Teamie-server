@@ -9,6 +9,7 @@ import {
     CommentDeleteForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { CommonResponse } from 'src/common/response/common-response.dto';
+import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class CommentsService {
@@ -39,10 +40,14 @@ export class CommentsService {
         return UpdateCommentResponseDto.from(updatedComment);
     }
 
-    async deleteComment(userId: number, commentId: number): Promise<CommonResponse> {
+    async deleteComment(
+        userId: number,
+        commentId: number,
+        queryRunner: QueryRunner
+    ): Promise<CommonResponse> {
         // 댓글 존재 여부 확인
-        const comment = await this.commentRepository
-            .createQueryBuilder('comment')
+        const comment = await queryRunner.manager
+            .createQueryBuilder(Comment, 'comment')
             .leftJoinAndSelect('comment.user', 'user')
             .where('comment.id = :commentId', { commentId })
             .getOne();
