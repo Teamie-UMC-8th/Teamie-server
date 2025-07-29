@@ -62,8 +62,30 @@ export class CommentUpdateForbiddenException extends CustomHttpException {
 export class CommentDeleteForbiddenException extends CustomHttpException {
     constructor(data?: any) {
         super(
-            ErrorCode.FORBIDDEN_COMMENT_FOR_UPDATE,
+            ErrorCode.FORBIDDEN_COMMENT_FOR_DELETE,
             '본인이 작성한 댓글만 삭제할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class CocommentUpdateForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COCOMMENT_FOR_UPDATE,
+            '본인이 작성한 대댓글만 수정할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class CocommentDeleteForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COCOMMENT_FOR_DELETE,
+            '본인이 작성한 대댓글만 삭제할 수 있습니다.',
             HttpStatus.FORBIDDEN,
             data
         );
@@ -197,6 +219,17 @@ export class TaskFileNotFoundException extends CustomHttpException {
 export class CommentNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.COMMENT_NOT_FOUND, '댓글을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
+export class CocommentNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.COCOMMENT_NOT_FOUND,
+            '대댓글을 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
     }
 }
 
