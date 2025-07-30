@@ -61,7 +61,7 @@ export class ProjectsController {
     @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
     @ApiOkResponse({
         type: String,
-        description: '${userId}님이 ${projectId} 프로젝트에 참여되었습니다.',
+        description: '${user.name}님이 ${project.name} 프로젝트에 참여되었습니다.',
     })
     @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
     async joinProject(@Query('inviteCode') inviteCode: string, @User('id') userId: number) {
