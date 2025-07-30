@@ -127,7 +127,7 @@ async createTask(
 
         if (!newStep) throw new StepNotFoundException();
 
-        // 3. userProject 조회 (권한 확인)
+        // 3. userProject 조회 
         const userProject = await queryRunner.manager.findOne(UserProject, {
             where: {
                 user: { id: userId },
