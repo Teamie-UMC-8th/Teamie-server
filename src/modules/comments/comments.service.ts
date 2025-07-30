@@ -26,32 +26,46 @@ export class CommentsService {
         private readonly cocommentRepository: Repository<Cocomment>
     ) {}
 
-    async updateComment(userId: number, commentId: number, dto: UpdateCommentRequestDto) {
-        const comment = await this.commentRepository
-            .createQueryBuilder('comment')
+    async updateComment(
+        queryRunner: QueryRunner,
+        userId: number,
+        commentId: number,
+        dto: UpdateCommentRequestDto
+    ): Promise<UpdateCommentResponseDto> {
+
+        // 1️. 댓글 존재 여부 확인 (작성자 정보까지 조회)
+        const comment = await queryRunner.manager
+            .createQueryBuilder(Comment, 'comment')
             .leftJoin('comment.user', 'user')
             .addSelect(['user.id'])
             .where('comment.id = :commentId', { commentId })
-            .select(['comment.content', 'user.id'])
+            .select(['comment.id', 'comment.content', 'user.id'])
             .getOne();
+
         if (!comment) {
             throw new CommentNotFoundException('댓글을 찾을 수 없습니다.');
         }
 
-        if (userId != comment.user.id) {
+        // 2️. 작성자 확인 (권한 체크)
+        if (userId !== comment.user.id) {
             throw new CommentUpdateForbiddenException('본인이 작성한 댓글만 수정할 수 있습니다.');
         }
 
+        // 3️. 댓글 내용 수정
         comment.content = dto.content;
 
-        const updatedComment = await this.commentRepository.save(comment);
+        // 4️. 댓글 저장 (QueryRunner 사용)
+        const updatedComment = await queryRunner.manager.save(Comment, comment);
+
+        // 5️. DTO 변환 후 반환
         return UpdateCommentResponseDto.from(updatedComment);
     }
 
+
     async deleteComment(
+        queryRunner: QueryRunner,
         userId: number,
         commentId: number,
-        queryRunner: QueryRunner
     ): Promise<CommonResponse> {
         // 댓글 존재 여부 확인
         const comment = await queryRunner.manager
@@ -76,10 +90,10 @@ export class CommentsService {
     }
 
     async createCocomment(
+        queryRunner: QueryRunner,
         userId: number,
         commentId: number,
         dto: CreateCocommentRequestDto,
-        queryRunner: QueryRunner
     ): Promise<CreateCocommentResponseDto> {
         // 1. 대댓글 작성할 댓글 있는지
         const comment = await queryRunner.manager
