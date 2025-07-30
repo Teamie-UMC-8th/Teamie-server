@@ -1,6 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
 import { UserProject } from 'src/modules/mappings/user-projects/userProjects.entity';
+export class PostDto {
+    @ApiProperty()
+    author: string;
+
+    @ApiProperty()
+    content: string;
+
+    static from(data: any): PostDto {
+        const dto = new PostDto();
+        dto.author = data.author;
+        dto.content = data.content;
+        return dto;
+    }
+}
 
 export class SimpleTaskDto {
     @ApiProperty({ example: '담당업무' })
@@ -49,21 +63,6 @@ export class UserInProjectDto {
         dto.permission = entity.permission;
         dto.role = entity.role;
         dto.tasks = user.managers?.map((m) => SimpleTaskDto.from(m.task.name)) ?? [];
-        return dto;
-    }
-}
-
-export class PostDto {
-    @ApiProperty()
-    author: string;
-
-    @ApiProperty()
-    content: string;
-
-    static from(data: any): PostDto {
-        const dto = new PostDto();
-        dto.author = data.author;
-        dto.content = data.content;
         return dto;
     }
 }

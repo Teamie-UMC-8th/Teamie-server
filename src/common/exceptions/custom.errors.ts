@@ -114,6 +114,17 @@ export class StepDeleteForBiddenException extends CustomHttpException {
     }
 }
 
+export class ProfileForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.NOT_YOUR_PROFILE,
+            '자신의 프로필만 수정할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
@@ -161,6 +172,16 @@ export class PersonalRecallNotFoundException extends CustomHttpException {
     }
 }
 
+export class ProjectTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PROJECT_TRANSACTION_ERROR,
+            '프로젝트 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
 export class MasterPortfolioNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
