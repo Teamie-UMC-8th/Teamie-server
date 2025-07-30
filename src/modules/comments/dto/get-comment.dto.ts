@@ -4,7 +4,6 @@ import { Comment } from '../comments.entity';
 import { User } from '../../users/entities/users.entity';
 import { Cocomment } from '../cocomments/cocomments.entity';
 
-
 export class UserInCommentDto {
     @ApiProperty({
         example: 'https://s3:example.com/profile/example.png',
@@ -26,7 +25,7 @@ export class UserInCommentDto {
     }
 }
 
-export class CocommentInCommentDto{
+export class CocommentInCommentDto {
     @ApiProperty({
         example: 1,
         description: '대댓글 ID',
@@ -67,7 +66,6 @@ export class CocommentInCommentDto{
         dto.users = UserInCommentDto.from(cocomment.user);
         return dto;
     }
-
 }
 
 export class CommentGroupDto {
@@ -116,12 +114,10 @@ export class CommentGroupDto {
         dto.createdAt = comment.createdAt;
         dto.updatedAt = comment.updatedAt;
         dto.users = UserInCommentDto.from(comment.user);
-        dto.cocomments = comment.cocomments?.map(c => CocommentInCommentDto.from(c)) || [];
+        dto.cocomments = comment.cocomments?.map((c) => CocommentInCommentDto.from(c)) || [];
         return dto;
     }
 }
-
-
 
 export class GetCommentResponseDto {
     @ApiProperty({
@@ -144,11 +140,16 @@ export class GetCommentResponseDto {
     })
     comments: CommentGroupDto[];
 
-    static from(comments: Comment[], totalCount: number, offset: number, limit: number): GetCommentResponseDto {
+    static from(
+        comments: Comment[],
+        totalCount: number,
+        offset: number,
+        limit: number
+    ): GetCommentResponseDto {
         const dto = new GetCommentResponseDto();
         dto.totalCount = totalCount;
-        dto.hasMore = offset + limit < totalCount; 
-        dto.comments = comments.map(comment => CommentGroupDto.from(comment));
+        dto.hasMore = offset + limit < totalCount;
+        dto.comments = comments.map((comment) => CommentGroupDto.from(comment));
         return dto;
     }
 }

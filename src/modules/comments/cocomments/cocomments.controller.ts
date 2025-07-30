@@ -28,16 +28,19 @@ export class CocommentsController {
         @User('id') userId: number,
         @Req() req: TransactionalRequest
     ) {
-        return await this.cocommentsService.updateComment(userId, cocommentId, dto, req.queryRunner);
+        return await this.cocommentsService.updateComment(
+            userId,
+            cocommentId,
+            dto,
+            req.queryRunner
+        );
     }
-
-
 
     @ApiOperation({
         summary: '대댓글 삭제',
         description: '대댓글을 삭제합니다.',
     })
-    @ApiOkResponse({type: String, description: '대댓글 삭제 성공'})
+    @ApiOkResponse({ type: String, description: '대댓글 삭제 성공' })
     @Transactional()
     @Delete('/:cocommentId')
     async deleteCocomment(
@@ -47,6 +50,4 @@ export class CocommentsController {
     ): Promise<CommonResponse> {
         return this.cocommentsService.deleteCocomment(userId, cocommentId, req.queryRunner);
     }
-
-    
 }
