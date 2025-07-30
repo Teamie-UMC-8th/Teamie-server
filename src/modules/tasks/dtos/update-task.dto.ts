@@ -45,13 +45,6 @@ export class UpdateTaskRequestDto {
     @Type(() => Number)
     managerIds: number[];
 
-    @IsOptional()
-    @ApiProperty({
-        type: [String],
-        description: '기존 파일 URL 목록 (수정 시 유지할 기존 파일들)',
-    })
-    existingFileUrls?: string[];
-
     @ApiProperty({
         example: 5,
         description: '이동할 step의 ID',
