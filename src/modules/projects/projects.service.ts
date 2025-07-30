@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,7 @@ import {
     ProjectUpdateForbiddenException,
     InvalidInvitecodeException,
     ProfileForbiddenException,
+    ProjectTransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -375,6 +376,7 @@ export class ProjectsService {
     }
 
     async updateProfile(
+        qr: QueryRunner,
         projectId: number,
         userId: number,
         dto: UpdateProfileDto
@@ -397,13 +399,16 @@ export class ProjectsService {
         if (!userProject) {
             throw new ProjectForbiddenException();
         }
-
-        // 3. role 수정 후 저장
-        userProject.role = dto.role;
-        await this.userProjectRepository.save(userProject);
+        try {
+            // 3. role 수정 후 저장
+            userProject.role = dto.role;
+            await qr.manager.save(userProject);
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
 
         // 4. 전체 userProject 조회 (task 정보 포함)
-        const allUserProjects = await this.userProjectRepository.find({
+        const allUserProjects = await qr.manager.find(UserProject, {
             where: { project: { id: projectId } },
             relations: ['user', 'user.managers', 'user.managers.task'],
         });

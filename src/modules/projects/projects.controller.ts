@@ -8,6 +8,7 @@ import {
     Delete,
     Param,
     ParseIntPipe,
+    Req,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -35,6 +36,7 @@ import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -212,11 +214,13 @@ export class ProjectsController {
     @ApiCommonResponse(UpdateProfileResponseDto)
     @ApiCommonErrorResponse('NOT_YOUR_PROFILE', '자신의 프로필만 수정할 수 있습니다.')
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @Transactional()
     async changeProfile(
+        @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: UpdateProfileDto,
         @User('id') userId: number
     ) {
-        return await this.projectsService.updateProfile(projectId, userId, dto);
+        return await this.projectsService.updateProfile(req.queryRunner, projectId, userId, dto);
     }
 }
