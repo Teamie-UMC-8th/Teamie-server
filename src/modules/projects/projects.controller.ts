@@ -8,6 +8,7 @@ import {
     Delete,
     Param,
     ParseIntPipe,
+    Req,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -20,6 +21,7 @@ import {
     ApiParam,
     ApiOperation,
     ApiResponse,
+    ApiOkResponse,
 } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
@@ -34,6 +36,8 @@ import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
+import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
@@ -55,7 +59,10 @@ export class ProjectsController {
     @Get('/join')
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
     @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
-    @ApiCommonResponse(AllProjectResponseDto)
+    @ApiOkResponse({
+        type: String,
+        description: '${user.name}님이 ${project.name} 프로젝트에 참여되었습니다.',
+    })
     @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
     async joinProject(@Query('inviteCode') inviteCode: string, @User('id') userId: number) {
         return await this.projectsService.joinProject(userId, inviteCode);
@@ -199,5 +206,25 @@ export class ProjectsController {
         @User('id') currentUserId: number
     ) {
         return await this.projectsService.changeProjectLeader(projectId, dto, currentUserId);
+    }
+
+    @Patch('/:projectId/profile')
+    @ApiOperation({
+        summary: '프로필 카드 수정',
+        description: '프로필 카드를 수정합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiBody({ type: UpdateProfileDto })
+    @ApiCommonResponse(UpdateProfileResponseDto)
+    @ApiCommonErrorResponse('NOT_YOUR_PROFILE', '자신의 프로필만 수정할 수 있습니다.')
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
+    @Transactional()
+    async changeProfile(
+        @Req() req: TransactionalRequest,
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Body() dto: UpdateProfileDto,
+        @User('id') userId: number
+    ) {
+        return await this.projectsService.updateProfile(req.queryRunner, projectId, userId, dto);
     }
 }

@@ -1,9 +1,17 @@
-import { Controller, Param, Delete, Patch, Body } from '@nestjs/common';
+import { Controller, Param, Delete, Patch, Body, Req, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { CommentsService } from './comments.service';
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-comment.dto';
+import { Transactional } from 'src/common/decorators/transaction.decorator';
+import { CommonResponse } from 'src/common/response/common-response.dto';
+import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import {
+    CreateCocommentResponseDto,
+    CreateCocommentRequestDto,
+} from './cocomments/dto/create-cocomment.dto';
+
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
 @Controller('/comments')
@@ -23,5 +31,36 @@ export class CommentsController {
         @User('id') userId: number
     ) {
         return await this.commentsService.updateComment(userId, commentId, dto);
+    }
+
+    @Transactional()
+    @Delete('/:commentId')
+    @ApiOperation({
+        summary: '댓글 삭제',
+        description: '댓글을 삭제합니다.',
+    })
+    @ApiOkResponse({ type: String, description: '댓글 삭제 성공' })
+    async deleteComment(
+        @Param('commentId') commentId: number,
+        @User('id') userId: number,
+        @Req() req: TransactionalRequest
+    ): Promise<CommonResponse> {
+        return this.commentsService.deleteComment(userId, commentId, req.queryRunner);
+    }
+
+    @ApiOperation({
+        summary: '대댓글 생성',
+        description: '대댓글을 생성합니다.',
+    })
+    @Transactional()
+    @Post('/:commentId/cocomments')
+    @ApiCommonResponse(CreateCocommentResponseDto)
+    async createCocoment(
+        @Param('commentId') commentId: number,
+        @User('id') userId: number,
+        @Req() req: TransactionalRequest,
+        @Body() dto: CreateCocommentRequestDto
+    ): Promise<CreateCocommentResponseDto> {
+        return this.commentsService.createCocomment(userId, commentId, dto, req.queryRunner);
     }
 }

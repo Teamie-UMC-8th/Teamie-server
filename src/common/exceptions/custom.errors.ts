@@ -59,6 +59,39 @@ export class CommentUpdateForbiddenException extends CustomHttpException {
     }
 }
 
+export class CommentDeleteForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COMMENT_FOR_DELETE,
+            '본인이 작성한 댓글만 삭제할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class CocommentUpdateForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COCOMMENT_FOR_UPDATE,
+            '본인이 작성한 대댓글만 수정할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class CocommentDeleteForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COCOMMENT_FOR_DELETE,
+            '본인이 작성한 대댓글만 삭제할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 export class AlreadyProjectCompletedException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -97,6 +130,17 @@ export class StepDeleteForBiddenException extends CustomHttpException {
         super(
             ErrorCode.STEP_DELETE_FORBIDDEN,
             'STEP 내부에 업무가 존재할 경우, 삭제가 불가능합니다',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class ProfileForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.NOT_YOUR_PROFILE,
+            '자신의 프로필만 수정할 수 있습니다.',
             HttpStatus.FORBIDDEN,
             data
         );
@@ -150,6 +194,16 @@ export class PersonalRecallNotFoundException extends CustomHttpException {
     }
 }
 
+export class ProjectTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PROJECT_TRANSACTION_ERROR,
+            '프로젝트 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
 export class MasterPortfolioNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -186,6 +240,17 @@ export class TaskFileNotFoundException extends CustomHttpException {
 export class CommentNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.COMMENT_NOT_FOUND, '댓글을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
+    }
+}
+
+export class CocommentNotFoundException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.COCOMMENT_NOT_FOUND,
+            '대댓글을 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            data
+        );
     }
 }
 

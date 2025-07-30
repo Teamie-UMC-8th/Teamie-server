@@ -1,6 +1,7 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { Comment } from '../comments.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Entity()
 export class Cocomment extends BaseEntity {
@@ -11,4 +12,7 @@ export class Cocomment extends BaseEntity {
         onDelete: 'CASCADE',
     })
     comment: Comment;
+
+    @ManyToOne(() => User, (user) => user.cocomments, { onDelete: 'CASCADE' })
+    user: User;
 }

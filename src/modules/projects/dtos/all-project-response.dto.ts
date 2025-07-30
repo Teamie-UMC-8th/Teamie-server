@@ -1,6 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
 import { UserProject } from 'src/modules/mappings/user-projects/userProjects.entity';
+import { ProjectResponseDto } from './project-response.dto';
+export class PostDto {
+    @ApiProperty()
+    author: string;
+
+    @ApiProperty()
+    content: string;
+
+    static from(data: any): PostDto {
+        const dto = new PostDto();
+        dto.author = data.author;
+        dto.content = data.content;
+        return dto;
+    }
+}
 
 export class SimpleTaskDto {
     @ApiProperty({ example: '담당업무' })
@@ -53,24 +68,9 @@ export class UserInProjectDto {
     }
 }
 
-export class PostDto {
-    @ApiProperty()
-    author: string;
-
-    @ApiProperty()
-    content: string;
-
-    static from(data: any): PostDto {
-        const dto = new PostDto();
-        dto.author = data.author;
-        dto.content = data.content;
-        return dto;
-    }
-}
-
 export class AllProjectResponseDto {
-    @ApiProperty({ type: Project })
-    project: Project;
+    @ApiProperty({ type: ProjectResponseDto })
+    project: ProjectResponseDto;
 
     @ApiProperty({ type: [UserInProjectDto] })
     users: UserInProjectDto[];
@@ -84,7 +84,7 @@ export class AllProjectResponseDto {
         posts: PostDto[];
     }): AllProjectResponseDto {
         const dto = new AllProjectResponseDto();
-        dto.project = entity.project;
+        dto.project = ProjectResponseDto.fromEntity(entity.project);
         dto.users = entity.users;
         dto.posts = entity.posts;
         return dto;

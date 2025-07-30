@@ -3,6 +3,7 @@ import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserInvariantViolationException } from 'src/common/exceptions/custom.errors';
+import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class AuthService {
@@ -32,5 +33,14 @@ export class AuthService {
             userId: userId,
         };
         return this.jwtService.sign(payload);
+    }
+
+    async verifyWsToken(token: string): Promise<number> {
+        try {
+            const payload = await this.jwtService.verifyAsync(token);
+            return payload.userId;
+        } catch (err) {
+            throw new WsException('Invalid token');
+        }
     }
 }

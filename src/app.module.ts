@@ -12,13 +12,14 @@ import { PersonalRecallsModule } from './modules/personal-recalls/personal-recal
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.gaurd';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { S3TestController } from './infra/upload/upload.controller';
 import { StepsModule } from './modules/steps/steps.module';
 import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';
 import { TaskFilesModule } from './modules/mappings/task-files/task-files.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { CocommentsModule } from './modules/comments/cocomments/cocomments.module';
 import { FinalPortfoliosModule } from './modules/final-portfolios/final-portfolios.module';
 import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 @Module({
@@ -53,6 +54,7 @@ import { TransactionInterceptor } from './common/interceptors/transaction.interc
         PlansModule,
         CommentsModule,
         FinalPortfoliosModule,
+        CocommentsModule,
     ],
     controllers: [S3TestController],
     providers: [
