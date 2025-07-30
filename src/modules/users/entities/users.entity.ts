@@ -28,7 +28,10 @@ export class User extends BaseEntity {
     })
     school: string;
 
-    @Column({ nullable: true })
+    @Column({
+        nullable: true,
+        select: false,
+    })
     tier: string; // NOTE: 추후 ENUM으로 바꾸기(요금제 확정 시)
 
     @Column({ length: 255 })
@@ -41,18 +44,28 @@ export class User extends BaseEntity {
     })
     kakaoId: string;
 
-    @Column({ default: 0 })
+    @Column({
+        default: 0,
+        select: false,
+    })
     credit: number;
 
-    @Column({ default: 0 })
+    @Column({
+        default: 0,
+        select: false,
+    })
     projectNum: number;
 
-    @Column({ default: true })
+    @Column({
+        default: true,
+        select: false,
+    })
     isActive: boolean;
 
     @Column({
         length: 15,
         nullable: true,
+        select: false,
     })
     major: string;
 
