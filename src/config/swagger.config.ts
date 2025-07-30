@@ -24,6 +24,7 @@ export const createSwaggerConfig = (configService: ConfigService) => {
             },
             'access-token'
         )
+        .addCookieAuth('accessToken')
         .build();
 };
 
