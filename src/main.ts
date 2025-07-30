@@ -6,6 +6,7 @@ import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
 import { defaultConfig } from './config/app.config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createSwaggerConfig, publicPaths } from './config/swagger.config';
+import * as cookieParser from 'cookie-parser'
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -15,6 +16,7 @@ async function bootstrap() {
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     });
+    app.use(cookieParser());
 
     const configService = app.get(ConfigService);
     const config = defaultConfig(configService);
