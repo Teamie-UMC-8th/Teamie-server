@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Plan } from './plans.entity';
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { PlanDetails } from './dtos/plan-details.dto';
-import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
+import {
+    PlanDateConflictException,
+    PlanNotFoundException,
+    PlanTransactionException,
+    ProjectForbiddenException,
+} from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../projects/projects.service';
+import { CreatePlanResponse } from './dtos/create-plan.dto';
 
 @Injectable()
 export class PlansService {
@@ -14,6 +20,7 @@ export class PlansService {
         private readonly projectsService: ProjectsService
     ) {}
 
+    // 일정 상세 페이지 조회
     async getDetails(planId: number): Promise<PlanDetails> {
         const plan = await this.plansRepository
             .createQueryBuilder('plan')
@@ -38,5 +45,39 @@ export class PlansService {
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
         return await this.projectsService.checkProjectMember(userId, projectId);
+    }
+
+    // 일정 생성
+    async createPlan(
+        qr: QueryRunner,
+        userId: number,
+        projectId: number,
+        date: Date
+    ): Promise<CreatePlanResponse> {
+        // 유효한 식별자인지 & 사용자 권한 check
+        const project = await this.projectsService.assertProjectExists(projectId);
+        const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
+        if (!checkUserIsMember) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 프로젝트 생성일자와 일정 생성일자 비교
+        if (project.createdAt > date) {
+            throw new PlanDateConflictException({
+                createdAt: project.createdAt.toISOString(),
+                date: date.toISOString(),
+            });
+        }
+
+        try {
+            const newPlan = qr.manager.create(Plan, {
+                project: project,
+                date: date,
+            });
+            const savedPlan = await qr.manager.save(Plan, newPlan);
+            return CreatePlanResponse.fromEntity(savedPlan);
+        } catch (err) {
+            throw new PlanTransactionException();
+        }
     }
 }
