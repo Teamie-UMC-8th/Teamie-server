@@ -104,19 +104,41 @@ export class ProjectsService {
         const baseUrl = this.configService.get('BASE_URL');
         const inviteCode = `${baseUrl}/projects/join/${code}`;
 
-        return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
+
+        return CommonResponse.success(
+            CreateProjectResponseDto.fromEntity(project, inviteCode, expiresAt)
+        );
     }
 
     async joinProject(userId: number, inviteCode: string): Promise<CommonResponse> {
+        // 1) inviteCode로 projectId 가져오기
         const projectId = await this.getProjectByInviteCode(inviteCode);
         if (!projectId) throw new InvalidInvitecodeException();
 
+        // 2) 프로젝트 엔티티에서 이름 조회
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            select: ['id', 'name'], // 필요한 컬럼만
+        });
+        if (!project) throw new ProjectNotFoundException();
+
+        // 3) 유저 엔티티에서 이름 조회
+        const user = await this.userRepository.findOneOrFail({
+            where: { id: userId },
+            select: ['id', 'name'],
+        });
+
+        // 4) 아직 참여하지 않았다면 member로 추가
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (!alreadyJoined) {
             await this.addUserToProject(userId, projectId, 'member');
         }
+
+        // 5) 메시지에 이름 사용
         return CommonResponse.success({
-            message: `${userId}님이 ${projectId} 프로젝트에 참여되었습니다.`,
+            message: `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`,
         });
     }
 
@@ -272,8 +294,7 @@ export class ProjectsService {
         // 8) 다시 JSON.stringify 후 저장
         await this.redis.set(key, JSON.stringify(posts));
         await this.redis.expire(key, this.POST_TTL_SECONDS);
-
-        // 9) 생성된 객체 반환
+        // 10) 생성된 객체 반환
         return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost, projectId));
     }
 

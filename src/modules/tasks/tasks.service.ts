@@ -401,7 +401,7 @@ export class TasksService {
         return CreateTaskFileResponseDto.fromEntity(saved);
     }
 
-    // STEP별 더보기 API 
+    // STEP별 더보기 API
     async getMoreTasksByStep(
         projectId: number,
         stepId: number,
@@ -440,7 +440,7 @@ export class TasksService {
         return { tasks: tasks.map((t) => TaskInStepDto.from(t)), totalCount };
     }
 
-    // STATUS별 더보기 API 
+    // STATUS별 더보기 API
     async getMoreTasksByStatus(
         projectId: number,
         status: Status,
