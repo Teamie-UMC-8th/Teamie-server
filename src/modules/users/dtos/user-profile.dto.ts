@@ -57,7 +57,7 @@ export class UserProfileResponseDto {
     }
 }
 
-export class UpdateProfileRequestDto{
+export class UpdateProfileRequestDto {
     @ApiPropertyOptional({
         example: '중앙대학교',
         description: '변경할 프로필 정보-학교',
@@ -75,11 +75,11 @@ export class UpdateProfileRequestDto{
     major?: string;
 }
 
-export class UpdateProfileRequestWithFileDto extends UpdateProfileRequestDto{
+export class UpdateProfileRequestWithFileDto extends UpdateProfileRequestDto {
     @ApiProperty({
         type: 'string',
         format: 'binary',
-        required: false
+        required: false,
     })
     file?: any;
 }
