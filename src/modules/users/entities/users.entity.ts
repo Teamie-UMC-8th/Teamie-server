@@ -10,6 +10,7 @@ import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { FinalPortfolio } from '../../final-portfolios/final-portfolios.entity';
+import { Cocomment } from '../../comments/cocomments/cocomments.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -71,6 +72,9 @@ export class User extends BaseEntity {
 
     @OneToMany(() => Comment, (comment) => comment.user)
     comments: Comment[];
+
+    @OneToMany(() => Cocomment, (cocomment) => cocomment.user)
+    cocomments: Cocomment[];
 
     @OneToMany(() => PersonalRecall, (personalRecall) => personalRecall.user)
     personalRecalls: PersonalRecall[];

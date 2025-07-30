@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/projects.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +24,8 @@ import {
     ProjectForbiddenException,
     ProjectUpdateForbiddenException,
     InvalidInvitecodeException,
+    ProfileForbiddenException,
+    ProjectTransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -35,6 +37,7 @@ import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios
 import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { User } from '../users/entities/users.entity';
+import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -101,19 +104,41 @@ export class ProjectsService {
         const baseUrl = this.configService.get('BASE_URL');
         const inviteCode = `${baseUrl}/projects/join/${code}`;
 
-        return CommonResponse.success(CreateProjectResponseDto.fromEntity(project, inviteCode));
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
+
+        return CommonResponse.success(
+            CreateProjectResponseDto.fromEntity(project, inviteCode, expiresAt)
+        );
     }
 
     async joinProject(userId: number, inviteCode: string): Promise<CommonResponse> {
+        // 1) inviteCode로 projectId 가져오기
         const projectId = await this.getProjectByInviteCode(inviteCode);
         if (!projectId) throw new InvalidInvitecodeException();
 
+        // 2) 프로젝트 엔티티에서 이름 조회
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            select: ['id', 'name'], // 필요한 컬럼만
+        });
+        if (!project) throw new ProjectNotFoundException();
+
+        // 3) 유저 엔티티에서 이름 조회
+        const user = await this.userRepository.findOneOrFail({
+            where: { id: userId },
+            select: ['id', 'name'],
+        });
+
+        // 4) 아직 참여하지 않았다면 member로 추가
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (!alreadyJoined) {
             await this.addUserToProject(userId, projectId, 'member');
         }
+
+        // 5) 메시지에 이름 사용
         return CommonResponse.success({
-            message: `${userId}님이 ${projectId} 프로젝트에 참여되었습니다.`,
+            message: `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`,
         });
     }
 
@@ -269,8 +294,7 @@ export class ProjectsService {
         // 8) 다시 JSON.stringify 후 저장
         await this.redis.set(key, JSON.stringify(posts));
         await this.redis.expire(key, this.POST_TTL_SECONDS);
-
-        // 9) 생성된 객체 반환
+        // 10) 생성된 객체 반환
         return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost, projectId));
     }
 
@@ -370,6 +394,50 @@ export class ProjectsService {
         return CommonResponse.success(
             ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD)
         );
+    }
+
+    async updateProfile(
+        qr: QueryRunner,
+        projectId: number,
+        userId: number,
+        dto: UpdateProfileDto
+    ): Promise<CommonResponse<UpdateProfileResponseDto>> {
+        // 프로젝트 완료 여부 검사
+        await this.assertProjectIsEditable(projectId);
+        // 1. 본인 프로필 수정인지 확인
+        if (userId !== dto.id) {
+            throw new ProfileForbiddenException();
+        }
+
+        // 2. 해당 UserProject 매핑 가져오기
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                project: { id: projectId },
+                user: { id: dto.id },
+            },
+        });
+
+        if (!userProject) {
+            throw new ProjectForbiddenException();
+        }
+        try {
+            // 3. role 수정 후 저장
+            userProject.role = dto.role;
+            await qr.manager.save(userProject);
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
+
+        // 4. 전체 userProject 조회 (task 정보 포함)
+        const allUserProjects = await qr.manager.find(UserProject, {
+            where: { project: { id: projectId } },
+            relations: ['user', 'user.managers', 'user.managers.task'],
+        });
+
+        // 5. DTO 변환 및 응답 반환
+        const users = allUserProjects.map(UserInProjectDto.from);
+
+        return CommonResponse.success({ users });
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
