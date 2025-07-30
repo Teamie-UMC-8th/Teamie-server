@@ -46,7 +46,7 @@ export class LLMService {
         return completions;
     }
 
-    async generateQuestions(): Promise<Array<Question>> {
+    async generateQuestions(inputData: string): Promise<Array<Question>> {
         // 질문 생성 프롬프트를 로드합니다.
         let questionPrompt: string;
         try {

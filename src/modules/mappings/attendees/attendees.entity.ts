@@ -1,5 +1,5 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Plan } from 'src/modules/plans/plans.entity';
+import { Plan } from 'src/modules/plans/entities/plans.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import { Entity, ManyToOne } from 'typeorm';
 

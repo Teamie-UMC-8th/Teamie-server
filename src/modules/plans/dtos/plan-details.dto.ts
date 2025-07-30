@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from 'src/modules/users/entities/users.entity';
-import { Plan } from '../plans.entity';
+import { Plan } from '../entities/plans.entity';
 
 class UserProfile {
     @ApiProperty({

@@ -14,7 +14,7 @@ import {
     TaskNotFoundException,
     StepDeleteForBiddenException,
 } from '../../common/exceptions/custom.errors';
-import { Task } from '../tasks/tasks.entity';
+import { Task } from '../tasks/entities/tasks.entity';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
 
 @Injectable()

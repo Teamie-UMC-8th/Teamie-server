@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { In, QueryRunner, Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
@@ -19,6 +19,11 @@ import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-r
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { Task } from '../tasks/entities/tasks.entity';
+import { Plan } from '../plans/entities/plans.entity';
+import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
+import { portfolioType } from 'src/common/enums/portfolio-type.enum';
+import { Project } from '../projects/entities/projects.entity';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -29,11 +34,13 @@ export class MasterPortfoliosService {
         private readonly masterPortfolioRepository: Repository<MasterPortfolio>,
         @InjectRepository(MasterPortfolioAI)
         private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>,
         private readonly llmService: LLMService
     ) {}
 
     // 마스터 포트폴리오 질문 생성
-    async createQuestions(qr: QueryRunner, userId: number, projectId: number) {
+    async createQuestions(qr: QueryRunner, userId: number, projectId: number, recordIdList: number[]) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
             where: { project: { id: projectId }, user: { id: userId } },
@@ -43,12 +50,54 @@ export class MasterPortfoliosService {
         }
         const masterPortfolioId = masterPortfolio.id;
 
+        // recordId 정보 저장하기 (선택된 회의록)
+        for (const recordId of recordIdList) {
+            await qr.manager.update(
+                Plan,
+                { id: recordId },
+                { masterPortfolioId }
+            )
+        }
+
+        let inputData;
+        // 가져올 데이터
+        // 1. 선택된 회의록 내용
+        const records = await qr.manager.find(Plan, {
+            where: { id: In(recordIdList) },
+            select: ['meetingRecords'],
+        });
+        // 2. 담당자로 지정된 모든 업무명
+        const tasks = await qr.manager.find(Task, {
+            where: { managers: { user: { id: userId } }, step: { project: { id: projectId } } },
+            select: ['name'], // 업무명만 필요한 경우
+        })
+        // 3. 개인회고 내용
+        const personalRecalls = await qr.manager.find(PersonalRecall, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['collaborationProfile', 'memorableExperience', 'strengthsAndGrowth']
+        })
+        // 4. 프로젝트 명 / 분류 태그 / 기여도
+        const projectDate = await this.projectRepository.findOne({
+            where: { id: projectId },
+            select: ['createdAt', 'completedAt'],
+        })
+        if (!projectDate) {
+            console.log('Project date not found');
+            throw new InternalServerErrorException('프로젝트 정보를 찾을 수 없습니다.');
+        }
+        console.log('projectDate', projectDate.completedAt);
+        const completedAt = projectDate.completedAt;
+        // const createdAt = projectDate.createdAt ? projectDate.createdAt.getTime() : 0;
+        // const projectPeriod = Math.ceil((completedAt - createdAt) / (1000 * 60 * 60 * 24));
+        // 이름과 역할(role)
+        // 프로젝트명, 진행기간
+        // const projectInfo = await qr.manager.findOne(Project, {
+        //     where: { id: projectId },
+        //     select: ['name', ''],
+        // })
+
         // LLM을 호출하여 질문을 생성합니다.
-        // const questions: Array<Question> = await this.llmService.generateQuestions();
-        const questions: Array<Question> = [
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 1' },
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 2' },
-        ];
+        const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
 
         // 생성된 질문들을 데이터베이스에 저장합니다.
         const questionEntities: QuestionResponseDto[] = [];
@@ -143,10 +192,12 @@ export class MasterPortfoliosService {
         if (existingPortfolio) {
             throw new MasterPortfolioDuplicateException(userId, projectId);
         }
-
+        
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },
+            category: portfolioType.COURSE, // 기본 카테고리 설정 (수업)
+            contributionRate: 0, // 초기 기여도 설정 (0%)
         });
         await this.masterPortfolioRepository.save(masterPortfolio);
         return MasterPortfolioResponseDto.from(masterPortfolio);

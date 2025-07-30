@@ -3,6 +3,7 @@ import {
     Controller,
     Get,
     Param,
+    ParseArrayPipe,
     ParseIntPipe,
     Patch,
     Post,
@@ -75,9 +76,11 @@ export class MasterPortfoliosController {
     async createQuestions(
         @Req() req: TransactionalRequest,
         @Param('projectId', ParseIntPipe) projectId: number,
-        @User('id') userId: number
+        @User('id') userId: number,
+        @Body('recordIdList', ParseArrayPipe) recordIdList: number[]
     ) {
-        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId);
+        console.log('recordIdList', recordIdList);
+        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId, recordIdList);
     }
 
     @Post(':projectId/generate')
