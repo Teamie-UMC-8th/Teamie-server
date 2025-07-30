@@ -176,10 +176,7 @@ export class TasksController {
         summary: '업무별 댓글 조회',
         description: '업무별로 댓글과 대댓글을 조회합니다',
     })
-    async getComment(
-        @Param('taskId') taskId: number,
-        @Query('offset') offset: number,
-    ) {
+    async getComment(@Param('taskId') taskId: number, @Query('offset') offset: number) {
         return this.tasksService.getComment(taskId, offset);
     }
 }
