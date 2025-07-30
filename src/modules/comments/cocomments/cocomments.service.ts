@@ -47,4 +47,31 @@ export class CocommentsService {
 
         return UpdateCocommentResponseDto.from(updatedComment);
     }
+
+    async deleteCocomment(
+            userId: number,
+            cocommentId: number,
+            queryRunner: QueryRunner
+        ): Promise<CommonResponse> {
+            // 대댓글 존재 여부 확인
+            const cocomment = await queryRunner.manager
+                .createQueryBuilder(Cocomment, 'cocomment')
+                .leftJoinAndSelect('cocomment.user', 'user')
+                .where('cocomment.id = :cocommentId', { cocommentId })
+                .getOne();
+    
+            if (!cocomment) {
+                throw new CocommentNotFoundException();
+            }
+    
+            // 대댓글 작성자와 로그인한 유저가 같은지 확인
+            if (cocomment.user.id !== userId) {
+                throw new CocommentDeleteForbiddenException();
+            }
+    
+            // 대댓글 삭제
+            await queryRunner.manager.delete(Cocomment, { id: cocommentId });
+    
+            return CommonResponse.success({ message: `대댓글 ID ${cocommentId} 삭제 완료` });
+        }
 }
