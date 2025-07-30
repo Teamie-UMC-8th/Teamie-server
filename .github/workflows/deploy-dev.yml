@@ -30,7 +30,7 @@ jobs:
 
       - name: Build NestJS project
         run: |
-          rd /s /q dist
+          rm -rf dist
           npm run build
 
       - name: Docker build and push
