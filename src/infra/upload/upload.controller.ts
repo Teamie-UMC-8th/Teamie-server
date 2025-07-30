@@ -3,6 +3,7 @@ import { UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { User } from 'src/common/decorators/user.decorator';
+import { ConfigService } from '@nestjs/config';
 @Controller('upload')
 export class UploadController {
     constructor(private readonly uploadService: UploadService) {}
@@ -10,45 +11,23 @@ export class UploadController {
     @Post()
     @UseInterceptors(FileInterceptor('file'))
     async upload(@UploadedFile() file: Express.Multer.File) {
-        const key = await this.uploadService.uploadFile(file);
+        const url = await this.uploadService.uploadFile(file);
         return {
-            url: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
+            url
         };
     }
 }
 
 @Controller('s3')
 export class S3TestController {
-    private readonly s3 = new S3Client({
-        region: process.env.AWS_REGION,
-        credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
+    private readonly s3: S3Client;
+    constructor(private readonly config: ConfigService) {
+    this.s3 = new S3Client({
+      region: this.config.get<string>('AWS_REGION'),
+      credentials: {
+        accessKeyId: this.config.get<string>('AWS_ACCESS_KEY_ID')!,
+        secretAccessKey: this.config.get<string>('AWS_SECRET_ACCESS_KEY')!,
+      },
     });
-
-    @Get('test')
-    async testS3() {
-        try {
-            const result = await this.s3.send(
-                new ListObjectsV2Command({
-                    Bucket: process.env.AWS_S3_BUCKET!,
-                    MaxKeys: 1,
-                })
-            );
-
-            return {
-                success: true,
-                message: 'S3 연결 성공 ✅',
-                result,
-            };
-        } catch (error: any) {
-            console.error('S3 연결 실패 ❌', error);
-            return {
-                success: false,
-                message: 'S3 연결 실패 ❌',
-                error: error.message,
-            };
-        }
-    }
+  }
 }
