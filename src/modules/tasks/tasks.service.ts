@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Task } from './tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { CreateTaskRequestDto} from './dtos/create-task.dto';
+import { CreateTaskRequestDto } from './dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
@@ -22,7 +22,11 @@ import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dt
 import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
 import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
 import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
-import { GetCommentResponseDto, UserInCommentDto, CocommentInCommentDto } from '../comments/dto/get-comment.dto';
+import {
+    GetCommentResponseDto,
+    UserInCommentDto,
+    CocommentInCommentDto,
+} from '../comments/dto/get-comment.dto';
 import { Status } from '../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
@@ -480,12 +484,8 @@ export class TasksService {
         return { tasks: tasks.map((t) => TaskInStatusDto.from(t)), totalCount };
     }
 
-
     //업무별 댓글 조회
-    async getComment(
-        taskId: number,
-        offset: number,
-    ): Promise<GetCommentResponseDto> {
+    async getComment(taskId: number, offset: number): Promise<GetCommentResponseDto> {
         const task = await this.taskRepository.findOne({
             where: { id: taskId },
         });
@@ -498,12 +498,12 @@ export class TasksService {
             throw new BadRequestException('offset은 0 이상이어야 합니다.');
         }
 
-        const limit = 10; 
+        const limit = 10;
 
         // 댓글 조회 (댓글 작성자 + 대댓글 + 대댓글 작성자까지 한번에 조인)
         const comments = await this.commentRepository
             .createQueryBuilder('comment')
-            .leftJoinAndSelect('comment.user', 'user')  // 댓글 작성자
+            .leftJoinAndSelect('comment.user', 'user') // 댓글 작성자
             .leftJoinAndSelect('comment.cocomments', 'cocomment') // 대댓글
             .leftJoinAndSelect('cocomment.user', 'cocommentUser') // 대댓글 작성자
             .where('comment.taskId = :taskId', { taskId })
@@ -529,13 +529,12 @@ export class TasksService {
             ])
             .getMany();
 
-
         // 댓글 총 개수 (hasMore 계산용)
         const totalCount = await this.commentRepository.count({
             where: { task: { id: taskId } },
         });
 
-        // DTO 변환 
+        // DTO 변환
         return GetCommentResponseDto.from(comments, totalCount, offset, limit);
     }
 }
