@@ -247,6 +247,17 @@ export class InternalServerError extends CustomHttpException {
     }
 }
 
+export class TransactionException extends CustomHttpException {
+    constructor(domain: string, data?: any) {
+        super(
+            ErrorCode.TRANSACTION_ERROR,
+            `${domain}에서 트랜잭션 에러가 발생했습니다.`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
 export class UserInvariantViolationException extends CustomHttpException {
     constructor(data?: any) {
         super(

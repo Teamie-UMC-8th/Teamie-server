@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 
 export class UserProfileResponseDto {
     @ApiProperty({
@@ -54,4 +55,31 @@ export class UserProfileResponseDto {
         dto.projectNum = entity.projectNum;
         return dto;
     }
+}
+
+export class UpdateProfileRequestDto{
+    @ApiPropertyOptional({
+        example: '중앙대학교',
+        description: '변경할 프로필 정보-학교',
+    })
+    @IsOptional()
+    @MaxLength(15)
+    school?: string;
+
+    @ApiPropertyOptional({
+        example: '소프트웨어학부',
+        description: '변경할 프로필 정보-전공',
+    })
+    @IsOptional()
+    @MaxLength(15)
+    major?: string;
+}
+
+export class UpdateProfileRequestWithFileDto extends UpdateProfileRequestDto{
+    @ApiProperty({
+        type: 'string',
+        format: 'binary',
+        required: false
+    })
+    file?: any;
 }
