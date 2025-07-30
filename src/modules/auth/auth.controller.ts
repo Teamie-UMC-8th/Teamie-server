@@ -20,11 +20,11 @@ export class AuthController {
     @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
         summary: '카카오 로그인 트리거',
-        description: '카카오 인증페이지로 리다이렉트합니다.',
+        description: '카카오 인증페이지로 리다이렉트합니다. 스웨거에서 누르지 마세요.',
     })
     @ApiResponse({
         status: 302,
-        description: '카카오 로그인 페이지로 리다이렉트됨',
+        description: '카카오 로그인 페이지로 리다이렉트됨. 스웨거에서 누르지 마세요.',
     })
     async kakaoLogin() {}
 
@@ -46,7 +46,7 @@ export class AuthController {
             httpOnly: true,
             secure: false, // NOTE: HTTPS 전송 강제, 도메인 붙이게 되면 변경하기
             sameSite: 'lax',
-            maxAge: 100 * 60 * 60, // 1시간
+            maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
         });
         //TODO: 추후 refreshToken 구현 필요
         res.redirect(this.configService.get('CLIENT_REDIRECT_URI')!); // NOTE: 환경변수 없으면 터짐!
