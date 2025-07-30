@@ -29,7 +29,9 @@ jobs:
         run: npm ci
 
       - name: Build NestJS project
-        run: npm run build
+        run: |
+          rd /s /q dist
+          npm run build
 
       - name: Docker build and push
         run: |
