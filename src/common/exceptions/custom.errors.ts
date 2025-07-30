@@ -300,6 +300,17 @@ export class MasterPortfolioDuplicateException extends CustomHttpException {
     }
 }
 
+export class PlanDateConflictException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_DATE_CONFLICT,
+            '프로젝트 생성일자 이전에는 일정 생성이 불가능합니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {
@@ -350,6 +361,17 @@ export class PromptLoadingException extends CustomHttpException {
         super(
             ErrorCode.PROMPT_LOADING_ERROR,
             `프롬프트 파일을 로딩할 수 없습니다: ${filename}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
+export class PlanTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_TRANSACTION_ERROR,
+            '일정 관련 트랜잭션에서 에러가 발생했습니다.',
             HttpStatus.INTERNAL_SERVER_ERROR,
             data
         );

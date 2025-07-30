@@ -44,8 +44,8 @@ export class AuthController {
         const accessToken = await this.authService.handleKakaoLogin(kakaoUser);
         res.cookie('accessToken', accessToken, {
             httpOnly: true,
-            secure: false, // NOTE: HTTPS 전송 강제, 도메인 붙이게 되면 변경하기
-            sameSite: 'lax',
+            secure: true,
+            sameSite: 'none',
             maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
         });
         //TODO: 추후 refreshToken 구현 필요
