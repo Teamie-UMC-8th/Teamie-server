@@ -21,6 +21,7 @@ import {
     ApiParam,
     ApiOperation,
     ApiResponse,
+    ApiOkResponse,
 } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
@@ -58,7 +59,10 @@ export class ProjectsController {
     @Get('/join')
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
     @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
-    @ApiCommonResponse(AllProjectResponseDto)
+    @ApiOkResponse({
+        type: String,
+        description: '${userId}님이 ${projectId} 프로젝트에 참여되었습니다.',
+    })
     @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
     async joinProject(@Query('inviteCode') inviteCode: string, @User('id') userId: number) {
         return await this.projectsService.joinProject(userId, inviteCode);
