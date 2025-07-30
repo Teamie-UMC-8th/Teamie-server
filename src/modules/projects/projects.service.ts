@@ -78,36 +78,35 @@ export class ProjectsService {
     ): Promise<CommonResponse<CreateProjectResponseDto>> {
         const { name } = dto;
         // 1) outer 스코프에 한 번만 선언
-  let savedProject!: Project;
+        let savedProject!: Project;
 
-  try {
-    // 2) Project 인스턴스 생성 (manager.create)
-    const project = qr.manager.create(Project, {
-      name,
-      goal:       '',
-      rule:       '',
-      isCompleted:false,
-      completedAt:null,    // undefined 대신 null 권장
-    });
+        try {
+            // 2) Project 인스턴스 생성 (manager.create)
+            const project = qr.manager.create(Project, {
+                name,
+                goal: '',
+                rule: '',
+                isCompleted: false,
+                completedAt: null, // undefined 대신 null 권장
+            });
 
-    // 3) DB에 저장 → savedProject에 할당
-    savedProject = await qr.manager.save(Project, project);
+            // 3) DB에 저장 → savedProject에 할당
+            savedProject = await qr.manager.save(Project, project);
 
-    // 4) UserProject 인스턴스 생성
-    const userProject = qr.manager.create(UserProject, {
-      user:       { id: userId },
-      project:    savedProject,
-      permission: projectPermission.LEAD,
-      role:       '',
-    });
+            // 4) UserProject 인스턴스 생성
+            const userProject = qr.manager.create(UserProject, {
+                user: { id: userId },
+                project: savedProject,
+                permission: projectPermission.LEAD,
+                role: '',
+            });
 
-    // 5) UserProject도 저장
-    await qr.manager.save(UserProject, userProject);
-
-  } catch (err) {
-    // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
-    throw new ProjectTransactionException();
-  }
+            // 5) UserProject도 저장
+            await qr.manager.save(UserProject, userProject);
+        } catch (err) {
+            // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
+            throw new ProjectTransactionException();
+        }
         const code = generateRandomCode();
         const key = `invite:${code}`;
         const ttlSeconds = 60 * 60 * 24 * 7; //7일
@@ -223,44 +222,34 @@ export class ProjectsService {
         project.completedAt = new Date();
 
         try {
-    // 3-1) 프로젝트 저장
-    await qr.manager.save(Project, project);
+            // 3-1) 프로젝트 저장
+            await qr.manager.save(Project, project);
 
-    // 3-2) 모든 멤버의 projectNum + 1
-    const rawMembers = await this.userProjectRepository
-      .createQueryBuilder('up')
-      .leftJoin('up.user', 'user')
-      .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
-      .where('up.projectId = :projectId', { projectId })
-      .getRawMany<{ userId: number; projectNum: number }>();
+            // 3-2) 모든 멤버의 projectNum + 1
+            const rawMembers = await this.userProjectRepository
+                .createQueryBuilder('up')
+                .leftJoin('up.user', 'user')
+                .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
+                .where('up.projectId = :projectId', { projectId })
+                .getRawMany<{ userId: number; projectNum: number }>();
 
-    for (const { userId: memberId, projectNum } of rawMembers) {
-      await qr.manager.update(
-        User,
-        { id: memberId },
-        { projectNum: projectNum + 1 }
-      );
-    }
+            for (const { userId: memberId, projectNum } of rawMembers) {
+                await qr.manager.update(User, { id: memberId }, { projectNum: projectNum + 1 });
+            }
 
-    // 3-3) PersonalRecall 생성 (create → save)
-    const recall = qr.manager.create(PersonalRecall, {
-      user:    { id: userId },
-      project: { id: projectId },
-    });
-    await qr.manager.save(PersonalRecall, recall);
+            // 3-3) PersonalRecall 생성 (create → save)
+            const recall = qr.manager.create(PersonalRecall, {
+                user: { id: userId },
+                project: { id: projectId },
+            });
+            await qr.manager.save(PersonalRecall, recall);
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
 
-    // 3-4) MasterPortfolio도 같은 트랜잭션 매니저로 생성
-    const mPortfolio = qr.manager.create(MasterPortfolio, {
-      user:    { id: userId },
-      project: { id: projectId },
-      // 만약 기본 필드 외에 detailInfo 등 추가 정보가 있으면 이곳에 넣으세요.
-    });
-    await qr.manager.save(MasterPortfolio, mPortfolio);
+        // 4) 트랜잭션 범위 밖에서 MasterPortfolio 생성
+        await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
 
-  } catch (err) {
-    // 트랜잭션 예외 발생 시 인터셉터가 롤백해 줍니다.
-    throw new ProjectTransactionException();
-  }
         // 5) 응답 반환
         return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
     }
@@ -483,39 +472,27 @@ export class ProjectsService {
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
     async assertProjectIsEditable(projectId: number): Promise<Project> {
-  const project = await this.projectRepository.findOne({
-    where: { id: projectId },
-    relations: [
-      'userProjects',
-      'userProjects.user',
-      'userProjects.user.managers',
-      'userProjects.user.managers.task',
-    ],
-  });
-  if (!project) {
-    throw new ProjectNotFoundException();
-  }
-  if (project.isCompleted) {
-    throw new AlreadyProjectCompletedException();
-  }
-  return project;
-}
+        const project = await this.projectRepository.findOne({ where: { id: projectId } });
+        if (!project) throw new ProjectNotFoundException();
+        if (project.isCompleted) throw new AlreadyProjectCompletedException();
+        return project;
+    }
     // 프로젝트 존재 여부 확인
-async assertProjectExists(projectId: number): Promise<Project> {
-  const project = await this.projectRepository.findOne({
-    where: { id: projectId },
-    relations: [
-      'userProjects',
-      'userProjects.user',
-      'userProjects.user.managers',
-      'userProjects.user.managers.task',
-    ],
-  });
-  if (!project) {
-    throw new ProjectNotFoundException();
-  }
-  return project;
-}
+    async assertProjectExists(projectId: number): Promise<Project> {
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: [
+                'userProjects',
+                'userProjects.user',
+                'userProjects.user.managers',
+                'userProjects.user.managers.task',
+            ],
+        });
+        if (!project) {
+            throw new ProjectNotFoundException();
+        }
+        return project;
+    }
     // 프로젝트 멤버 확인 + 팀장 권한 확인
     async checkProjectLeader(userId: number, projectId: number) {
         const mapping = await this.userProjectRepository

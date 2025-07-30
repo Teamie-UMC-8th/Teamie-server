@@ -56,7 +56,7 @@ export class ProjectsController {
     async createProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Body() dto: CreateProjectDto,
+        @Body() dto: CreateProjectDto
     ) {
         return await this.projectsService.createProject(req.queryRunner, dto, userId);
     }
@@ -73,7 +73,7 @@ export class ProjectsController {
     async joinProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Query('inviteCode') inviteCode: string,
+        @Query('inviteCode') inviteCode: string
     ) {
         return await this.projectsService.joinProject(req.queryRunner, userId, inviteCode);
     }
@@ -93,7 +93,7 @@ export class ProjectsController {
     )
     async getProjectFullData(
         @User('id') userId: number,
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
     ) {
         return await this.projectsService.getProjectFullData(userId, projectId);
     }
@@ -129,7 +129,7 @@ export class ProjectsController {
     async completeProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
     ) {
         return await this.projectsService.completeProject(req.queryRunner, userId, projectId);
     }
@@ -148,7 +148,7 @@ export class ProjectsController {
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
-        @Body() dto: CreateStepDto,
+        @Body() dto: CreateStepDto
     ) {
         return await this.projectsService.createStep(req.queryRunner, dto, projectId, userId);
     }
@@ -166,7 +166,7 @@ export class ProjectsController {
     async createPost(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
-        @Body() dto: CreatePostDto,
+        @Body() dto: CreatePostDto
     ) {
         return await this.projectsService.createPost(dto, userId, projectId);
     }
@@ -195,7 +195,7 @@ export class ProjectsController {
     async deletePost(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
-        @Param('postId', ParseIntPipe) postId: number,
+        @Param('postId', ParseIntPipe) postId: number
     ) {
         return await this.projectsService.deletePost(postId, userId, projectId);
     }

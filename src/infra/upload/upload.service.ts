@@ -13,21 +13,21 @@ export class UploadService {
     });
 
     async uploadFile(file: Express.Multer.File): Promise<string> {
-    const bucket = process.env.AWS_S3_BUCKET!;
-    const region = process.env.AWS_REGION!;
-    const key = `upload/${uuid()}-${file.originalname}`;
+        const bucket = process.env.AWS_S3_BUCKET!;
+        const region = process.env.AWS_REGION!;
+        const key = `upload/${uuid()}-${file.originalname}`;
 
-    const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: file.buffer,
-    });
+        const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: file.buffer,
+        });
 
-    await this.s3.send(command);
+        await this.s3.send(command);
 
-    // bucket, region 변수가 메서드 내에 선언되어 있으므로 에러가 사라집니다.
-    return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-  }
+        // bucket, region 변수가 메서드 내에 선언되어 있으므로 에러가 사라집니다.
+        return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+    }
 
     async deleteFile(key: string): Promise<void> {
         const command = new DeleteObjectCommand({

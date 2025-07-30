@@ -13,7 +13,7 @@ export class UploadController {
     async upload(@UploadedFile() file: Express.Multer.File) {
         const url = await this.uploadService.uploadFile(file);
         return {
-            url
+            url,
         };
     }
 }
@@ -22,12 +22,12 @@ export class UploadController {
 export class S3TestController {
     private readonly s3: S3Client;
     constructor(private readonly config: ConfigService) {
-    this.s3 = new S3Client({
-      region: this.config.get<string>('AWS_REGION'),
-      credentials: {
-        accessKeyId: this.config.get<string>('AWS_ACCESS_KEY_ID')!,
-        secretAccessKey: this.config.get<string>('AWS_SECRET_ACCESS_KEY')!,
-      },
-    });
-  }
+        this.s3 = new S3Client({
+            region: this.config.get<string>('AWS_REGION'),
+            credentials: {
+                accessKeyId: this.config.get<string>('AWS_ACCESS_KEY_ID')!,
+                secretAccessKey: this.config.get<string>('AWS_SECRET_ACCESS_KEY')!,
+            },
+        });
+    }
 }
