@@ -15,17 +15,37 @@ import {
 import { PlanDetails } from '../dtos/plan-details.dto';
 import { PlansService } from '../plans.service';
 import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
+import { UseFilters, UseGuards } from '@nestjs/common';
+import { WsAuthGuard } from 'src/modules/auth/guards/ws-auth.guard';
+import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
+import { AuthService } from 'src/modules/auth/auth.service';
 
+@UseFilters(new WebSocketExceptionFilter())
+@UseGuards(WsAuthGuard)
 @WebSocketGateway({
     namespace: '/plans',
     cors: { origin: '*' },
     transports: ['websocket'],
 })
 export class PlansGateway {
-    constructor(private readonly plansService: PlansService) {}
+    constructor(
+        private readonly plansService: PlansService,
+        private readonly authService: AuthService
+    ) {}
 
     @WebSocketServer()
     server: Server;
+
+    //사용자 인증
+    @SubscribeMessage('authenticate')
+    async handleAuthenticate(
+        @MessageBody() payload: { token: string },
+        @ConnectedSocket() client: Socket
+    ) {
+        const token = payload.token;
+        client.data.user = await this.authService.verifyWsToken(token);
+        console.log(client.data.user);
+    }
 
     //수정사항 브로드캐스트
     broadCastUpdate(planId: number, msg: any) {
@@ -52,7 +72,6 @@ export class PlansGateway {
             return RealTimeMessage.of(RealTimeType.SYNCED, RealTimeEntity.PLAN, detail);
         } catch (error) {
             if (error instanceof PlanNotFoundException) {
-                client.emit('error', { message: error.message });
                 throw new WsException(error.message);
             }
             throw error;

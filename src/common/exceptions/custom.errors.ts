@@ -59,6 +59,17 @@ export class CommentUpdateForbiddenException extends CustomHttpException {
     }
 }
 
+export class CommentDeleteForbiddenException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_COMMENT_FOR_UPDATE,
+            '본인이 작성한 댓글만 삭제할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 export class AlreadyProjectCompletedException extends CustomHttpException {
     constructor(data?: any) {
         super(
