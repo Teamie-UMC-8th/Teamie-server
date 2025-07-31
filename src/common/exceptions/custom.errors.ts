@@ -103,6 +103,17 @@ export class AlreadyProjectCompletedException extends CustomHttpException {
     }
 }
 
+export class ExpiredInvitecodeException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.EXPIRED_INVITE_CODE,
+            '유효기간이 지난 url입니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 export class NotPostAuthorException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -289,6 +300,11 @@ export class AssigneeNotMemberException extends CustomHttpException {
     }
 }
 
+export class AlreadyJoinException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, data);
+    }
+}
 export class MasterPortfolioDuplicateException extends CustomHttpException {
     constructor(userId: number, projectId: number, data?: any) {
         super(

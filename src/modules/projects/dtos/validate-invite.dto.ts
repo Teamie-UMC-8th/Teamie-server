@@ -8,9 +8,9 @@ export class ValidateInviteResponseDto {
     projectId: number;
 
     // Entity → DTO 변환 정적 메서드
-    static fromEntity(entity: any): ValidateInviteResponseDto {
+    static fromEntity(projectId: number): ValidateInviteResponseDto {
         const dto = new ValidateInviteResponseDto();
-        dto.projectId = entity.pojectId;
+        dto.projectId = projectId;
         return dto;
     }
 }
