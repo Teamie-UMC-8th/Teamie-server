@@ -44,8 +44,8 @@ export class CommentsController {
     @Delete('/:commentId')
     async deleteComment(
         @Req() req: TransactionalRequest,
+        @User('id') userId: number,
         @Param('commentId') commentId: number,
-        @User('id') userId: number
     ): Promise<CommonResponse> {
         return this.commentsService.deleteComment(req.queryRunner, userId, commentId);
     }
