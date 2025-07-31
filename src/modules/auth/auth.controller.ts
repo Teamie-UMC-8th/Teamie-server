@@ -4,8 +4,9 @@ import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { KakaoUser, KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { Response } from 'express';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Pulbic } from 'src/common/decorators/public.decorator';
+import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -24,7 +25,7 @@ export class AuthController {
     })
     @ApiResponse({
         status: 302,
-        description: '카카오 로그인 페이지로 리다이렉트됨. 스웨거에서 누르지 마세요.',
+        description: '카카오 로그인 페이지로 리다이렉트됨.',
     })
     async kakaoLogin() {}
 
@@ -33,11 +34,7 @@ export class AuthController {
     @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
         summary: '카카오 로그인 콜백',
-        description: '로그인 로직이 이루어지고 프론트로 리다이렉트됩니다.',
-    })
-    @ApiResponse({
-        status: 302,
-        description: '프론트엔드 페이지로 리다이렉트됨',
+        description: '로그인 로직이 이루어지고 프론트로 리다이렉트됩니다. 스웨거에서 누르지 마세요.',
     })
     async kakaoCallback(@KakaoUser() req: KakaoUserAfterAuth, @Res() res: Response): Promise<void> {
         const kakaoUser = req;
@@ -49,6 +46,6 @@ export class AuthController {
             maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
         });
         //TODO: 추후 refreshToken 구현 필요
-        res.redirect(this.configService.get('CLIENT_REDIRECT_URI')!); // NOTE: 환경변수 없으면 터짐!
+        res.status(200).json({'message': '로그인 성공'});
     }
 }
