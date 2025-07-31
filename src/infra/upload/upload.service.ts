@@ -1,36 +1,36 @@
 import { Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuid } from 'uuid';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UploadService {
-    private s3 = new S3Client({
-        region: process.env.AWS_REGION,
-        credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
-    });
+    private readonly s3: S3Client;
+
+    constructor(private readonly configService: ConfigService) {
+        this.s3 = new S3Client({
+            region: this.configService.get<string>('AWS_REGION'),
+            credentials: {
+                accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID')!,
+                secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY')!,
+            },
+        });
+    }
 
     async uploadFile(file: Express.Multer.File): Promise<string> {
+        const bucket = this.configService.get<string>('AWS_S3_BUCKET')!;
+        const region = this.configService.get<string>('AWS_REGION')!;
         const key = `upload/${uuid()}-${file.originalname}`;
 
-        const command = new PutObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET!,
-            Key: key,
-            Body: file.buffer,
-        });
-
+        const command = new PutObjectCommand({ Bucket: bucket, Key: key, Body: file.buffer });
         await this.s3.send(command);
-        return key;
+
+        return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
     }
 
     async deleteFile(key: string): Promise<void> {
-        const command = new DeleteObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET!,
-            Key: key,
-        });
-
+        const bucket = this.configService.get<string>('AWS_S3_BUCKET')!;
+        const command = new DeleteObjectCommand({ Bucket: bucket, Key: key });
         await this.s3.send(command);
     }
 }

@@ -28,10 +28,7 @@ export class StepsService {
         private readonly taskRepository: Repository<Task>
     ) {}
 
-    async createStep(
-        dto: CreateStepDto,
-        projectId: number
-    ): Promise<CommonResponse<CreateStepResponseDto>> {
+    async createStep(dto: CreateStepDto, projectId: number): Promise<CreateStepResponseDto> {
         const { name } = dto;
 
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
@@ -46,13 +43,10 @@ export class StepsService {
 
         const savedStep = await this.stepRepository.save(step);
 
-        return CommonResponse.success(CreateStepResponseDto.fromEntity(savedStep));
+        return CreateStepResponseDto.fromEntity(savedStep);
     }
 
-    async updateStep(
-        stepId: number,
-        dto: UpdateStepDto
-    ): Promise<CommonResponse<UpdateStepResponseDto>> {
+    async updateStep(stepId: number, dto: UpdateStepDto): Promise<UpdateStepResponseDto> {
         const step = await this.stepRepository.findOne({ where: { id: stepId } });
         if (!step) {
             throw new StepNotFoundException();
@@ -61,14 +55,14 @@ export class StepsService {
         step.name = dto.name;
         const updatedStep = await this.stepRepository.save(step);
 
-        return CommonResponse.success(UpdateStepResponseDto.fromEntity(updatedStep, stepId));
+        return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
     }
 
     async updateTaskStep(
         dto: UpdateTaskStepDto,
         stepId: number,
         taskId: number
-    ): Promise<CommonResponse<UpdateTaskStepResponseDto>> {
+    ): Promise<UpdateTaskStepResponseDto> {
         const { newStepId } = dto;
         // 1) task 조회 + 현재 stepId 일치 여부 확인
         const raw = await this.taskRepository
@@ -100,7 +94,7 @@ export class StepsService {
             .execute();
 
         // 4) DTO 생성하여 반환
-        return CommonResponse.success(UpdateTaskStepResponseDto.fromEntity(taskId, newStepId));
+        return UpdateTaskStepResponseDto.fromEntity(taskId, newStepId);
     }
 
     async deleteStep(stepId: number): Promise<CommonResponse> {
