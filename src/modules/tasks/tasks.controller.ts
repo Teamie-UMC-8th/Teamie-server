@@ -217,11 +217,7 @@ export class TasksController {
     })
     @ApiCommonResponse(GetCommentResponseDto)
     @Get('/:taskId/comments')
-    async getComment(
-        @Param('taskId') taskId: number, 
-        @Query('offset') offset: number
-    ) {
+    async getComment(@Param('taskId') taskId: number, @Query('offset') offset: number) {
         return this.tasksService.getComment(taskId, offset);
     }
 }
-

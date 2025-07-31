@@ -38,13 +38,16 @@ import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto';
+import { PlansService } from '../plans/plans.service';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
     constructor(
         private readonly projectsService: ProjectsService,
-        private readonly stepsService: StepsService
+        private readonly stepsService: StepsService,
+        private readonly plansService: PlansService
     ) {}
 
     @Post()
@@ -226,5 +229,22 @@ export class ProjectsController {
         @User('id') userId: number
     ) {
         return await this.projectsService.updateProfile(req.queryRunner, projectId, userId, dto);
+    }
+
+    @ApiOperation({
+        summary: '일정 생성 API',
+        description: '팀 캘린더에서 새로운 일정을 생성하는 API입니다.',
+    })
+    @ApiCommonResponse(CreatePlanResponse)
+    @Transactional()
+    @Post('/:projectId/plans')
+    async createPlan(
+        @Req() req: TransactionalRequest,
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Body() body: CreatePlanReq
+    ): Promise<CreatePlanResponse> {
+        const date: Date = new Date(body.date);
+        return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
     }
 }
