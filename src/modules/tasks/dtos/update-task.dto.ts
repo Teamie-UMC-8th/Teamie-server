@@ -17,8 +17,8 @@ export class UpdateTaskRequestDto {
         example: '2024-07-10 00:00:00',
         description: '마감기한',
     })
-    @IsNotEmpty()
-    deadline: Date | null;
+    @IsOptional()
+    deadline: Date;
 
     @ApiProperty({
         example: Status.ONGOING,
@@ -32,14 +32,15 @@ export class UpdateTaskRequestDto {
         example: '문서 검토가 필요합니다',
         description: '비고',
     })
-    @IsNotEmpty()
-    memo: string | null;
+    @IsOptional()
+    memo: string;
 
     @ApiProperty({
         example: [1, 2, 3],
         description: '담당자 userId 목록',
         type: [Number],
     })
+    @IsOptional()
     @IsArray()
     @IsNumber({}, { each: true })
     @Type(() => Number)
