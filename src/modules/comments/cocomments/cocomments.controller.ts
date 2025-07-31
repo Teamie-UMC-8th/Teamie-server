@@ -23,16 +23,16 @@ export class CocommentsController {
     @Transactional()
     @Patch('/:cocommentId')
     async updateComment(
-        @Param('cocommentId') cocommentId: number,
-        @Body() dto: UpdateCocommentRequestDto,
+        @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Req() req: TransactionalRequest
+        @Param('cocommentId') cocommentId: number,
+        @Body() dto: UpdateCocommentRequestDto
     ) {
         return await this.cocommentsService.updateComment(
+            req.queryRunner,
             userId,
             cocommentId,
-            dto,
-            req.queryRunner
+            dto
         );
     }
 
@@ -44,10 +44,10 @@ export class CocommentsController {
     @Transactional()
     @Delete('/:cocommentId')
     async deleteCocomment(
-        @Param('cocommentId') cocommentId: number,
+        @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Req() req: TransactionalRequest
+        @Param('cocommentId') cocommentId: number
     ): Promise<CommonResponse> {
-        return this.cocommentsService.deleteCocomment(userId, cocommentId, req.queryRunner);
+        return this.cocommentsService.deleteCocomment(req.queryRunner, userId, cocommentId);
     }
 }

@@ -38,14 +38,13 @@ import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
+import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 @ApiTags('Projects')
 @ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
-    constructor(
-        private readonly projectsService: ProjectsService,
-        private readonly stepsService: StepsService
-    ) {}
+    constructor(private readonly projectsService: ProjectsService) {}
 
     @Post()
     @ApiBody({ type: CreateProjectDto })
@@ -61,21 +60,34 @@ export class ProjectsController {
         return await this.projectsService.createProject(req.queryRunner, dto, userId);
     }
 
+    @Get('/join/validate')
+    @ApiOperation({
+        summary: '초대코드 유효성 검사',
+        description: 'inviteCode가 유효한지 확인합니다.',
+    })
+    @ApiCommonResponse(ValidateInviteResponseDto)
+    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
+    async validateInvite(@Query('inviteCode') inviteCode: string) {
+        return await this.projectsService.joinValidate(inviteCode);
+    }
+
     @Post('/join')
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
-    @ApiQuery({ name: 'inviteCode', required: true, example: 'abcd1234' })
-    @ApiOkResponse({
-        type: String,
-        description: '${user.name}님이 ${project.name} 프로젝트에 참여되었습니다.',
-    })
-    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
+    @ApiQuery({ name: 'pojectId', required: true, example: 1 })
+    @ApiCommonResponse(JoinProjectResponseDto)
+    @ApiCommonErrorResponse(
+        'FORBIDDEN_USER_FOR_UPDATE',
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        403
+    )
+    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @Transactional()
     async joinProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Query('inviteCode') inviteCode: string
+        @Body() dto: JoinProjectDto
     ) {
-        return await this.projectsService.joinProject(req.queryRunner, userId, inviteCode);
+        return await this.projectsService.joinProject(req.queryRunner, userId, dto);
     }
 
     @Get('/:projectId')
@@ -218,8 +230,8 @@ export class ProjectsController {
     @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
     @Transactional()
     async changeProjectLeader(
-        @User('id') currentUserId: number,
         @Req() req: TransactionalRequest,
+        @User('id') currentUserId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: ChangeLeaderDto
     ) {

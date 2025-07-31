@@ -17,7 +17,7 @@ export class UpdateTaskRequestDto {
         example: '2024-07-10 00:00:00',
         description: '마감기한',
     })
-    @IsNotEmpty()
+    @IsOptional()
     deadline: Date;
 
     @ApiProperty({
@@ -32,7 +32,7 @@ export class UpdateTaskRequestDto {
         example: '문서 검토가 필요합니다',
         description: '비고',
     })
-    @IsNotEmpty()
+    @IsOptional()
     memo: string;
 
     @ApiProperty({
@@ -40,17 +40,11 @@ export class UpdateTaskRequestDto {
         description: '담당자 userId 목록',
         type: [Number],
     })
+    @IsOptional()
     @IsArray()
     @IsNumber({}, { each: true })
     @Type(() => Number)
     managerIds: number[];
-
-    @IsOptional()
-    @ApiProperty({
-        type: [String],
-        description: '기존 파일 URL 목록 (수정 시 유지할 기존 파일들)',
-    })
-    existingFileUrls?: string[];
 
     @ApiProperty({
         example: 5,
@@ -73,7 +67,7 @@ export class UpdateTaskResponseDto {
         example: '2024-07-10 00:00:00 ',
         description: '마감기한',
     })
-    deadline: Date;
+    deadline: Date | null;
 
     @ApiProperty({
         example: Status.ONGOING,
@@ -86,7 +80,7 @@ export class UpdateTaskResponseDto {
         example: '문서 검토가 필요합니다',
         description: '비고',
     })
-    memo: string;
+    memo: string | null;
 
     @ApiProperty({
         type: [ManagerResponseDto],
@@ -94,6 +88,7 @@ export class UpdateTaskResponseDto {
     })
     managers: ManagerResponseDto[];
 
+    @IsNotEmpty()
     @ApiProperty({
         example: 5,
         description: '해당 업무가 속한 step의 ID',

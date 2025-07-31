@@ -14,16 +14,13 @@ import { query } from 'express';
 
 @Injectable()
 export class CocommentsService {
-    constructor(
-        @InjectRepository(Cocomment)
-        private readonly cocommentRepository: Repository<Cocomment>
-    ) {}
+    constructor() {}
 
     async updateComment(
+        queryRunner: QueryRunner,
         userId: number,
         cocommentId: number,
-        dto: UpdateCocommentRequestDto,
-        queryRunner: QueryRunner
+        dto: UpdateCocommentRequestDto
     ): Promise<UpdateCocommentResponseDto> {
         const cocomment = await queryRunner.manager
             .createQueryBuilder(Cocomment, 'cocomment')
@@ -49,9 +46,9 @@ export class CocommentsService {
     }
 
     async deleteCocomment(
+        queryRunner: QueryRunner,
         userId: number,
-        cocommentId: number,
-        queryRunner: QueryRunner
+        cocommentId: number
     ): Promise<CommonResponse> {
         // 대댓글 존재 여부 확인
         const cocomment = await queryRunner.manager
