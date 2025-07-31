@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlansGateway } from './gateways/plans.gateway';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { User } from 'src/common/decorators/user.decorator';
@@ -15,7 +15,6 @@ import { CreatePlanReq, CreatePlanResponse } from './dtos/create-plan.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Plans')
-@ApiBearerAuth('access-token')
 @Controller('/plans')
 export class PlansController {
     constructor(

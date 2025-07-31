@@ -14,7 +14,6 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
 import {
-    ApiBearerAuth,
     ApiBody,
     ApiQuery,
     ApiTags,
@@ -41,7 +40,6 @@ import { Transactional, TransactionalRequest } from 'src/common/decorators/trans
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 @ApiTags('Projects')
-@ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
     constructor(private readonly projectsService: ProjectsService) {}

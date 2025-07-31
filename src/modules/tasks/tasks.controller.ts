@@ -14,7 +14,6 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
-    ApiBearerAuth,
     ApiBody,
     ApiTags,
     ApiQuery,
@@ -43,7 +42,6 @@ import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
 import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
 
 @ApiTags('Tasks')
-@ApiBearerAuth('access-token')
 @Controller('/tasks')
 export class TasksController {
     constructor(private readonly tasksService: TasksService) {}

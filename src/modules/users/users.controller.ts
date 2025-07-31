@@ -11,7 +11,7 @@ import {
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { UsersService } from './users.service';
 import {
@@ -21,13 +21,11 @@ import {
 } from './dtos/user-profile.dto';
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
-import { BadRequestException } from 'src/common/exceptions/custom.errors';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
 import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
 
 @ApiTags('Users')
-@ApiBearerAuth('access-token')
 @Controller('users')
 export class UsersController {
     constructor(private readonly userService: UsersService) {}
