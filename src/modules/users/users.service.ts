@@ -68,8 +68,7 @@ export class UsersService {
 
         // 프로필 이미지 S3 저장
         if (file) {
-            const key = await this.uploadService.uploadFile(file);
-            const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+            const fileUrl = await this.uploadService.uploadFile(file);
             updateData.imageUrl = fileUrl;
         }
         if (body?.school) updateData.school = body?.school;

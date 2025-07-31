@@ -420,9 +420,7 @@ export class TasksService {
 
         if (!userProject) throw new ProjectForbiddenException();
 
-        // 3. 파일 업로드 (S3)
-        const key = await this.uploadService.uploadFile(file);
-        const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+        const fileUrl = await this.uploadService.uploadFile(file);
 
         // 4. TaskFile 생성
         const taskFile = queryRunner.manager.create(TaskFile);
