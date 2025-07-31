@@ -4,9 +4,8 @@ import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { KakaoUser, KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { Response } from 'express';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Pulbic } from 'src/common/decorators/public.decorator';
-import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -16,9 +15,6 @@ export class AuthController {
         private readonly configService: ConfigService
     ) {}
 
-    @Pulbic()
-    @Get('/kakao')
-    @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
         summary: '카카오 로그인 트리거',
         description: '카카오 인증페이지로 리다이렉트합니다. 스웨거에서 누르지 마세요.',
@@ -27,15 +23,23 @@ export class AuthController {
         status: 302,
         description: '카카오 로그인 페이지로 리다이렉트됨.',
     })
+    @Pulbic()
+    @UseGuards(AuthGuard('kakao'))
+    @Get('/kakao')
     async kakaoLogin() {}
 
-    @Pulbic()
-    @Get('/kakao/callback')
-    @UseGuards(AuthGuard('kakao'))
     @ApiOperation({
         summary: '카카오 로그인 콜백',
-        description: '로그인 로직이 이루어지고 프론트로 리다이렉트됩니다. 스웨거에서 누르지 마세요.',
+        description:
+            '로그인 로직이 이루어지고 프론트로 리다이렉트됩니다. 스웨거에서 누르지 마세요.',
     })
+    @ApiResponse({
+        status: 302,
+        description: '프론트엔드 페이지로 리다이렉트됨',
+    })
+    @Pulbic()
+    @UseGuards(AuthGuard('kakao'))
+    @Get('/kakao/callback')
     async kakaoCallback(@KakaoUser() req: KakaoUserAfterAuth, @Res() res: Response): Promise<void> {
         const kakaoUser = req;
         const accessToken = await this.authService.handleKakaoLogin(kakaoUser);
@@ -46,6 +50,7 @@ export class AuthController {
             maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
         });
         //TODO: 추후 refreshToken 구현 필요
-        res.status(200).json({'message': '로그인 성공'});
+        const url = this.configService.get('CLIENT_REDIRECT_URI') || 'http://localhost:3000/docs';
+        res.redirect(url);
     }
 }
