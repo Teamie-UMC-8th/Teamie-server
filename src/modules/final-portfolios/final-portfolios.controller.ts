@@ -1,6 +1,6 @@
 import { Controller, Get, Query, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
@@ -9,7 +9,6 @@ import { FinalPortfoliosService } from './final-portfoilos.service';
 import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
 
 @ApiTags('FinalPortfolios')
-@ApiBearerAuth('access-token')
 @Controller('/final-portfolios')
 export class FinalPortfoliosController {
     constructor(

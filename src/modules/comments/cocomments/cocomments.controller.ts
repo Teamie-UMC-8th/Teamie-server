@@ -1,5 +1,5 @@
 import { Controller, Param, Delete, Patch, Body, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { CocommentsService } from './cocomments.service';
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
@@ -9,7 +9,6 @@ import { CommonResponse } from 'src/common/response/common-response.dto';
 import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Cocomments')
-@ApiBearerAuth('access-token')
 @Controller('/cocomments')
 export class CocommentsController {
     constructor(private readonly cocommentsService: CocommentsService) {}
