@@ -6,17 +6,25 @@ import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UpdateProfileRequestDto, UserProfileResponseDto } from './dtos/user-profile.dto';
 import {
     BadRequestException,
+    ForbiddenUserForMasterPortfolioException,
+    MasterPortfolioNotFoundException,
+    ProjectNotFoundException,
     TransactionException,
     UserNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { UploadService } from 'src/infra/upload/upload.service';
+import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
+import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
+import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
+import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private readonly userRepostiory: Repository<User>,
-        private readonly uploadService: UploadService
+        private readonly uploadService: UploadService,
+        private readonly masterPortfoliosService: MasterPortfoliosService
     ) {}
 
     //회원가입 여부 확인
@@ -78,6 +86,48 @@ export class UsersService {
                 throw new UserNotFoundException();
             }
             return UserProfileResponseDto.fromEntity(user);
+        } catch (err) {
+            console.log(err);
+            throw new TransactionException('User');
+        }
+    }
+
+    // 마이페이지/마스터포트폴리오 - 주요 업무 수정
+    async updateMainTaskField(
+        qr: QueryRunner,
+        userId: number,
+        portfolioId: number,
+        body: UserMainTaskRequestDTO
+    ): Promise<UserMasterPortfoliosResponseDto> {
+        //1. 포트폴리오 owner 확인
+        const check = await this.masterPortfoliosService.checkMasterPortfolioOwner(
+            userId,
+            portfolioId
+        );
+        if (!check) {
+            throw new ForbiddenUserForMasterPortfolioException({ portfolioId: portfolioId });
+        }
+        try {
+            //2. 업데이트
+            await qr.manager.update(MasterPortfolio, { id: portfolioId }, body);
+            //3. 조회 및 데이터 반환
+            const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
+                where: { id: portfolioId },
+                relations: ['project'],
+                select: {
+                    id: true,
+                    category: true,
+                    contributionRate: true,
+                    mainTask: true,
+                    project: {
+                        name: true,
+                        createdAt: true,
+                        completedAt: true,
+                    },
+                },
+            });
+            if (!masterPortfolio) throw new MasterPortfolioNotFoundException();
+            return UserMasterPortfoliosResponseDto.fromNestedEntity(masterPortfolio);
         } catch (err) {
             console.log(err);
             throw new TransactionException('User');
