@@ -1,6 +1,6 @@
 import { Controller, Body, ParseIntPipe, Patch, Delete, Param } from '@nestjs/common';
 import { StepsService } from './steps.service';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
@@ -12,7 +12,6 @@ import { UpdateStepDto, UpdateStepResponseDto } from './dtos/update-step.dto';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
 import { Transactional } from 'src/common/decorators/transaction.decorator';
 @ApiTags('Steps')
-@ApiBearerAuth('access-token')
 @Controller('/steps')
 export class StepsController {
     constructor(private readonly stepsService: StepsService) {}

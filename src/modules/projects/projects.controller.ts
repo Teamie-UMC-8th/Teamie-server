@@ -14,7 +14,6 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
 import {
-    ApiBearerAuth,
     ApiBody,
     ApiQuery,
     ApiTags,
@@ -39,7 +38,6 @@ import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.d
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 @ApiTags('Projects')
-@ApiBearerAuth('access-token')
 @Controller('/projects')
 export class ProjectsController {
     constructor(
