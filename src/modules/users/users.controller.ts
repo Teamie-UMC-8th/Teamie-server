@@ -2,6 +2,8 @@ import {
     Body,
     Controller,
     Get,
+    Param,
+    ParseIntPipe,
     Patch,
     Req,
     UploadedFile,
@@ -20,6 +22,8 @@ import {
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
+import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -54,5 +58,26 @@ export class UsersController {
         @UploadedFile() file?: Express.Multer.File
     ) {
         return await this.userService.updateUserProfile(req.queryRunner, userId, body, file);
+    }
+
+    @ApiOperation({
+        summary: '마이페이지/주요업무 수정 API',
+        description: '사용자의 프로젝트 별 주요업무 필드를 수정하는 API입니다.',
+    })
+    @ApiCommonResponse(UserMasterPortfoliosResponseDto)
+    @Transactional()
+    @Patch('/me/:portfolioId')
+    async updateMainTask(
+        @Req() req: TransactionalRequest,
+        @User('id') userId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
+        @Body() body: UserMainTaskRequestDTO
+    ) {
+        return await this.userService.updateMainTaskField(
+            req.queryRunner,
+            userId,
+            portfolioId,
+            body
+        );
     }
 }
