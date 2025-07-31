@@ -127,7 +127,7 @@ export class TasksService {
 
         if (!newStep) throw new StepNotFoundException();
 
-        // 3. userProject 조회
+        // 3. userProject 조회 (업데이트할 유저가 프로젝트에 속해있는지)
         const userProject = await queryRunner.manager.findOne(UserProject, {
             where: {
                 user: { id: userId },
@@ -146,10 +146,7 @@ export class TasksService {
 
         const updatedTask = await queryRunner.manager.save(Task, task);
 
-        // 5. managerIds 무조건 덮어쓰기
-        await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
-
-        // 모든 managerIds 참여자 조회 (한 번에)
+        // 5. 참여자 조회 (managerIds 유효성 검사)
         const participants = await queryRunner.manager.find(UserProject, {
             where: {
                 user: { id: In(dto.managerIds) },
@@ -158,24 +155,14 @@ export class TasksService {
             relations: ['user'],
         });
 
-        // 참여자 id만 추출
         const validManagerIds = participants.map((up) => up.user.id);
-
         const invalidManagers: string[] = [];
 
         for (const managerId of dto.managerIds) {
             if (!validManagerIds.includes(managerId)) {
                 const user = await queryRunner.manager.findOne(User, { where: { id: managerId } });
                 invalidManagers.push(user?.name ?? `userId ${managerId}`);
-                continue;
             }
-
-            // Manager 생성
-            const manager = queryRunner.manager.create(Manager, {
-                user: { id: managerId },
-                task: updatedTask,
-            });
-            await queryRunner.manager.save(Manager, manager);
         }
 
         if (invalidManagers.length > 0) {
@@ -184,6 +171,19 @@ export class TasksService {
             );
         }
 
+        // 6. 기존 Manager 전부 삭제 후
+        await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
+
+        // 7. 새 Manager 다시 저장
+        for (const managerId of validManagerIds) {
+            const manager = queryRunner.manager.create(Manager, {
+                user: { id: managerId },
+                task: updatedTask,
+            });
+            await queryRunner.manager.save(Manager, manager);
+        }
+
+        // 8. 최종 조회
         const managers = await queryRunner.manager.find(Manager, {
             where: { task: { id: updatedTask.id } },
             relations: ['user'],
