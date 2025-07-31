@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Task } from './tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { CreateTaskRequestDto } from './dtos/create-task.dto';
+import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
@@ -35,6 +35,7 @@ import {
     ProjectNotFoundException,
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
+import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class TasksService {
@@ -64,12 +65,14 @@ export class TasksService {
     ) {}
 
     async createTask(
+        queryRunner: QueryRunner,
         userId: number,
         createTaskRequestDto: CreateTaskRequestDto
-    ): Promise<{ taskId: number }> {
+    ): Promise<CreateTaskResponseDto> {
         const { stepId } = createTaskRequestDto;
 
-        const targetStep = await this.stepRepository.findOne({
+        // Step 조회
+        const targetStep = await queryRunner.manager.findOne(Step, {
             where: { id: stepId },
             relations: ['project'],
         });
@@ -80,91 +83,8 @@ export class TasksService {
 
         const projectId = targetStep.project.id;
 
-        const userPorject = await this.userProjectRepository.findOne({
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
-
-        if (!userPorject) {
-            throw new ProjectForbiddenException();
-        }
-
-        const task = {
-            step: targetStep,
-            name: '빈 업무',
-            memo: ' ',
-            deadline: new Date(),
-        };
-        const saved = await this.taskRepository.save(task);
-        return { taskId: saved.id };
-    }
-
-    async updateTask(dto: UpdateTaskRequestDto, userId: number, taskId: number) {
-        const task = await this.taskRepository.findOne({
-            where: { id: taskId },
-            relations: ['step', 'step.project'],
-        });
-
-        if (!task) throw new TaskNotFoundException();
-
-        // step 무조건 덮어쓰기
-        const newStep = await this.stepRepository.findOne({
-            where: { id: dto.stepId },
-            relations: ['project'],
-        });
-
-        if (!newStep) throw new StepNotFoundException();
-
-        const userProject = await this.userProjectRepository.findOne({
-            where: {
-                user: { id: userId },
-                project: { id: newStep.project.id },
-            },
-        });
-
-        if (!userProject) throw new ProjectForbiddenException();
-
-        task.step = newStep;
-        task.name = dto.name;
-        task.deadline = new Date(dto.deadline);
-        task.status = dto.status;
-        task.memo = dto.memo;
-
-        const updatedTask = await this.taskRepository.save(task);
-
-        // managerIds 무조건 덮어쓰기
-        await this.managerRepository.delete({ task: { id: updatedTask.id } });
-
-        for (const managerId of dto.managerIds) {
-            const manager = this.managerRepository.create({
-                user: { id: managerId },
-                task: updatedTask,
-            });
-            await this.managerRepository.save(manager);
-        }
-
-        const managers = await this.managerRepository.find({
-            where: { task: { id: updatedTask.id } },
-            relations: ['user'],
-        });
-
-        return UpdateTaskResponseDto.from(updatedTask, managers);
-    }
-    async deleteTask(userId: number, taskId: number): Promise<DeleteTaskResponseDto> {
-        const task = await this.taskRepository.findOne({
-            where: { id: taskId },
-            relations: ['step', 'step.project'],
-        });
-
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
-
-        // 프로젝트 참여 여부 확인
-        const projectId = task.step.project.id;
-        const userProject = await this.userProjectRepository.findOne({
+        // userProject 조회
+        const userProject = await queryRunner.manager.findOne(UserProject, {
             where: {
                 user: { id: userId },
                 project: { id: projectId },
@@ -175,28 +95,129 @@ export class TasksService {
             throw new ProjectForbiddenException();
         }
 
-        // 관련 TaskFile 가져오기
-        const taskFiles = await this.taskFileRepository.find({
+        // 업무 생성
+        const task = queryRunner.manager.create(Task, {
+            step: targetStep,
+            name: '빈 업무',
+            memo: null,
+            deadline: null,
+        });
+
+        const saved = await queryRunner.manager.save(task);
+
+        return CreateTaskResponseDto.fromEntity(saved);
+    }
+
+    async updateTask(
+        queryRunner: QueryRunner,
+        userId: number,
+        taskId: number,
+        dto: UpdateTaskRequestDto
+    ): Promise<UpdateTaskResponseDto> {
+        // 1. 수정할 Task 조회
+        const task = await queryRunner.manager.findOne(Task, {
+            where: { id: taskId },
+            relations: ['step', 'step.project'],
+        });
+
+        if (!task) throw new TaskNotFoundException();
+
+        // 2. 새 Step 조회
+        const newStep = await queryRunner.manager.findOne(Step, {
+            where: { id: dto.stepId },
+            relations: ['project'],
+        });
+
+        if (!newStep) throw new StepNotFoundException();
+
+        // 3. userProject 조회
+        const userProject = await queryRunner.manager.findOne(UserProject, {
+            where: {
+                user: { id: userId },
+                project: { id: newStep.project.id },
+            },
+        });
+
+        if (!userProject) throw new ProjectForbiddenException();
+
+        // 4. Task 필드 덮어쓰기
+        task.step = newStep;
+        task.name = dto.name;
+        task.deadline = dto.deadline;
+        task.status = dto.status;
+        task.memo = dto.memo;
+
+        const updatedTask = await queryRunner.manager.save(Task, task);
+
+        // 5. managerIds 무조건 덮어쓰기
+        await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
+
+        for (const managerId of dto.managerIds) {
+            const manager = queryRunner.manager.create(Manager, {
+                user: { id: managerId },
+                task: updatedTask,
+            });
+            await queryRunner.manager.save(Manager, manager);
+        }
+
+        // 6. managers 조회
+        const managers = await queryRunner.manager.find(Manager, {
+            where: { task: { id: updatedTask.id } },
+            relations: ['user'],
+        });
+
+        return UpdateTaskResponseDto.from(updatedTask, managers);
+    }
+
+    async deleteTask(
+        queryRunner: QueryRunner,
+        userId: number,
+        taskId: number
+    ): Promise<DeleteTaskResponseDto> {
+        // 1. Task 조회
+        const task = await queryRunner.manager.findOne(Task, {
+            where: { id: taskId },
+            relations: ['step', 'step.project'],
+        });
+
+        if (!task) {
+            throw new TaskNotFoundException();
+        }
+
+        // 2. 프로젝트 참여 여부 확인
+        const projectId = task.step.project.id;
+        const userProject = await queryRunner.manager.findOne(UserProject, {
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
+
+        if (!userProject) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 3. TaskFile 조회
+        const taskFiles = await queryRunner.manager.find(TaskFile, {
             where: { task: { id: taskId } },
         });
 
-        // S3 및 DB에서 파일 삭제
+        // 4. 파일 삭제 (S3 + DB)
         for (const file of taskFiles) {
             try {
                 const key = file.fileUrl.split('.amazonaws.com/')[1];
                 if (key) {
-                    await this.uploadService.deleteFile(key); // S3 삭제
+                    await this.uploadService.deleteFile(key); // S3 파일 삭제
                 }
-                await this.taskFileRepository.delete({ id: file.id }); // DB 삭제
+                await queryRunner.manager.delete(TaskFile, { id: file.id }); // DB 삭제
             } catch (err) {
                 console.error(`[파일 삭제 실패] ${file.fileUrl}`);
                 console.error(err);
-                // 실패하더라도 전체 삭제는 계속 진행
             }
         }
 
-        // 업무 삭제
-        await this.taskRepository.delete(taskId);
+        // 5. Task 삭제
+        await queryRunner.manager.delete(Task, taskId);
 
         return {
             message: '업무가 성공적으로 삭제되었습니다.',
@@ -334,13 +355,14 @@ export class TasksService {
     }
 
     async createComment(
+        queryRunner: QueryRunner,
         userId: number,
         taskId: number,
         createCommentRequestDto: CreateCommentRequestDto
     ): Promise<CreateCommentResponseDto> {
         // 1. 업무 존재 여부 및 프로젝트 가져오기
-        const task = await this.taskRepository
-            .createQueryBuilder('task')
+        const task = await queryRunner.manager
+            .createQueryBuilder(Task, 'task')
             .leftJoin('task.step', 'step')
             .leftJoin('step.project', 'project')
             .where('task.id = :taskId', { taskId })
@@ -351,7 +373,7 @@ export class TasksService {
 
         // 2. 프로젝트 참여자 여부 확인
         const { projectId } = task;
-        const isMember = await this.userProjectRepository.findOne({
+        const isMember = await queryRunner.manager.findOne(UserProject, {
             where: {
                 user: { id: userId },
                 project: { id: projectId },
@@ -360,49 +382,60 @@ export class TasksService {
         if (!isMember) throw new ProjectForbiddenException();
 
         // 3. 댓글 생성 및 저장
-        const comment = this.commentRepository.create({
+        const comment = queryRunner.manager.create(CommentEntity, {
             user: { id: userId },
             task: { id: taskId },
             content: createCommentRequestDto.content,
         });
-        const saved = await this.commentRepository.save(comment);
+        const saved = await queryRunner.manager.save(CommentEntity, comment);
 
         // 4. 응답 반환
         return CreateCommentResponseDto.from(saved);
     }
 
     async createTaskFile(
+        queryRunner: QueryRunner,
         userId: number,
         taskId: number,
         file: Express.Multer.File
     ): Promise<CreateTaskFileResponseDto> {
-        const task = await this.taskRepository
-            .createQueryBuilder('task')
+        // 1. Task 조회 (Step, Project 조인)
+        const task = await queryRunner.manager
+            .createQueryBuilder(Task, 'task')
             .leftJoin('task.step', 'step')
             .leftJoin('step.project', 'project')
             .select(['task.id', 'step.id', 'project.id AS project_id'])
             .where('task.id = :taskId', { taskId })
             .getRawOne();
+
         if (!task) throw new TaskNotFoundException();
 
-        const userProject = await this.userProjectRepository.findOne({
+        // 2. 프로젝트 참여자 여부 확인
+        const userProject = await queryRunner.manager.findOne(UserProject, {
             where: {
                 user: { id: userId },
                 project: { id: task.project_id },
             },
         });
+
         if (!userProject) throw new ProjectForbiddenException();
 
+        // 3. 파일 업로드 (S3)
         const key = await this.uploadService.uploadFile(file);
         const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-        const taskFile = this.taskFileRepository.create({
+        // 4. TaskFile 생성
+        const taskFile = queryRunner.manager.create(TaskFile);
+        Object.assign(taskFile, {
             fileUrl,
-            task,
+            task: { id: taskId },
             user: { id: userId },
         });
 
-        const saved = await this.taskFileRepository.save(taskFile);
+        // 5. DB 저장
+        const saved = await queryRunner.manager.save(TaskFile, taskFile);
+
+        // 6. DTO 변환 후 반환
         return CreateTaskFileResponseDto.fromEntity(saved);
     }
 
