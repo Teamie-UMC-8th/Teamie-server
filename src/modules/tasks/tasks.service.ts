@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Task } from './tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
+import { User } from '../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
@@ -22,11 +23,7 @@ import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dt
 import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
 import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
 import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
-import {
-    GetCommentResponseDto,
-    UserInCommentDto,
-    CocommentInCommentDto,
-} from '../comments/dto/get-comment.dto';
+import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
 import { Status } from '../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
@@ -152,7 +149,28 @@ export class TasksService {
         // 5. managerIds 무조건 덮어쓰기
         await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
 
+        // 모든 managerIds 참여자 조회 (한 번에)
+        const participants = await queryRunner.manager.find(UserProject, {
+            where: {
+                user: { id: In(dto.managerIds) },
+                project: { id: newStep.project.id },
+            },
+            relations: ['user'],
+        });
+
+        // 참여자 id만 추출
+        const validManagerIds = participants.map((up) => up.user.id);
+
+        const invalidManagers: string[] = [];
+
         for (const managerId of dto.managerIds) {
+            if (!validManagerIds.includes(managerId)) {
+                const user = await queryRunner.manager.findOne(User, { where: { id: managerId } });
+                invalidManagers.push(user?.name ?? `userId ${managerId}`);
+                continue;
+            }
+
+            // Manager 생성
             const manager = queryRunner.manager.create(Manager, {
                 user: { id: managerId },
                 task: updatedTask,
@@ -160,7 +178,12 @@ export class TasksService {
             await queryRunner.manager.save(Manager, manager);
         }
 
-        // 6. managers 조회
+        if (invalidManagers.length > 0) {
+            throw new ProjectForbiddenException(
+                `${invalidManagers.join(', ')} 은/는 프로젝트 참여자가 아닙니다.`
+            );
+        }
+
         const managers = await queryRunner.manager.find(Manager, {
             where: { task: { id: updatedTask.id } },
             relations: ['user'],
