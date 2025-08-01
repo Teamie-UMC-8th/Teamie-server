@@ -144,7 +144,7 @@ export class MasterPortfoliosService {
         const role = await qr.manager.findOne(UserProject, {
             where: { user: { id: userId }, project: { id: projectId } },
             select: ['id', 'role'],
-        })
+        });
 
         // TODO: inputData 형태 정리
         const inputData: string = JSON.stringify({
@@ -164,10 +164,9 @@ export class MasterPortfoliosService {
                 assignedTask,
                 keyAchievement,
                 insight,
-            }
-        })
+            },
+        });
 
-        console.log('Input Data for LLM:', inputData);
         // LLM을 호출하여 질문을 생성합니다.
         const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
 

@@ -78,7 +78,12 @@ export class MasterPortfoliosController {
         @User('id') userId: number,
         @Body('recordIdList', ParseArrayPipe) recordIdList: number[]
     ) {
-        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId, recordIdList);
+        return this.masterPortfoliosService.createQuestions(
+            req.queryRunner,
+            userId,
+            projectId,
+            recordIdList
+        );
     }
 
     @Post(':projectId/generate')
