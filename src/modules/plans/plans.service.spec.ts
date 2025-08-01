@@ -3,7 +3,7 @@ import { PlansService } from './plans.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ProjectsService } from '../projects/projects.service';
 import { Repository } from 'typeorm';
-import { Plan } from './entities/plans.entity';
+import { Plan } from './entities/plan.entity';
 import { PlanDetails } from './dtos/plan-details.dto';
 import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
 

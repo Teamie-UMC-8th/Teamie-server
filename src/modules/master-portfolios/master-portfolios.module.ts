@@ -9,7 +9,10 @@ import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { Project } from '../projects/entities/projects.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Questions, MasterPortfolio, MasterPortfolioAI, Project]), LLMModule],
+    imports: [
+        TypeOrmModule.forFeature([Questions, MasterPortfolio, MasterPortfolioAI, Project]),
+        LLMModule,
+    ],
     controllers: [MasterPortfoliosController],
     providers: [MasterPortfoliosService],
     exports: [MasterPortfoliosService],

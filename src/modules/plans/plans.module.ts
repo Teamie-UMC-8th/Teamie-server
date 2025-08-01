@@ -3,7 +3,7 @@ import { PlansGateway } from './gateways/plans.gateway';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Plan } from './entities/plans.entity';
+import { Plan } from './entities/plan.entity';
 import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsISODateString } from 'src/common/decorators/validate-iso-date.decorator';
-import { Plan } from '../entities/plans.entity';
+import { Plan } from '../entities/plan.entity';
 
 export class CreatePlanReq {
     @ApiProperty({

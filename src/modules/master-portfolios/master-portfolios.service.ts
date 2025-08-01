@@ -12,6 +12,7 @@ import {
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
+    ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
@@ -21,11 +22,38 @@ import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 import { Task } from '../tasks/entities/tasks.entity';
-import { Plan } from '../plans/entities/plans.entity';
+import { Plan } from '../plans/entities/plan.entity';
 import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Project } from '../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
+import { User } from '../users/entities/users.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
+
+function getPeriod(createdAt: Date, completedAt: Date): string {
+    let years = completedAt.getFullYear() - createdAt.getFullYear();
+    let months = completedAt.getMonth() - createdAt.getMonth();
+    let days = completedAt.getDate() - createdAt.getDate();
+
+    // 월 차이가 음수인 경우 보정
+    if (days < 0) {
+        months -= 1;
+        const prevMonth = new Date(completedAt.getFullYear(), completedAt.getMonth(), 0);
+        days += prevMonth.getDate();
+    }
+    // 연 차이가 음수인 경우 보정
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+
+    // 0인 단위는 표시하지 않음
+    const period: string[] = [];
+    if (years > 0) period.push(`${years}년`);
+    if (months > 0) period.push(`${months}개월`);
+    if (days > 0) period.push(`${days}일`);
+    return period.join(' ');
+}
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -42,7 +70,12 @@ export class MasterPortfoliosService {
     ) {}
 
     // 마스터 포트폴리오 질문 생성
-    async createQuestions(qr: QueryRunner, userId: number, projectId: number, recordIdList: number[]) {
+    async createQuestions(
+        qr: QueryRunner,
+        userId: number,
+        projectId: number,
+        recordIdList: number[]
+    ) {
         // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
             where: { project: { id: projectId }, user: { id: userId } },
@@ -51,17 +84,16 @@ export class MasterPortfoliosService {
             throw new MasterPortfolioNotFoundException();
         }
         const masterPortfolioId = masterPortfolio.id;
+        const detailInfo = masterPortfolio.detailInfo;
+        const assignedTask = masterPortfolio.assignedTask;
+        const keyAchievement = masterPortfolio.keyAchievement;
+        const insight = masterPortfolio.insight;
 
         // recordId 정보 저장하기 (선택된 회의록)
         for (const recordId of recordIdList) {
-            await qr.manager.update(
-                Plan,
-                { id: recordId },
-                { masterPortfolioId }
-            )
+            await qr.manager.update(Plan, { id: recordId }, { masterPortfolioId });
         }
 
-        let inputData;
         // 가져올 데이터
         // 1. 선택된 회의록 내용
         const records = await qr.manager.find(Plan, {
@@ -71,33 +103,71 @@ export class MasterPortfoliosService {
         // 2. 담당자로 지정된 모든 업무명
         const tasks = await qr.manager.find(Task, {
             where: { managers: { user: { id: userId } }, step: { project: { id: projectId } } },
-            select: ['name'], // 업무명만 필요한 경우
-        })
+            select: ['name'],
+        });
         // 3. 개인회고 내용
-        const personalRecalls = await qr.manager.find(PersonalRecall, {
+        const personalRecalls = await qr.manager.findOne(PersonalRecall, {
             where: { user: { id: userId }, project: { id: projectId } },
-            select: ['collaborationProfile', 'memorableExperience', 'strengthsAndGrowth']
-        })
-        // 4. 프로젝트 명 / 분류 태그 / 기여도
-        const projectDate = await this.projectRepository.findOne({
+            select: ['id', 'collaborationProfile', 'memorableExperience', 'strengthsAndGrowth'],
+        });
+        // 4. 프로젝트명, 진행기간
+        const projectInfo = await qr.manager.findOne(Project, {
             where: { id: projectId },
-            select: ['createdAt', 'completedAt'],
-        })
-        if (!projectDate) {
-            console.log('Project date not found');
-            throw new InternalServerErrorException('프로젝트 정보를 찾을 수 없습니다.');
+            select: ['createdAt', 'completedAt', 'name'],
+        });
+        if (!projectInfo) {
+            throw new ProjectNotFoundException(`Project with ID ${projectId} not found`);
         }
-        console.log('projectDate', projectDate.completedAt);
-        const completedAt = projectDate.completedAt;
-        // const createdAt = projectDate.createdAt ? projectDate.createdAt.getTime() : 0;
-        // const projectPeriod = Math.ceil((completedAt - createdAt) / (1000 * 60 * 60 * 24));
-        // 이름과 역할(role)
-        // 프로젝트명, 진행기간
-        // const projectInfo = await qr.manager.findOne(Project, {
-        //     where: { id: projectId },
-        //     select: ['name', ''],
-        // })
+        const projectName: string = projectInfo.name; // 프로젝트명
+        const createdAt: Date = projectInfo.createdAt; // 2025-07-26T06:05:35.998Z, Date 객체
+        const completedAt: Date = projectInfo.completedAt || new Date(); // 완료일이 없으면 현재 시간으로 설정
+        const projectPeriod: string = getPeriod(createdAt, completedAt);
 
+        // 5. 분류 태그, 기여도
+        const masterPortfolioData = await qr.manager.findOne(MasterPortfolio, {
+            where: { id: masterPortfolioId },
+            select: ['category', 'contributionRate'],
+        });
+        if (!masterPortfolioData) {
+            throw new MasterPortfolioNotFoundException(
+                `Master portfolio with ID ${masterPortfolioId} not found`
+            );
+        }
+        const category: string = masterPortfolioData.category;
+        const contributionRate: number = masterPortfolioData.contributionRate;
+
+        // 6. 이름과 역할(role)
+        const userName = await qr.manager.findOne(User, {
+            where: { id: userId },
+            select: ['name'],
+        });
+        const role = await qr.manager.findOne(UserProject, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['id', 'role'],
+        })
+
+        // TODO: inputData 형태 정리
+        const inputData: string = JSON.stringify({
+            userName: userName?.name,
+            role: role?.role,
+            projectName,
+            projectPeriod,
+            createdAt,
+            completedAt,
+            category,
+            contributionRate,
+            records,
+            tasks,
+            personalRecalls,
+            masterPortfolio: {
+                detailInfo,
+                assignedTask,
+                keyAchievement,
+                insight,
+            }
+        })
+
+        console.log('Input Data for LLM:', inputData);
         // LLM을 호출하여 질문을 생성합니다.
         const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
 
@@ -194,7 +264,7 @@ export class MasterPortfoliosService {
         if (existingPortfolio) {
             throw new MasterPortfolioDuplicateException(userId, projectId);
         }
-        
+
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },

@@ -5,7 +5,7 @@ import { TestingModule, Test } from '@nestjs/testing';
 import { PlanDetails } from './dtos/plan-details.dto';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
 import { PlansGateway } from './gateways/plans.gateway';
-import { Plan } from './entities/plans.entity';
+import { Plan } from './entities/plan.entity';
 
 describe('PlansController', () => {
     let controller: PlansController;

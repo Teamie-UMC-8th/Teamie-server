@@ -78,7 +78,6 @@ export class MasterPortfoliosController {
         @User('id') userId: number,
         @Body('recordIdList', ParseArrayPipe) recordIdList: number[]
     ) {
-        console.log('recordIdList', recordIdList);
         return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, projectId, recordIdList);
     }
 
