@@ -413,7 +413,7 @@ export class ProjectsService {
         currentUserId: number
     ): Promise<ChangeLeaderResponseDto> {
         await this.assertProjectIsEditable(projectId);
-        await this.checkProjectLeader(currentUserId, projectId);
+        await this.checkProjectMember(currentUserId, projectId);
         const { newLeaderId } = dto;
         const newId = newLeaderId;
 
@@ -595,11 +595,12 @@ export class ProjectsService {
         userId: number,
         projectId: number,
         role: string,
-        qr
+        qr: QueryRunner
     ): Promise<void> {
-        let userProject!: UserProject;
+        let userProject: UserProject;
         try {
-            const userProject = qr.manager.create(UserProject, {
+            //  userProject 에 할당
+            userProject = qr.manager.create(UserProject, {
                 user: { id: userId },
                 project: { id: projectId },
                 permission: projectPermission.MEMBER,
@@ -608,7 +609,9 @@ export class ProjectsService {
         } catch (err) {
             throw new ProjectTransactionException();
         }
-        await this.userProjectRepository.save(userProject);
+
+        // 트랜잭션 같은 컨텍스트로 저장
+        await qr.manager.save(UserProject, userProject);
     }
 }
 
