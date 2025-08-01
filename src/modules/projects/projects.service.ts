@@ -125,7 +125,7 @@ export class ProjectsService {
         //meta 키 추가
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.set(`invite:meta:${code}`, '', /* no EX */);
+        await this.redis.set(`invite:meta:${code}`, '' /* no EX */);
 
         // 프로젝트 별 코드 목록 Set
         await this.redis.sAdd(`project:${projectId}:invites`, code);
@@ -274,16 +274,16 @@ export class ProjectsService {
 
         // 5) 프로젝트 완료 시 Redis에 남아 있는 URL 캐시, 해시도 같이 삭제 삭제
         // 1) Set 에서 이 프로젝트의 모든 inviteCode 조회
-const setKey = `project:${projectId}:invites`;
-const codes = await this.redis.sMembers(setKey);
+        const setKey = `project:${projectId}:invites`;
+        const codes = await this.redis.sMembers(setKey);
 
-if (codes.length) {
-  // 2) 남은 invite:<code> 삭제(메타는 남겨둠)
-  const delKeys = codes.flatMap(c => [`invite:${c}`]);
-  await this.redis.del(delKeys);
-  // 3) Set 자체도 삭제
-  await this.redis.del(setKey);
-}
+        if (codes.length) {
+            // 2) 남은 invite:<code> 삭제(메타는 남겨둠)
+            const delKeys = codes.flatMap((c) => [`invite:${c}`]);
+            await this.redis.del(delKeys);
+            // 3) Set 자체도 삭제
+            await this.redis.del(setKey);
+        }
 
         // 6) 응답 반환
         return CompleteProjectResponseDto.fromEntity(project);
@@ -561,29 +561,28 @@ if (codes.length) {
 
     // 참여코드로 프로젝트 id 조회
     private async getProjectByInviteCode(inviteCode: string) {
-    const codeKey = `invite:${inviteCode}`;
-    const metaKey = `invite:meta:${inviteCode}`;
+        const codeKey = `invite:${inviteCode}`;
+        const metaKey = `invite:meta:${inviteCode}`;
 
-     // 1) 정상: invite:<code>가 살아 있으면
-  const projectIdStr = await this.redis.get(codeKey);
-  if (!projectIdStr) {
-    // 2) 완료(만료된 링크): meta 키만 남아 있으면
-     if (await this.redis.exists(metaKey)) {
-        const metaProjectIdStr = await this.redis.get(metaKey);
-        if (metaProjectIdStr) {
-          throw new AlreadyProjectCompletedException();
-        }else{
-            throw new ExpiredInvitecodeException();
+        // 1) 정상: invite:<code>가 살아 있으면
+        const projectIdStr = await this.redis.get(codeKey);
+        if (!projectIdStr) {
+            // 2) 완료(만료된 링크): meta 키만 남아 있으면
+            if (await this.redis.exists(metaKey)) {
+                const metaProjectIdStr = await this.redis.get(metaKey);
+                if (metaProjectIdStr) {
+                    throw new AlreadyProjectCompletedException();
+                } else {
+                    throw new ExpiredInvitecodeException();
+                }
+            } else {
+                throw new InvalidInvitecodeException();
+            }
         }
-  }
-  else{
-    throw new InvalidInvitecodeException();
-  }
-  }
 
-  const projectId = Number(projectIdStr);
-    return projectId;
-}
+        const projectId = Number(projectIdStr);
+        return projectId;
+    }
     // user와 project 매핑 존재 확인
     private async isUserInProject(userId: number, projectId: number): Promise<boolean> {
         return await this.userProjectRepository.exists({
