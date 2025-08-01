@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlansGateway } from './gateways/plans.gateway';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { User } from 'src/common/decorators/user.decorator';
@@ -13,7 +13,6 @@ import { PlansService } from './plans.service';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
 
 @ApiTags('Plans')
-@ApiBearerAuth('access-token')
 @Controller('/plans')
 export class PlansController {
     constructor(

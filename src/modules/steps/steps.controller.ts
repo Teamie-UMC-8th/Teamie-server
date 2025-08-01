@@ -1,6 +1,6 @@
 import { Controller, Body, ParseIntPipe, Patch, Delete, Param } from '@nestjs/common';
 import { StepsService } from './steps.service';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
@@ -12,7 +12,6 @@ import { UpdateStepDto, UpdateStepResponseDto } from './dtos/update-step.dto';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
 import { Transactional } from 'src/common/decorators/transaction.decorator';
 @ApiTags('Steps')
-@ApiBearerAuth('access-token')
 @Controller('/steps')
 export class StepsController {
     constructor(private readonly stepsService: StepsService) {}
@@ -30,7 +29,7 @@ export class StepsController {
         @Param('stepId', ParseIntPipe) stepId: number,
         @Body() dto: UpdateStepDto,
         @User() userId: number
-    ): Promise<CommonResponse<UpdateStepResponseDto>> {
+    ): Promise<UpdateStepResponseDto> {
         return this.stepsService.updateStep(stepId, dto);
     }
 
@@ -50,7 +49,7 @@ export class StepsController {
         @Param('taskId', ParseIntPipe) taskId: number,
         @Body() dto: UpdateTaskStepDto,
         @User() userId: number
-    ): Promise<CommonResponse<UpdateTaskStepResponseDto>> {
+    ): Promise<UpdateTaskStepResponseDto> {
         return this.stepsService.updateTaskStep(dto, stepId, taskId);
     }
 

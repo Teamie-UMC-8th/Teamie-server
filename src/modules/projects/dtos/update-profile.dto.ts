@@ -10,4 +10,9 @@ export class UpdateProfileDto {
 
 export class UpdateProfileResponseDto {
     users: UserInProjectDto[];
+    static fromEntity(users: UserInProjectDto[]): UpdateProfileResponseDto {
+        const dto = new UpdateProfileResponseDto();
+        dto.users = users;
+        return dto;
+    }
 }

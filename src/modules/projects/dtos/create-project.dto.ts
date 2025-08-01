@@ -24,7 +24,7 @@ export class CreateProjectResponseDto {
     name: string;
 
     @ApiProperty({
-        example: 'https://localhost:3000/projects/join/abcd1234',
+        example: 'abcd1234',
         description: '초대 코드 URL',
     })
     inviteCode: string;

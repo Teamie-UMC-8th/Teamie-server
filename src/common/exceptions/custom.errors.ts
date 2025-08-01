@@ -103,6 +103,17 @@ export class AlreadyProjectCompletedException extends CustomHttpException {
     }
 }
 
+export class ExpiredInvitecodeException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.EXPIRED_INVITE_CODE,
+            '유효기간이 지난 url입니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 export class NotPostAuthorException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -141,6 +152,17 @@ export class ProfileForbiddenException extends CustomHttpException {
         super(
             ErrorCode.NOT_YOUR_PROFILE,
             '자신의 프로필만 수정할 수 있습니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class ForbiddenUserForMasterPortfolioException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_USER_FOR_MASTER_PORTFOLIO,
+            '마스터포트폴리오 카드에 대해 수정권한이 없는 사용자입니다.',
             HttpStatus.FORBIDDEN,
             data
         );
@@ -289,6 +311,11 @@ export class AssigneeNotMemberException extends CustomHttpException {
     }
 }
 
+export class AlreadyJoinException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, data);
+    }
+}
 export class MasterPortfolioDuplicateException extends CustomHttpException {
     constructor(userId: number, projectId: number, data?: any) {
         super(

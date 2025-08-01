@@ -11,7 +11,7 @@ import {
     ValidationPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
 import { MasterPortfoliosService } from './master-portfolios.service';
@@ -30,7 +30,6 @@ import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-respons
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('MasterPortfolios')
-@ApiBearerAuth('access-token')
 @Controller('master-portfolios')
 export class MasterPortfoliosController {
     constructor(
