@@ -13,15 +13,7 @@ import {
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
-import {
-    ApiBody,
-    ApiQuery,
-    ApiTags,
-    ApiParam,
-    ApiOperation,
-    ApiResponse,
-    ApiOkResponse,
-} from '@nestjs/swagger';
+import { ApiBody, ApiTags, ApiParam, ApiOperation } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
@@ -30,19 +22,22 @@ import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
-import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
-import { CommonResponse } from 'src/common/response/common-response.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
+import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto';
+import { PlansService } from '../plans/plans.service';
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
-    constructor(private readonly projectsService: ProjectsService) {}
+    constructor(
+        private readonly projectsService: ProjectsService,
+        private readonly plansService: PlansService
+    ) {}
 
     @Post()
     @ApiBody({ type: CreateProjectDto })
@@ -255,5 +250,22 @@ export class ProjectsController {
         @Body() dto: UpdateProfileDto
     ) {
         return await this.projectsService.updateProfile(req.queryRunner, projectId, userId, dto);
+    }
+
+    @ApiOperation({
+        summary: '일정 생성 API',
+        description: '팀 캘린더에서 새로운 일정을 생성하는 API입니다.',
+    })
+    @ApiCommonResponse(CreatePlanResponse)
+    @Transactional()
+    @Post('/:projectId/plans')
+    async createPlan(
+        @Req() req: TransactionalRequest,
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Body() body: CreatePlanReq
+    ): Promise<CreatePlanResponse> {
+        const date: Date = new Date(body.date);
+        return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
     }
 }
