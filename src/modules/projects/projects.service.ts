@@ -111,26 +111,27 @@ export class ProjectsService {
             // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
             throw new ProjectTransactionException();
         }
+
+        // invite:<code> -> projectId (문자열 키)
         const code = generateRandomCode();
         const key = `invite:${code}`;
         const ttlSeconds = 60 * 60 * 24 * 3; //3일
-        await this.redis.set(key, savedProject.id.toString());
+        const projectId = savedProject.id.toString();
+        await this.redis.set(key, projectId);
         await this.redis.expire(key, ttlSeconds);
 
         const inviteCode = `${code}`;
 
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.hSet('invite:meta', code, expiresAt);
+        await this.redis.hSet(`invite:${projectId}`, code, expiresAt);
         return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
     }
 
     async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
         // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
         const projectId = await this.getProjectByInviteCode(inviteCode);
-        if (projectId == null) {
-            throw new InvalidInvitecodeException();
-        }
+
         // 2) 이미 참여한 사용자라면 예외
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (alreadyJoined) {
@@ -264,10 +265,25 @@ export class ProjectsService {
             throw new ProjectTransactionException();
         }
 
-        // 4) 트랜잭션 범위 밖에서 MasterPortfolio 생성
-        await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
+        // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
+        await this.masterPortfoliosService.createMasterPortfolio(qr.manager, userId, projectId);
 
-        // 5) 응답 반환
+        // 5) 프로젝트 완료 시 Redis에 남아 있는 URL 캐시, 해시도 같이 삭제 삭제
+        const hashKey = `invite:${projectId}`;
+
+        // 해시에 남아 있는 모든 inviteCode 조회
+        const codes: string[] = await this.redis.hKeys(hashKey);
+
+        if (codes.length > 0) {
+            // 각 invite:<code> 문자열 키 삭제
+            const inviteKeys = codes.map((code) => `invite:${code}`);
+            await this.redis.del(inviteKeys);
+        }
+
+        // 프로젝트별 해시 자체 삭제
+        await this.redis.del(hashKey);
+
+        // 6) 응답 반환
         return CompleteProjectResponseDto.fromEntity(project);
     }
     async createStep(
@@ -545,14 +561,16 @@ export class ProjectsService {
     private async getProjectByInviteCode(inviteCode: string) {
         const key = `invite:${inviteCode}`;
         const projectIdStr = await this.redis.get(key);
-        if (projectIdStr == null) return null; //키가 없으면 null 리턴
-        // 숫자로 변환
-        const metaTs = await this.redis.hGet('invite:meta', inviteCode);
-        if (metaTs) {
-            // 메타만 남아 있으면 TTL 만료 → expired
-            throw new ExpiredInvitecodeException();
-        }
         const projectId = Number(projectIdStr);
+        if (projectIdStr == null) {
+            const metaTs = await this.redis.hGet(`invite:${projectId}`, inviteCode);
+            if (metaTs) {
+                // hset 남아 있으면 TTL 만료 → 만료된 링크 에러
+                throw new ExpiredInvitecodeException();
+            } else {
+                throw new InvalidInvitecodeException(); //키가 없으면 유효하지 않은 코드라고 에러 표시
+            }
+        }
         return projectId;
     }
 

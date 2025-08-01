@@ -20,6 +20,7 @@ import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-r
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -137,7 +138,7 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 생성 (project 종료할 때 사용)
-    async createMasterPortfolio(userId: number, projectId: number) {
+    async createMasterPortfolio(manager: EntityManager, userId: number, projectId: number) {
         const existingPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
         });
@@ -149,7 +150,7 @@ export class MasterPortfoliosService {
             user: { id: userId },
             project: { id: projectId },
         });
-        await this.masterPortfolioRepository.save(masterPortfolio);
+        await manager.save(MasterPortfolio, masterPortfolio);
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
