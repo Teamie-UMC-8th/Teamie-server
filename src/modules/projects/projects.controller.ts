@@ -64,21 +64,17 @@ export class ProjectsController {
         description: 'inviteCode가 유효한지 확인합니다.',
     })
     @ApiCommonResponse(ValidateInviteResponseDto)
-    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
-    async validateInvite(@Query('inviteCode') inviteCode: string) {
-        return await this.projectsService.joinValidate(inviteCode);
+    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 400)
+    @ApiCommonErrorResponse('PROJECT_ALREADY_COMPLETED', '이미 완료된 프로젝트입니다', 403)
+    @ApiCommonErrorResponse('EXPIRED_INVITE_CODE', '유효기간이 지난 url입니다.', 404)
+    @ApiCommonErrorResponse('ALREDY_JOIN', '이미 프로젝트에 참여하였습니다.', 409)
+    async validateInvite(@User('id') userId: number, @Query('inviteCode') inviteCode: string) {
+        return await this.projectsService.joinValidate(userId, inviteCode);
     }
 
     @Post('/join')
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
-    @ApiQuery({ name: 'pojectId', required: true, example: 1 })
     @ApiCommonResponse(JoinProjectResponseDto)
-    @ApiCommonErrorResponse(
-        'FORBIDDEN_USER_FOR_UPDATE',
-        '해당 프로젝트에 접근 권한이 없습니다.',
-        403
-    )
-    @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @Transactional()
     async joinProject(
         @Req() req: TransactionalRequest,

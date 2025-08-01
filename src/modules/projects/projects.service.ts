@@ -26,6 +26,8 @@ import {
     InvalidInvitecodeException,
     ProfileForbiddenException,
     ProjectTransactionException,
+    ExpiredInvitecodeException,
+    AlreadyJoinException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -119,16 +121,34 @@ export class ProjectsService {
 
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-
+        await this.redis.hSet('invite:meta', code, expiresAt);
         return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
     }
 
-    async joinValidate(inviteCode: string): Promise<ValidateInviteResponseDto> {
-        //  inviteCode로 projectId 가져오기
+    async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
+        // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
         const projectId = await this.getProjectByInviteCode(inviteCode);
-        if (!projectId) throw new InvalidInvitecodeException();
+        if (projectId == null) {
+            throw new InvalidInvitecodeException();
+        }
+        // 2) 이미 참여한 사용자라면 예외
+        const alreadyJoined = await this.isUserInProject(userId, projectId);
+        if (alreadyJoined) {
+            throw new AlreadyJoinException();
+        }
 
-        return ValidateInviteResponseDto.fromEntity(projectId);
+        // 3) 프로젝트 이름 조회
+        const project = await this.projectRepository.findOneOrFail({
+            where: { id: projectId },
+            select: ['name'],
+        });
+
+        // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
+        return ValidateInviteResponseDto.fromEntity(
+            projectId,
+            project.name,
+            projectPermission.MEMBER
+        );
     }
 
     async joinProject(
@@ -138,11 +158,10 @@ export class ProjectsService {
     ): Promise<JoinProjectResponseDto> {
         const projectId = dto.projectId;
         //  프로젝트 엔티티에서 이름 조회
-        const project = await this.projectRepository.findOne({
+        const project = await this.projectRepository.findOneOrFail({
             where: { id: projectId },
             select: ['id', 'name'],
         });
-        if (!project) throw new ProjectNotFoundException();
         //  유저 엔티티에서 이름 조회
         const user = await this.userRepository.findOneOrFail({
             where: { id: userId },
@@ -154,7 +173,7 @@ export class ProjectsService {
             await this.addUserToProject(userId, projectId, 'member', qr);
         }
         const message = `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`;
-        const responseDto = JoinProjectResponseDto.fromEntity(message, project);
+        const responseDto = JoinProjectResponseDto.fromEntity(message);
 
         return responseDto;
     }
@@ -528,6 +547,11 @@ export class ProjectsService {
         const projectIdStr = await this.redis.get(key);
         if (projectIdStr == null) return null; //키가 없으면 null 리턴
         // 숫자로 변환
+        const metaTs = await this.redis.hGet('invite:meta', inviteCode);
+        if (metaTs) {
+            // 메타만 남아 있으면 TTL 만료 → expired
+            throw new ExpiredInvitecodeException();
+        }
         const projectId = Number(projectIdStr);
         return projectId;
     }
