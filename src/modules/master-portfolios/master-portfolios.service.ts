@@ -25,6 +25,7 @@ import { Plan } from '../plans/entities/plans.entity';
 import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Project } from '../projects/entities/projects.entity';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -186,7 +187,7 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 생성 (project 종료할 때 사용)
-    async createMasterPortfolio(userId: number, projectId: number) {
+    async createMasterPortfolio(manager: EntityManager, userId: number, projectId: number) {
         const existingPortfolio = await this.masterPortfolioRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
         });
@@ -200,7 +201,7 @@ export class MasterPortfoliosService {
             category: portfolioType.COURSE, // 기본 카테고리 설정 (수업)
             contributionRate: 0, // 초기 기여도 설정 (0%)
         });
-        await this.masterPortfolioRepository.save(masterPortfolio);
+        await manager.save(MasterPortfolio, masterPortfolio);
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 

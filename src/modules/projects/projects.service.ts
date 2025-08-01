@@ -111,26 +111,31 @@ export class ProjectsService {
             // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
             throw new ProjectTransactionException();
         }
+
+        // invite:<code> -> projectId (문자열 키)
         const code = generateRandomCode();
         const key = `invite:${code}`;
         const ttlSeconds = 60 * 60 * 24 * 3; //3일
-        await this.redis.set(key, savedProject.id.toString());
+        const projectId = savedProject.id.toString();
+        await this.redis.set(key, projectId);
         await this.redis.expire(key, ttlSeconds);
 
         const inviteCode = `${code}`;
 
+        //meta 키 추가
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.hSet('invite:meta', code, expiresAt);
+        await this.redis.set(`invite:meta:${code}`, '' /* no EX */);
+
+        // 프로젝트 별 코드 목록 Set
+        await this.redis.sAdd(`project:${projectId}:invites`, code);
         return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
     }
 
     async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
         // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
         const projectId = await this.getProjectByInviteCode(inviteCode);
-        if (projectId == null) {
-            throw new InvalidInvitecodeException();
-        }
+
         // 2) 이미 참여한 사용자라면 예외
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (alreadyJoined) {
@@ -264,10 +269,23 @@ export class ProjectsService {
             throw new ProjectTransactionException();
         }
 
-        // 4) 트랜잭션 범위 밖에서 MasterPortfolio 생성
-        await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
+        // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
+        await this.masterPortfoliosService.createMasterPortfolio(qr.manager, userId, projectId);
 
-        // 5) 응답 반환
+        // 5) 프로젝트 완료 시 Redis에 남아 있는 URL 캐시, 해시도 같이 삭제 삭제
+        // 1) Set 에서 이 프로젝트의 모든 inviteCode 조회
+        const setKey = `project:${projectId}:invites`;
+        const codes = await this.redis.sMembers(setKey);
+
+        if (codes.length) {
+            // 2) 남은 invite:<code> 삭제(메타는 남겨둠)
+            const delKeys = codes.flatMap((c) => [`invite:${c}`]);
+            await this.redis.del(delKeys);
+            // 3) Set 자체도 삭제
+            await this.redis.del(setKey);
+        }
+
+        // 6) 응답 반환
         return CompleteProjectResponseDto.fromEntity(project);
     }
     async createStep(
@@ -543,19 +561,28 @@ export class ProjectsService {
 
     // 참여코드로 프로젝트 id 조회
     private async getProjectByInviteCode(inviteCode: string) {
-        const key = `invite:${inviteCode}`;
-        const projectIdStr = await this.redis.get(key);
-        if (projectIdStr == null) return null; //키가 없으면 null 리턴
-        // 숫자로 변환
-        const metaTs = await this.redis.hGet('invite:meta', inviteCode);
-        if (metaTs) {
-            // 메타만 남아 있으면 TTL 만료 → expired
-            throw new ExpiredInvitecodeException();
+        const codeKey = `invite:${inviteCode}`;
+        const metaKey = `invite:meta:${inviteCode}`;
+
+        // 1) 정상: invite:<code>가 살아 있으면
+        const projectIdStr = await this.redis.get(codeKey);
+        if (!projectIdStr) {
+            // 2) 완료(만료된 링크): meta 키만 남아 있으면
+            if (await this.redis.exists(metaKey)) {
+                const metaProjectIdStr = await this.redis.get(metaKey);
+                if (metaProjectIdStr) {
+                    throw new AlreadyProjectCompletedException();
+                } else {
+                    throw new ExpiredInvitecodeException();
+                }
+            } else {
+                throw new InvalidInvitecodeException();
+            }
         }
+
         const projectId = Number(projectIdStr);
         return projectId;
     }
-
     // user와 project 매핑 존재 확인
     private async isUserInProject(userId: number, projectId: number): Promise<boolean> {
         return await this.userProjectRepository.exists({
