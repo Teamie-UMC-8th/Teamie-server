@@ -64,16 +64,12 @@ export class ProjectsController {
         description: 'inviteCode가 유효한지 확인합니다.',
     })
     @ApiCommonResponse(ValidateInviteResponseDto)
-    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 404)
+    @ApiCommonErrorResponse('INVALID_INVITE_CODE', '유효하지 않은 초대코드입니다.', 400)
     @ApiCommonErrorResponse('PROJECT_ALREADY_COMPLETED', '이미 완료된 프로젝트입니다', 403)
-    @ApiCommonErrorResponse('EXPIRED_INVITE_CODE', '유효기간이 지난 url입니다.', 4043)
+    @ApiCommonErrorResponse('EXPIRED_INVITE_CODE', '유효기간이 지난 url입니다.', 404)
     @ApiCommonErrorResponse('ALREDY_JOIN', '이미 프로젝트에 참여하였습니다.', 409)
-    async validateInvite(
-        @Req() req: TransactionalRequest,
-        @User('id') userId: number,
-        @Query('inviteCode') inviteCode: string
-    ) {
-        return await this.projectsService.joinValidate(req.queryRunner, userId, inviteCode);
+    async validateInvite(@User('id') userId: number, @Query('inviteCode') inviteCode: string) {
+        return await this.projectsService.joinValidate(userId, inviteCode);
     }
 
     @Post('/join')

@@ -125,21 +125,30 @@ export class ProjectsService {
         return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
     }
 
-    async joinValidate(
-        qr: QueryRunner,
-        userId: number,
-        inviteCode: string
-    ): Promise<ValidateInviteResponseDto> {
-        //  inviteCode로 projectId 가져오기
+    async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
+        // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
         const projectId = await this.getProjectByInviteCode(inviteCode);
-        if (!projectId) throw new InvalidInvitecodeException();
-
+        if (projectId == null) {
+            throw new InvalidInvitecodeException();
+        }
+        // 2) 이미 참여한 사용자라면 예외
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (alreadyJoined) {
             throw new AlreadyJoinException();
         }
 
-        return ValidateInviteResponseDto.fromEntity(projectId);
+        // 3) 프로젝트 이름 조회
+        const project = await this.projectRepository.findOneOrFail({
+            where: { id: projectId },
+            select: ['name'],
+        });
+
+        // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
+        return ValidateInviteResponseDto.fromEntity(
+            projectId,
+            project.name,
+            projectPermission.MEMBER
+        );
     }
 
     async joinProject(
