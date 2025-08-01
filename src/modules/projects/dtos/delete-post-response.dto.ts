@@ -5,4 +5,9 @@ export class DeletePostResponseDto {
         description: '삭제 성공 완료 메세지',
     })
     message: string;
+    static fromEntity(entity: any): DeletePostResponseDto {
+        const dto = new DeletePostResponseDto();
+        dto.message = entity.message;
+        return dto;
+    }
 }

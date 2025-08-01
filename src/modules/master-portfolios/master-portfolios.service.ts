@@ -8,6 +8,7 @@ import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import {
+    ForbiddenUserForMasterPortfolioException,
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
@@ -263,5 +264,18 @@ export class MasterPortfoliosService {
             .slice(0, pageSize)
             .map((entity) => UserMasterPortfoliosResponseDto.fromEntity(entity));
         return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
+    }
+
+    //마스터포트폴리오 소유자 체크
+    async checkMasterPortfolioOwner(userId: number, portfolioId: number): Promise<Boolean> {
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId },
+            relations: ['user'],
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+        if (masterPortfolio.user.id !== userId) return false;
+        return true;
     }
 }

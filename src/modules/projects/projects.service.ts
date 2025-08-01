@@ -26,6 +26,8 @@ import {
     InvalidInvitecodeException,
     ProfileForbiddenException,
     ProjectTransactionException,
+    ExpiredInvitecodeException,
+    AlreadyJoinException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -38,6 +40,8 @@ import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { User } from '../users/entities/users.entity';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
+import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
+import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -72,80 +76,109 @@ export class ProjectsService {
     }
 
     async createProject(
+        qr: QueryRunner,
         dto: CreateProjectDto,
         userId: number
-    ): Promise<CommonResponse<CreateProjectResponseDto>> {
+    ): Promise<CreateProjectResponseDto> {
         const { name } = dto;
-        const project = this.projectRepository.create({
-            name,
-            goal: '',
-            rule: '',
-            isCompleted: false,
-            completedAt: undefined,
-        });
+        // 1) outer 스코프에 한 번만 선언
+        let savedProject!: Project;
 
-        const savedProject = await this.projectRepository.save(project);
+        try {
+            // 2) Project 인스턴스 생성 (manager.create)
+            const project = qr.manager.create(Project, {
+                name,
+                goal: '',
+                rule: '',
+                isCompleted: false,
+                completedAt: null, // undefined 대신 null 권장
+            });
 
-        const userProject = this.userProjectRepository.create({
-            user: { id: userId }, // User 엔티티의 id를 사용하여 관계 설정
-            project: savedProject,
-            permission: projectPermission.LEAD,
-            role: '',
-        });
+            // 3) DB에 저장 → savedProject에 할당
+            savedProject = await qr.manager.save(Project, project);
 
-        await this.userProjectRepository.save(userProject);
+            // 4) UserProject 인스턴스 생성
+            const userProject = qr.manager.create(UserProject, {
+                user: { id: userId },
+                project: savedProject,
+                permission: projectPermission.LEAD,
+                role: '',
+            });
 
+            // 5) UserProject도 저장
+            await qr.manager.save(UserProject, userProject);
+        } catch (err) {
+            // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
+            throw new ProjectTransactionException();
+        }
         const code = generateRandomCode();
         const key = `invite:${code}`;
-        const ttlSeconds = 60 * 60 * 24 * 7; //7일
+        const ttlSeconds = 60 * 60 * 24 * 3; //3일
         await this.redis.set(key, savedProject.id.toString());
         await this.redis.expire(key, ttlSeconds);
 
-        const baseUrl = this.configService.get('BASE_URL');
-        const inviteCode = `${baseUrl}/projects/join/${code}`;
+        const inviteCode = `${code}`;
 
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
+        await this.redis.hSet('invite:meta', code, expiresAt);
+        return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
+    }
 
-        return CommonResponse.success(
-            CreateProjectResponseDto.fromEntity(project, inviteCode, expiresAt)
+    async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
+        // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
+        const projectId = await this.getProjectByInviteCode(inviteCode);
+        if (projectId == null) {
+            throw new InvalidInvitecodeException();
+        }
+        // 2) 이미 참여한 사용자라면 예외
+        const alreadyJoined = await this.isUserInProject(userId, projectId);
+        if (alreadyJoined) {
+            throw new AlreadyJoinException();
+        }
+
+        // 3) 프로젝트 이름 조회
+        const project = await this.projectRepository.findOneOrFail({
+            where: { id: projectId },
+            select: ['name'],
+        });
+
+        // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
+        return ValidateInviteResponseDto.fromEntity(
+            projectId,
+            project.name,
+            projectPermission.MEMBER
         );
     }
 
-    async joinProject(userId: number, inviteCode: string): Promise<CommonResponse> {
-        // 1) inviteCode로 projectId 가져오기
-        const projectId = await this.getProjectByInviteCode(inviteCode);
-        if (!projectId) throw new InvalidInvitecodeException();
-
-        // 2) 프로젝트 엔티티에서 이름 조회
-        const project = await this.projectRepository.findOne({
+    async joinProject(
+        qr: QueryRunner,
+        userId: number,
+        dto: JoinProjectDto
+    ): Promise<JoinProjectResponseDto> {
+        const projectId = dto.projectId;
+        //  프로젝트 엔티티에서 이름 조회
+        const project = await this.projectRepository.findOneOrFail({
             where: { id: projectId },
-            select: ['id', 'name'], // 필요한 컬럼만
+            select: ['id', 'name'],
         });
-        if (!project) throw new ProjectNotFoundException();
-
-        // 3) 유저 엔티티에서 이름 조회
+        //  유저 엔티티에서 이름 조회
         const user = await this.userRepository.findOneOrFail({
             where: { id: userId },
             select: ['id', 'name'],
         });
-
-        // 4) 아직 참여하지 않았다면 member로 추가
+        //  아직 참여하지 않았다면 member로 추가
         const alreadyJoined = await this.isUserInProject(userId, projectId);
         if (!alreadyJoined) {
-            await this.addUserToProject(userId, projectId, 'member');
+            await this.addUserToProject(userId, projectId, 'member', qr);
         }
+        const message = `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`;
+        const responseDto = JoinProjectResponseDto.fromEntity(message);
 
-        // 5) 메시지에 이름 사용
-        return CommonResponse.success({
-            message: `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`,
-        });
+        return responseDto;
     }
 
-    async getProjectFullData(
-        userId: number,
-        projectId: number
-    ): Promise<CommonResponse<AllProjectResponseDto>> {
+    async getProjectFullData(userId: number, projectId: number): Promise<AllProjectResponseDto> {
         // 프로젝트 존재 검사
         const project = await this.assertProjectExists(projectId);
         // 프로젝트 멤버 권한 검사
@@ -162,14 +195,15 @@ export class ProjectsService {
         const postsRaw = (await this.redis.get(key)) || [];
         const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
 
-        return CommonResponse.success(AllProjectResponseDto.fromEntity({ project, users, posts }));
+        return AllProjectResponseDto.fromEntity({ project, users, posts });
     }
 
     async updateProject(
+        qr: QueryRunner,
         userId: number,
         projectId: number,
         dto: UpdateProjectDto
-    ): Promise<CommonResponse<AllProjectResponseDto>> {
+    ): Promise<AllProjectResponseDto> {
         //프로젝트 존재 검사
         const project = await this.assertProjectIsEditable(projectId);
         //프로젝트 팀장 여부
@@ -185,75 +219,90 @@ export class ProjectsService {
         if (dto.rule !== undefined) project.rule = dto.rule;
         if (dto.goal !== undefined) project.goal = dto.goal;
 
-        await this.projectRepository.save(project);
+        await qr.manager.save(project);
 
         return this.getProjectFullData(userId, projectId);
     }
 
     async completeProject(
+        qr: QueryRunner,
         userId: number,
         projectId: number
-    ): Promise<CommonResponse<CompleteProjectResponseDto>> {
-        //project가 존재하는지, 이미 완료된건지 검사
+    ): Promise<CompleteProjectResponseDto> {
+        // 1) 프로젝트 존재 검사 & 수정 가능 확인
         const project = await this.assertProjectIsEditable(projectId);
-        //프로젝트 팀장인지 권한 검사
+        // 2) 팀장 권한 확인
         await this.checkProjectLeader(userId, projectId);
-        // 프로젝트 완료 상태로 변경
+
+        // 3) 프로젝트 완료 처리
         project.isCompleted = true;
-        project.completedAt = new Date(); // 현재 시간으로 설정
-        await this.projectRepository.save(project);
-        // projectId 에 속한 userId들만 조회
-        const rawMembers = await this.userProjectRepository
-            .createQueryBuilder('up')
-            .leftJoin('up.user', 'user')
-            .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
-            .where('up.projectId = :projectId', { projectId })
-            .getRawMany<{ userId: number; projectNum: number }>();
+        project.completedAt = new Date();
 
-        for (const { userId, projectNum } of rawMembers) {
-            // 1. user.projectNum +1 후 저장
-            await this.userRepository.update(userId, { projectNum: projectNum + 1 });
+        try {
+            // 3-1) 프로젝트 저장
+            await qr.manager.save(Project, project);
 
-            // 2. PersonalRecall 생성
-            await this.personalRecallRepository.save({
+            // 3-2) 모든 멤버의 projectNum + 1
+            const rawMembers = await this.userProjectRepository
+                .createQueryBuilder('up')
+                .leftJoin('up.user', 'user')
+                .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
+                .where('up.projectId = :projectId', { projectId })
+                .getRawMany<{ userId: number; projectNum: number }>();
+
+            for (const { userId: memberId, projectNum } of rawMembers) {
+                await qr.manager.update(User, { id: memberId }, { projectNum: projectNum + 1 });
+            }
+
+            // 3-3) PersonalRecall 생성 (create → save)
+            const recall = qr.manager.create(PersonalRecall, {
                 user: { id: userId },
                 project: { id: projectId },
             });
-
-            // 3. MasterPortfolio 생성
-            await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
+            await qr.manager.save(PersonalRecall, recall);
+        } catch (err) {
+            throw new ProjectTransactionException();
         }
-        return CommonResponse.success(CompleteProjectResponseDto.fromEntity(project));
-    }
 
+        // 4) 트랜잭션 범위 밖에서 MasterPortfolio 생성
+        await this.masterPortfoliosService.createMasterPortfolio(userId, projectId);
+
+        // 5) 응답 반환
+        return CompleteProjectResponseDto.fromEntity(project);
+    }
     async createStep(
+        qr: QueryRunner,
         dto: CreateStepDto,
         projectId: number,
         userId: number
-    ): Promise<CommonResponse<CreateStepResponseDto>> {
+    ): Promise<CreateStepResponseDto> {
         // 프로젝트 멤버인지 확인
         await this.checkProjectMember(userId, projectId);
-        // 1) 엔티티 생성
-        const step = this.stepRepository.create({
-            ...dto,
-        });
+        let savedStep: Step;
+        try {
+            // 1) 엔티티 생성
+            const step = qr.manager.create(Step, {
+                ...dto,
+                project: { id: projectId },
+                createdBy: { id: userId },
+            });
 
-        // Assign relations separately if needed
-        (step as any).project = { id: projectId };
-        (step as any).createdBy = { id: userId };
-
-        // 2) 실제로 DB에 저장
-        const saved = await this.stepRepository.save(step);
+            // 2) 실제로 DB에 저장
+            savedStep = await qr.manager.save(Step, step);
+        } catch (err) {
+            // 트랜잭션 중 오류 시 예외 던지기
+            throw new ProjectTransactionException();
+        }
 
         // 3) 저장된 엔티티 전체를 DTO로 변환해 반환
-        return CommonResponse.success(CreateStepResponseDto.fromEntity(saved));
+        return CreateStepResponseDto.fromEntity(savedStep);
     }
 
     async createPost(
         dto: CreatePostDto,
         userId: number,
         projectId: number
-    ): Promise<CommonResponse<CreatePostResponseDto>> {
+    ): Promise<CreatePostResponseDto> {
         // 1) 프로젝트 존재 확인, 프로젝트 멤버인지 확인
         await this.assertProjectExists(projectId);
         await this.checkProjectMember(userId, projectId);
@@ -295,14 +344,14 @@ export class ProjectsService {
         await this.redis.set(key, JSON.stringify(posts));
         await this.redis.expire(key, this.POST_TTL_SECONDS);
         // 10) 생성된 객체 반환
-        return CommonResponse.success(CreatePostResponseDto.fromEntity(newPost, projectId));
+        return CreatePostResponseDto.fromEntity(newPost, projectId);
     }
 
     async deletePost(
         postId: number,
         userId: number,
         projectId: number
-    ): Promise<CommonResponse<DeletePostResponseDto>> {
+    ): Promise<DeletePostResponseDto> {
         await this.checkProjectMember(userId, projectId);
         const key = this.POSTS_KEY(projectId);
         const postsRaw = await this.redis.get(key);
@@ -334,14 +383,17 @@ export class ProjectsService {
         await this.redis.set(key, JSON.stringify(posts)); // 갱신
         await this.redis.expire(key, this.POST_TTL_SECONDS); // TTL 재설정
 
-        return CommonResponse.success({ message: '포스트잇이 삭제되었습니다.' });
+        const message = '포스트잇이 삭제되었습니다.';
+
+        return DeletePostResponseDto.fromEntity(message);
     }
 
     async changeProjectLeader(
+        qr: QueryRunner,
         projectId: number,
         dto: ChangeLeaderDto,
         currentUserId: number
-    ): Promise<CommonResponse<ChangeLeaderResponseDto>> {
+    ): Promise<ChangeLeaderResponseDto> {
         await this.assertProjectIsEditable(projectId);
         await this.checkProjectLeader(currentUserId, projectId);
         const { newLeaderId } = dto;
@@ -365,35 +417,30 @@ export class ProjectsService {
             throw new AlreadyLeaderException();
         }
 
-        // 4) 기존 팀장 MEMBER로 강등
-        if (currentLeaderRaw) {
-            await this.userProjectRepository.update(
-                {
-                    user: { id: currentLeaderRaw.oldLeaderId },
-                    project: { id: projectId },
-                },
-                { permission: projectPermission.MEMBER }
+        try {
+            // 4) 기존 팀장 MEMBER로 강등
+            if (currentLeaderRaw) {
+                await qr.manager.update(
+                    UserProject,
+                    { user: { id: currentLeaderRaw.oldLeaderId }, project: { id: projectId } },
+                    { permission: projectPermission.MEMBER }
+                );
+            }
+
+            // 5) 새 팀장 LEAD로 승격
+            await qr.manager.update(
+                UserProject,
+                { user: { id: newLeaderId }, project: { id: projectId } },
+                { permission: projectPermission.LEAD }
             );
+        } catch (err) {
+            // 트랜잭션 예외 발생 시 롤백하도록 인터셉터가 처리하고,
+            // 여기서는 도메인 예외로 래핑
+            throw new ProjectTransactionException();
         }
-
-        // 5) 새 팀장이 프로젝트 멤버인지 확인
-        const membership = await this.userProjectRepository.findOne({
-            where: { user: { id: newId }, project: { id: projectId } },
-        });
-        if (!membership) {
-            throw new AssigneeNotMemberException();
-        }
-
-        // 6) 새 팀장 LEAD로 업데이트
-        await this.userProjectRepository.update(
-            { user: { id: newId }, project: { id: projectId } },
-            { permission: projectPermission.LEAD }
-        );
 
         // 7) 응답 반환 (permission은 LEAD로 고정)
-        return CommonResponse.success(
-            ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD)
-        );
+        return ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD);
     }
 
     async updateProfile(
@@ -401,7 +448,7 @@ export class ProjectsService {
         projectId: number,
         userId: number,
         dto: UpdateProfileDto
-    ): Promise<CommonResponse<UpdateProfileResponseDto>> {
+    ): Promise<UpdateProfileResponseDto> {
         // 프로젝트 완료 여부 검사
         await this.assertProjectIsEditable(projectId);
         // 1. 본인 프로필 수정인지 확인
@@ -437,7 +484,7 @@ export class ProjectsService {
         // 5. DTO 변환 및 응답 반환
         const users = allUserProjects.map(UserInProjectDto.from);
 
-        return CommonResponse.success({ users });
+        return UpdateProfileResponseDto.fromEntity(users);
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
@@ -449,8 +496,18 @@ export class ProjectsService {
     }
     // 프로젝트 존재 여부 확인
     async assertProjectExists(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({ where: { id: projectId } });
-        if (!project) throw new ProjectNotFoundException();
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: [
+                'userProjects',
+                'userProjects.user',
+                'userProjects.user.managers',
+                'userProjects.user.managers.task',
+            ],
+        });
+        if (!project) {
+            throw new ProjectNotFoundException();
+        }
         return project;
     }
     // 프로젝트 멤버 확인 + 팀장 권한 확인
@@ -490,6 +547,11 @@ export class ProjectsService {
         const projectIdStr = await this.redis.get(key);
         if (projectIdStr == null) return null; //키가 없으면 null 리턴
         // 숫자로 변환
+        const metaTs = await this.redis.hGet('invite:meta', inviteCode);
+        if (metaTs) {
+            // 메타만 남아 있으면 TTL 만료 → expired
+            throw new ExpiredInvitecodeException();
+        }
         const projectId = Number(projectIdStr);
         return projectId;
     }
@@ -502,13 +564,23 @@ export class ProjectsService {
     }
 
     // user를 project 멤버로 추가
-    private async addUserToProject(userId: number, projectId: number, role: string): Promise<void> {
-        const userProject = this.userProjectRepository.create({
-            user: { id: userId },
-            project: { id: projectId },
-            permission: projectPermission.MEMBER,
-            role,
-        });
+    private async addUserToProject(
+        userId: number,
+        projectId: number,
+        role: string,
+        qr
+    ): Promise<void> {
+        let userProject!: UserProject;
+        try {
+            const userProject = qr.manager.create(UserProject, {
+                user: { id: userId },
+                project: { id: projectId },
+                permission: projectPermission.MEMBER,
+                role,
+            });
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
         await this.userProjectRepository.save(userProject);
     }
 }

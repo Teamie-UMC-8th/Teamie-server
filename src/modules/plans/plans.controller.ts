@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlansGateway } from './gateways/plans.gateway';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { User } from 'src/common/decorators/user.decorator';
@@ -11,34 +11,14 @@ import { PlanDetails } from './dtos/plan-details.dto';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { PlansService } from './plans.service';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
-import { CreatePlanReq, CreatePlanResponse } from './dtos/create-plan.dto';
-import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Plans')
-@ApiBearerAuth('access-token')
 @Controller('/plans')
 export class PlansController {
     constructor(
         private readonly plansGateway: PlansGateway,
         private readonly plansService: PlansService
     ) {}
-
-    @Post()
-    @ApiOperation({
-        summary: '일정 생성 API',
-        description: '팀 캘린더에서 새로운 일정을 생성하는 API입니다.',
-    })
-    @ApiCommonResponse(CreatePlanResponse)
-    @Transactional()
-    async createPlan(
-        @Req() req: TransactionalRequest,
-        @Body() body: CreatePlanReq,
-        @User('id') userId: number
-    ): Promise<CreatePlanResponse> {
-        const projectId: number = Number(body.projectId);
-        const date: Date = new Date(body.date);
-        return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
-    }
 
     @Pulbic()
     @Patch('/test/:planId')

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
 import { PersonalRecallsService } from './personal-recalls.service';
 import { User } from 'src/common/decorators/user.decorator';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { UpdatePersonalRecallDto } from './dtos/update-personal-recall.dto';
 import {
     ApiCommonErrorResponse,
@@ -10,7 +10,6 @@ import {
 import { PersonalRecallResponseDto } from './dtos/personal-recall-response.dto';
 
 @ApiTags('PersonalRecalls')
-@ApiBearerAuth('access-token')
 @Controller('/projects')
 export class PersonalRecallsController {
     constructor(private readonly personalRecallsService: PersonalRecallsService) {}

@@ -11,8 +11,8 @@ export class Task extends BaseEntity {
     @Column({ length: 35, default: '빈 업무' })
     name: string;
 
-    @Column()
-    deadline: Date;
+    @Column({ type: 'datetime', nullable: true })
+    deadline: Date | null;
 
     @Column({
         type: 'enum',
@@ -21,8 +21,8 @@ export class Task extends BaseEntity {
     })
     status: Status;
 
-    @Column({ length: 500 })
-    memo: string;
+    @Column({ type: 'varchar', length: 500, nullable: true })
+    memo: string | null;
 
     @ManyToOne(() => Step, (step) => step.tasks, { onDelete: 'CASCADE' })
     step: Step;

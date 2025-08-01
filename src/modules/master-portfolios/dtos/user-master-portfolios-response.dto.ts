@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
+import { ProjectTransactionException } from 'src/common/exceptions/custom.errors';
 
 export class UserMasterPortfoliosResponseDto {
     @ApiProperty({
@@ -62,5 +63,29 @@ export class UserMasterPortfoliosResponseDto {
         dto.endDate = entity.completedAt.toISOString();
         dto.mainTask = entity.mainTask;
         return dto;
+    }
+
+    static fromNestedEntity(entity: {
+        id: number;
+        category: portfolioType;
+        contributionRate: number;
+        mainTask: string;
+        project: {
+            name: string;
+            createdAt: Date;
+            completedAt: Date | null;
+        };
+    }) {
+        if (!entity.project.completedAt) throw new ProjectTransactionException();
+        const flatEntity = {
+            id: entity.id,
+            name: entity.project.name,
+            category: entity.category,
+            contributionRate: entity.contributionRate,
+            createdAt: entity.project.createdAt,
+            completedAt: entity.project.completedAt,
+            mainTask: entity.mainTask,
+        };
+        return this.fromEntity(flatEntity);
     }
 }

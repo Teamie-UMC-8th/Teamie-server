@@ -1,11 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty } from 'class-validator';
 
 export class CreateTaskRequestDto {
+    @ApiProperty({
+        example: 1,
+        description: '생성할 업무의 step ID',
+    })
+    @IsNotEmpty()
     stepId: number;
 }
 
 export class CreateTaskResponseDto {
-    @ApiProperty({ example: 1, description: '생성된 업무 ID' })
+    @ApiProperty({
+        example: 1,
+        description: '생성된 업무 ID',
+    })
     taskId: number;
 
     constructor(taskId: number) {
