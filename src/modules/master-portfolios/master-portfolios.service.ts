@@ -8,7 +8,6 @@ import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import {
-    ForbiddenUserForMasterPortfolioException,
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
@@ -35,10 +34,10 @@ export class MasterPortfoliosService {
     ) {}
 
     // 마스터 포트폴리오 질문 생성
-    async createQuestions(qr: QueryRunner, userId: number, projectId: number) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+    async createQuestions(qr: QueryRunner, userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -46,11 +45,7 @@ export class MasterPortfoliosService {
         const masterPortfolioId = masterPortfolio.id;
 
         // LLM을 호출하여 질문을 생성합니다.
-        // const questions: Array<Question> = await this.llmService.generateQuestions();
-        const questions: Array<Question> = [
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 1' },
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 2' },
-        ];
+        const questions: Array<Question> = await this.llmService.generateQuestions();
 
         // 생성된 질문들을 데이터베이스에 저장합니다.
         const questionEntities: QuestionResponseDto[] = [];
@@ -80,14 +75,18 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(qr: QueryRunner, userId: number, projectId: number) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+    async generateMasterPortfolio(qr: QueryRunner, userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
+
+        // 프로젝트 ID를 가져옵니다.
+        const projectId = masterPortfolio.project.id;
 
         // 임시로 더미 데이터 사용
         let projectData: any;
@@ -127,9 +126,18 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성 결과 조회
-    async getMasterPortfolioGenerationResult(userId: number, projectId: number) {
+    async getMasterPortfolioGenerationResult(userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 project ID를 찾습니다.
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+
         const masterPortfolioAI = await this.masterPortfolioAIRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, project: { id: masterPortfolio.project.id } },
         });
         if (!masterPortfolioAI) {
             throw new MasterPortfolioAINotFoundException();
@@ -155,9 +163,10 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 조회
-    async getMasterPortfolio(userId: number, projectId: number) {
+    async getMasterPortfolio(userId: number, portfolioId: number) {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -169,20 +178,21 @@ export class MasterPortfoliosService {
     async updateMasterPortfolio(
         qr: QueryRunner,
         userId: number,
-        projectId: number,
+        portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
         await qr.manager.update(
             MasterPortfolio,
             {
                 user: { id: userId },
-                project: { id: projectId },
+                id: portfolioId,
             },
             updateDataDto
         );
 
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
