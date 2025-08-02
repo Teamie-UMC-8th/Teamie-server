@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Between } from 'typeorm';
 import { Task } from './tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
@@ -33,6 +33,10 @@ import {
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
+import {
+    CalenderCardResponseDto,
+    TeamCalenderResponseDto,
+} from '../projects/dtos/team-calender-response.dto';
 
 @Injectable()
 export class TasksService {
@@ -591,5 +595,33 @@ export class TasksService {
 
         // DTO 변환
         return GetCommentResponseDto.from(comments, totalCount, offset, limit);
+    }
+
+    // 마감일 별 업무 조회
+    async getTasksByDeadline(
+        projectId: number,
+        startDate: Date,
+        endDate: Date
+    ): Promise<Record<string, CalenderCardResponseDto[]>> {
+        const tasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .select(['task.deadline AS date', 'task.id AS id', 'task.name AS name'])
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('task.deadline BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .orderBy('task.deadline', 'ASC')
+            .getRawMany();
+
+        //날짜 별 그룹핑
+        const grouped = tasks.reduce(
+            (acc, curr) => {
+                const date = curr.date.toISOString().split('T')[0];
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(CalenderCardResponseDto.fromTask(curr));
+                return acc;
+            },
+            {} as Record<string, CalenderCardResponseDto[]>
+        );
+        return grouped;
     }
 }

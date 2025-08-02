@@ -20,6 +20,17 @@ export class InvalidInvitecodeException extends CustomHttpException {
     }
 }
 
+export class InvalidDateException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_DATE_TOO_LONG,
+            '최대 31일까지만 조회할 수 있습니다.',
+            HttpStatus.BAD_REQUEST,
+            data
+        );
+    }
+}
+
 //401
 export class UnAuthorizedException extends CustomHttpException {
     constructor(data?: any) {

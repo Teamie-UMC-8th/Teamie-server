@@ -13,6 +13,7 @@ import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios
 import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.module';
 import { User } from '../users/entities/users.entity';
 import { PlansModule } from '../plans/plans.module';
+import { TasksModule } from '../tasks/tasks.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step, User]),
@@ -21,6 +22,7 @@ import { PlansModule } from '../plans/plans.module';
         forwardRef(() => StepsModule), // Circular dependency handling
         MasterPortfoliosModule,
         forwardRef(() => PlansModule),
+        TasksModule,
     ],
     controllers: [ProjectsController],
     providers: [ProjectsService],
