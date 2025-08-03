@@ -7,16 +7,37 @@ import { defaultConfig } from './config/app.config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 import * as cookieParser from 'cookie-parser';
+import * as session from 'express-session';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const allowedOrigins = rawOrigins.split(',').map(origin => origin.trim());
     app.enableCors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            if (!origin) return callback(null, true);
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            } else {
+                return callback(new Error(`CORS: ${origin} is not allowed`), false);
+            }
+        },
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     });
     app.use(cookieParser());
+
+    app.use(
+        session({
+            secret: process.env.SESSION_SECRET,
+            resave: false,
+            saveUninitialized: false,
+            cookie: {
+                maxAge: 360000,
+            },
+        }),
+    );
 
     const configService = app.get(ConfigService);
     const config = defaultConfig(configService);
