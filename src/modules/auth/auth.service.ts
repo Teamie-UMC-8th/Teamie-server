@@ -47,10 +47,11 @@ export class AuthService {
     }
 
     validateRedirectOrigin(url: string): boolean {
-        try{
+        try {
             const parsed = new URL(url);
-            const rawOrigins: string = this.configService.get('CORS_ORIGIN')|| 'http://localhost:3000';
-            const allowedOrigins = rawOrigins.split(',').map(origin => origin.trim());
+            const rawOrigins: string =
+                this.configService.get('CORS_ORIGIN') || 'http://localhost:3000';
+            const allowedOrigins = rawOrigins.split(',').map((origin) => origin.trim());
             return allowedOrigins.includes(parsed.origin);
         } catch {
             return false;

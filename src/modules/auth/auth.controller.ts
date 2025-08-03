@@ -24,7 +24,7 @@ export class AuthController {
     @ApiQuery({
         name: 'redirect_url',
         description: '리다이렉트 될 base_url을 쿼리 파라미터로 포함합니다.',
-        required: false
+        required: false,
     })
     @ApiResponse({
         status: 302,
@@ -33,7 +33,7 @@ export class AuthController {
     @Pulbic()
     @UseGuards(SetRedirectUrlGuard, AuthGuard('kakao'))
     @Get('/kakao')
-    async kakaoLogin(@Query('redirect_url') redirect_url?: string,) {}
+    async kakaoLogin(@Query('redirect_url') redirect_url?: string) {}
 
     @ApiOperation({
         summary: '카카오 로그인 콜백',
@@ -47,18 +47,25 @@ export class AuthController {
     @Pulbic()
     @UseGuards(AuthGuard('kakao'))
     @Get('/kakao/callback')
-    async kakaoCallback(@Req() req: any, @KakaoUser() user: KakaoUserAfterAuth, @Res() res: Response): Promise<void> {
+    async kakaoCallback(
+        @Req() req: any,
+        @KakaoUser() user: KakaoUserAfterAuth,
+        @Res() res: Response
+    ): Promise<void> {
         // 클라이언트 요청 host 파싱
-        const baseRedirect = req.session.redirectUrl || this.configService.get('CLIENT_REDIRECT_URI') || 'http://localhost:3000';
+        const baseRedirect =
+            req.session.redirectUrl ||
+            this.configService.get('CLIENT_REDIRECT_URI') ||
+            'http://localhost:3000';
         const safeOrigin = this.authService.validateRedirectOrigin(baseRedirect)
             ? baseRedirect
             : this.configService.get('CLIENT_REDIRECT_URI') || 'http://localhost:3000';
         const redirectPath = this.configService.get('CLIENT_REDIRECT_PATH') || '/docs';
         // 슬래시 중복 방지
-        const fullRedirect = safeOrigin.endsWith('/') 
+        const fullRedirect = safeOrigin.endsWith('/')
             ? safeOrigin.slice(0, -1) + redirectPath
             : safeOrigin + redirectPath;
-        
+
         // 사용자 인증 by JWT
         const kakaoUser = user;
         const accessToken = await this.authService.handleKakaoLogin(kakaoUser);

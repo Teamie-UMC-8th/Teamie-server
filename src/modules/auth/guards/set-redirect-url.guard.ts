@@ -1,5 +1,5 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { Observable } from "rxjs";
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class SetRedirectUrlGuard implements CanActivate {
@@ -7,7 +7,7 @@ export class SetRedirectUrlGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const { redirect_url } = request.query;
 
-        if(redirect_url) {
+        if (redirect_url) {
             request.session.redirectUrl = redirect_url;
         }
 

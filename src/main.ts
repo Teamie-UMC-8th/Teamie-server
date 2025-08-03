@@ -13,9 +13,12 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
-    const allowedOrigins = rawOrigins.split(',').map(origin => origin.trim());
+    const allowedOrigins = rawOrigins.split(',').map((origin) => origin.trim());
     app.enableCors({
-        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        origin: (
+            origin: string | undefined,
+            callback: (err: Error | null, allow?: boolean) => void
+        ) => {
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
@@ -36,7 +39,7 @@ async function bootstrap() {
             cookie: {
                 maxAge: 360000,
             },
-        }),
+        })
     );
 
     const configService = app.get(ConfigService);

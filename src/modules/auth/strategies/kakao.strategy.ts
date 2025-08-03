@@ -15,11 +15,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy) {
         });
     }
 
-    async validate(
-        accessToken: string,
-        refreshToken: string,
-        profile: Profile,
-    ): Promise<any> {
+    async validate(accessToken: string, refreshToken: string, profile: Profile): Promise<any> {
         try {
             const { _json } = profile;
             const user = {
