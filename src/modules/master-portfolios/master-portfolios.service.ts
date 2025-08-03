@@ -74,17 +74,19 @@ export class MasterPortfoliosService {
     async createQuestions(
         qr: QueryRunner,
         userId: number,
-        projectId: number,
+        portfolioId: number,
         recordIdList: number[]
     ) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
         const masterPortfolioId = masterPortfolio.id;
+        const projectId = masterPortfolio.project.id;
         const detailInfo = masterPortfolio.detailInfo;
         const assignedTask = masterPortfolio.assignedTask;
         const keyAchievement = masterPortfolio.keyAchievement;
@@ -207,14 +209,18 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(qr: QueryRunner, userId: number, projectId: number) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+    async generateMasterPortfolio(qr: QueryRunner, userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
+
+        // 프로젝트 ID를 가져옵니다.
+        const projectId = masterPortfolio.project.id;
 
         // 이미 생성된 마스터 포트폴리오 AI가 있는지 확인합니다.
         const existingPortfolioAI = await this.masterPortfolioAIRepository.findOne({
@@ -262,9 +268,18 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성 결과 조회
-    async getMasterPortfolioGenerationResult(userId: number, projectId: number) {
+    async getMasterPortfolioGenerationResult(userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 project ID를 찾습니다.
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+
         const masterPortfolioAI = await this.masterPortfolioAIRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, project: { id: masterPortfolio.project.id } },
         });
         if (!masterPortfolioAI) {
             throw new MasterPortfolioAINotFoundException();
@@ -292,9 +307,10 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 조회
-    async getMasterPortfolio(userId: number, projectId: number) {
+    async getMasterPortfolio(userId: number, portfolioId: number) {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -306,20 +322,21 @@ export class MasterPortfoliosService {
     async updateMasterPortfolio(
         qr: QueryRunner,
         userId: number,
-        projectId: number,
+        portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
         await qr.manager.update(
             MasterPortfolio,
             {
                 user: { id: userId },
-                project: { id: projectId },
+                id: portfolioId,
             },
             updateDataDto
         );
 
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();

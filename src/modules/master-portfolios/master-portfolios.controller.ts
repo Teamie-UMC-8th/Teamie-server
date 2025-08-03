@@ -60,12 +60,12 @@ export class MasterPortfoliosController {
         );
     }
 
-    @Post(':projectId/questions')
+    @Post(':portfolioId/questions')
     @ApiOperation({
         summary: '마스터 포트폴리오 질문 AI 생성 API',
         description: '프로젝트의 마스터 포트폴리오 질문을 AI로 생성합니다.',
     })
-    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @ApiBody({ type: CreateQuestions })
     @ApiCommonResponseArray(QuestionResponseDto)
     @ApiCommonErrorResponse(
@@ -76,24 +76,24 @@ export class MasterPortfoliosController {
     @Transactional()
     async createQuestions(
         @Req() req: TransactionalRequest,
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number,
         @Body() createQuestionsDto: CreateQuestions
     ) {
         return this.masterPortfoliosService.createQuestions(
             req.queryRunner,
             userId,
-            projectId,
+            portfolioId,
             createQuestionsDto.recordIdList
         );
     }
 
-    @Post(':projectId/generate')
+    @Post(':portfolioId/generate')
     @ApiOperation({
         summary: '마스터 포트폴리오 AI 생성 API',
         description: '프로젝트의 마스터 포트폴리오를 AI로 생성합니다.',
     })
-    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @ApiCommonResponse(MasterPortfolioResponseDto)
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
@@ -103,22 +103,22 @@ export class MasterPortfoliosController {
     @Transactional()
     async generateMasterPortfolio(
         @Req() req: TransactionalRequest,
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number
     ) {
         return this.masterPortfoliosService.generateMasterPortfolio(
             req.queryRunner,
             userId,
-            projectId
+            portfolioId
         );
     }
 
-    @Get(':projectId/generation-result')
+    @Get(':portfolioId/generation-result')
     @ApiOperation({
         summary: '마스터 포트폴리오 AI 생성 결과 조회 API',
         description: '프로젝트의 마스터 포트폴리오 AI 생성 결과를 조회합니다.',
     })
-    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @ApiCommonResponse(MasterPortfolioAIResponseDto)
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
@@ -126,18 +126,18 @@ export class MasterPortfoliosController {
         404
     )
     async getMasterPortfolioGenerationResult(
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.getMasterPortfolioGenerationResult(userId, projectId);
+        return this.masterPortfoliosService.getMasterPortfolioGenerationResult(userId, portfolioId);
     }
 
-    @Get(':projectId')
+    @Get(':portfolioId')
     @ApiOperation({
         summary: '마스터 포트폴리오 조회 API',
         description: '프로젝트의 마스터 포트폴리오를 조회합니다.',
     })
-    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @ApiCommonResponse(MasterPortfolioResponseDto)
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
@@ -145,18 +145,18 @@ export class MasterPortfoliosController {
         404
     )
     async getMasterPortfolio(
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number
     ) {
-        return this.masterPortfoliosService.getMasterPortfolio(userId, projectId);
+        return this.masterPortfoliosService.getMasterPortfolio(userId, portfolioId);
     }
 
-    @Patch(':projectId')
+    @Patch(':portfolioId')
     @ApiOperation({
         summary: '마스터 포트폴리오 업데이트 API',
         description: '프로젝트의 마스터 포트폴리오를 업데이트합니다.',
     })
-    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @ApiBody({ type: MasterPortfolioRequestDto })
     @ApiCommonResponse(MasterPortfolioResponseDto)
     @ApiCommonErrorResponse(
@@ -167,14 +167,14 @@ export class MasterPortfoliosController {
     @Transactional()
     async updateMasterPortfolio(
         @Req() req: TransactionalRequest,
-        @Param('projectId', ParseIntPipe) projectId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
         return this.masterPortfoliosService.updateMasterPortfolio(
             req.queryRunner,
             userId,
-            projectId,
+            portfolioId,
             updateDataDto
         );
     }
