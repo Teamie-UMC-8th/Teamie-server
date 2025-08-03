@@ -3,6 +3,7 @@ import {
     Controller,
     Get,
     Param,
+    ParseArrayPipe,
     ParseIntPipe,
     Patch,
     Post,
@@ -28,6 +29,7 @@ import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import { CreateQuestions } from './dtos/create-questions.dto';
 
 @ApiTags('MasterPortfolios')
 @Controller('master-portfolios')
@@ -64,6 +66,7 @@ export class MasterPortfoliosController {
         description: '프로젝트의 마스터 포트폴리오 질문을 AI로 생성합니다.',
     })
     @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
+    @ApiBody({ type: CreateQuestions })
     @ApiCommonResponseArray(QuestionResponseDto)
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
@@ -75,8 +78,14 @@ export class MasterPortfoliosController {
         @Req() req: TransactionalRequest,
         @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number
+        @Body() createQuestionsDto: CreateQuestions
     ) {
-        return this.masterPortfoliosService.createQuestions(req.queryRunner, userId, portfolioId);
+        return this.masterPortfoliosService.createQuestions(
+            req.queryRunner,
+            userId,
+            portfolioId,
+            createQuestionsDto.recordIdList
+        );
     }
 
     @Post(':portfolioId/generate')
