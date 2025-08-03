@@ -8,6 +8,7 @@ import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import {
+    AIGenerationAlreadyExists,
     ForbiddenUserForMasterPortfolioException,
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
@@ -167,6 +168,14 @@ export class MasterPortfoliosService {
             },
         });
 
+        // 이미 생성된 질문이 있는지 확인합니다.
+        const existingQuestions = await qr.manager.findOne(Questions, {
+            where: { masterPortfolio: { id: masterPortfolioId } },
+        });
+        if (existingQuestions) {
+            throw new AIGenerationAlreadyExists();
+        }
+
         // LLM을 호출하여 질문을 생성합니다.
         const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
 
@@ -205,6 +214,14 @@ export class MasterPortfoliosService {
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
+        }
+
+        // 이미 생성된 마스터 포트폴리오 AI가 있는지 확인합니다.
+        const existingPortfolioAI = await this.masterPortfolioAIRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (existingPortfolioAI) {
+            throw new AIGenerationAlreadyExists();
         }
 
         // 임시로 더미 데이터 사용
