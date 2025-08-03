@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between } from 'typeorm';
-import { Task } from './tasks.entity';
+import { Task } from './entities/tasks.entity';
+import { Repository, In } from 'typeorm';
 import { Step } from '../steps/entities/steps.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { User } from '../users/entities/users.entity';
@@ -33,10 +33,7 @@ import {
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import {
-    CalenderCardResponseDto,
-    TeamCalenderResponseDto,
-} from '../projects/dtos/team-calender-response.dto';
+import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
 
 @Injectable()
 export class TasksService {
