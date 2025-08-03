@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-kakao';
+import { InternalServerError } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy) {
@@ -18,7 +19,6 @@ export class KakaoStrategy extends PassportStrategy(Strategy) {
         accessToken: string,
         refreshToken: string,
         profile: Profile,
-        done: (error: any, user?: any, info?: any) => void
     ): Promise<any> {
         try {
             const { _json } = profile;
@@ -28,9 +28,9 @@ export class KakaoStrategy extends PassportStrategy(Strategy) {
                 email: _json.kakao_account?.email,
                 profileImage: _json.properties?.profile_image,
             };
-            done(null, user);
+            return user;
         } catch (error) {
-            done(error, false);
+            throw new InternalServerError('인증 중 에러가 발생하였습니다.');
         }
     }
 }
