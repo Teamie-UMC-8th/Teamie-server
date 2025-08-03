@@ -4,12 +4,14 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserInvariantViolationException } from 'src/common/exceptions/custom.errors';
 import { WsException } from '@nestjs/websockets';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly userService: UsersService,
-        private readonly jwtService: JwtService
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService
     ) {}
 
     async handleKakaoLogin(kakaoUser: KakaoUserAfterAuth): Promise<String> {
@@ -41,6 +43,17 @@ export class AuthService {
             return payload.userId;
         } catch (err) {
             throw new WsException('Invalid token');
+        }
+    }
+
+    validateRedirectOrigin(url: string): boolean {
+        try{
+            const parsed = new URL(url);
+            const rawOrigins: string = this.configService.get('CORS_ORIGIN')|| 'http://localhost:3000';
+            const allowedOrigins = rawOrigins.split(',').map(origin => origin.trim());
+            return allowedOrigins.includes(parsed.origin);
+        } catch {
+            return false;
         }
     }
 }
