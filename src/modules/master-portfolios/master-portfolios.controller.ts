@@ -77,7 +77,7 @@ export class MasterPortfoliosController {
     async createQuestions(
         @Req() req: TransactionalRequest,
         @Param('portfolioId', ParseIntPipe) portfolioId: number,
-        @User('id') userId: number
+        @User('id') userId: number,
         @Body() createQuestionsDto: CreateQuestions
     ) {
         return this.masterPortfoliosService.createQuestions(

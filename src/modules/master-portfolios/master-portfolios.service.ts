@@ -80,11 +80,13 @@ export class MasterPortfoliosService {
         // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
             where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
         const masterPortfolioId = masterPortfolio.id;
+        const projectId = masterPortfolio.project.id;
         const detailInfo = masterPortfolio.detailInfo;
         const assignedTask = masterPortfolio.assignedTask;
         const keyAchievement = masterPortfolio.keyAchievement;
@@ -219,7 +221,7 @@ export class MasterPortfoliosService {
 
         // 프로젝트 ID를 가져옵니다.
         const projectId = masterPortfolio.project.id;
-      
+
         // 이미 생성된 마스터 포트폴리오 AI가 있는지 확인합니다.
         const existingPortfolioAI = await this.masterPortfolioAIRepository.findOne({
             where: { user: { id: userId }, project: { id: projectId } },
