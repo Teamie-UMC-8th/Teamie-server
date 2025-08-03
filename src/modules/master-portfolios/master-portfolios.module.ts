@@ -6,9 +6,13 @@ import { Questions } from './entities/questions.entity';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
 import { LLMModule } from 'src/infra/llm/llm.module';
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
+import { Project } from '../projects/entities/projects.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Questions, MasterPortfolio, MasterPortfolioAI]), LLMModule],
+    imports: [
+        TypeOrmModule.forFeature([Questions, MasterPortfolio, MasterPortfolioAI, Project]),
+        LLMModule,
+    ],
     controllers: [MasterPortfoliosController],
     providers: [MasterPortfoliosService],
     exports: [MasterPortfoliosService],
