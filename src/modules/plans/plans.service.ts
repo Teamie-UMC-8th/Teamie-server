@@ -11,6 +11,7 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../projects/projects.service';
 import { CreatePlanResponse } from './dtos/create-plan.dto';
+import { DeletePlanResponseDto } from './dtos/delete-plan.dto';
 import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
 
 @Injectable()
@@ -108,5 +109,34 @@ export class PlansService {
         } catch (err) {
             throw new PlanTransactionException();
         }
+    }
+
+    async deletePlan(
+        qr: QueryRunner,
+        userId: number,
+        planId: number
+    ): Promise<DeletePlanResponseDto> {
+        // 1. planId에 해당하는 plan 조회
+        const plan = await qr.manager.findOne(Plan, {
+            where: { id: planId },
+            relations: ['project'],
+        });
+        if (!plan)
+            throw new PlanNotFoundException({
+                planId: planId,
+            });
+
+        // 2. 사용자의 삭제 권한 검사
+        const checkUserIsMember = await this.projectsService.checkProjectMember(
+            userId,
+            plan.project.id
+        );
+        if (!checkUserIsMember) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 3. 일정 삭제
+        await qr.manager.delete(Plan, planId);
+        return DeletePlanResponseDto.from(planId);
     }
 }
