@@ -17,14 +17,17 @@ import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
 import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
 import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
 import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
-
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
+import { UserProjectResponseDto } from './dtos/user-project.dto';
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private readonly userRepostiory: Repository<User>,
         private readonly uploadService: UploadService,
-        private readonly masterPortfoliosService: MasterPortfoliosService
+        private readonly masterPortfoliosService: MasterPortfoliosService,
+        @InjectRepository(UserProject)
+        private readonly userProjectRepository: Repository<UserProject>
     ) {}
 
     //회원가입 여부 확인
@@ -131,5 +134,22 @@ export class UsersService {
             console.log(err);
             throw new TransactionException('User');
         }
+    }
+
+    // 사용자가 속한 프로젝트들 조회
+    async getUserProject(userId: number): Promise<UserProjectResponseDto[]> {
+        const mappings = await this.userProjectRepository.find({
+            where: { user: { id: userId } },
+            relations: ['project'],
+            select: {
+                project: {
+                    id: true,
+                    name: true,
+                },
+                role: true,
+            },
+        });
+
+        return mappings.map(UserProjectResponseDto.fromEntity);
     }
 }
