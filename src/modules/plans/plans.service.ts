@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Plan } from './entities/plan.entity';
 import { QueryRunner, Repository } from 'typeorm';
@@ -11,14 +11,44 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../projects/projects.service';
 import { CreatePlanResponse } from './dtos/create-plan.dto';
+import { DeletePlanResponseDto } from './dtos/delete-plan.dto';
+import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
 
 @Injectable()
 export class PlansService {
     constructor(
         @InjectRepository(Plan)
         private readonly plansRepository: Repository<Plan>,
+        @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService
     ) {}
+
+    // 날짜 별 일정 조회
+    async getPlansByDate(
+        projectId: number,
+        startDate: Date,
+        endDate: Date
+    ): Promise<Record<string, CalenderCardResponseDto[]>> {
+        const plans = await this.plansRepository
+            .createQueryBuilder('plan')
+            .select(['plan.date AS date', 'plan.id AS id', 'plan.name AS name'])
+            .where('plan.projectId = :projectId', { projectId })
+            .andWhere('plan.date BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .orderBy('plan.date', 'ASC')
+            .getRawMany();
+
+        //날짜 별 그룹핑
+        const grouped = plans.reduce(
+            (acc, curr) => {
+                const date = curr.date.toISOString().split('T')[0];
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(CalenderCardResponseDto.fromPlan(curr));
+                return acc;
+            },
+            {} as Record<string, CalenderCardResponseDto[]>
+        );
+        return grouped;
+    }
 
     // 일정 상세 페이지 조회
     async getDetails(planId: number): Promise<PlanDetails> {
@@ -79,5 +109,34 @@ export class PlansService {
         } catch (err) {
             throw new PlanTransactionException();
         }
+    }
+
+    async deletePlan(
+        qr: QueryRunner,
+        userId: number,
+        planId: number
+    ): Promise<DeletePlanResponseDto> {
+        // 1. planId에 해당하는 plan 조회
+        const plan = await qr.manager.findOne(Plan, {
+            where: { id: planId },
+            relations: ['project'],
+        });
+        if (!plan)
+            throw new PlanNotFoundException({
+                planId: planId,
+            });
+
+        // 2. 사용자의 삭제 권한 검사
+        const checkUserIsMember = await this.projectsService.checkProjectMember(
+            userId,
+            plan.project.id
+        );
+        if (!checkUserIsMember) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 3. 일정 삭제
+        await qr.manager.delete(Plan, planId);
+        return DeletePlanResponseDto.from(planId);
     }
 }

@@ -6,7 +6,6 @@ import { QueryRunner, Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { ConfigService } from '@nestjs/config';
-import { CommonResponse } from '../../common/response/common-response.dto';
 import { UserInProjectDto, AllProjectResponseDto, PostDto } from './dtos/all-project-response.dto';
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
@@ -20,7 +19,6 @@ import {
     NotPostAuthorException,
     AlreadyLeaderException,
     ForbiddenSelfAssignException,
-    AssigneeNotMemberException,
     ProjectForbiddenException,
     ProjectUpdateForbiddenException,
     InvalidInvitecodeException,
@@ -28,6 +26,7 @@ import {
     ProjectTransactionException,
     ExpiredInvitecodeException,
     AlreadyJoinException,
+    InvalidDateException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
@@ -35,13 +34,18 @@ import { StepsService } from '../steps/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
 import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
-import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
 import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
 import { User } from '../users/entities/users.entity';
 import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
+import { PlansService } from '../plans/plans.service';
+import { TasksService } from '../tasks/tasks.service';
+import {
+    CalenderCardResponseDto,
+    TeamCalenderResponseDto,
+} from './dtos/team-calender-response.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -68,7 +72,9 @@ export class ProjectsService {
         private readonly redis: RedisClientType,
         private readonly configService: ConfigService,
         private readonly stepsService: StepsService,
-        private readonly masterPortfoliosService: MasterPortfoliosService
+        private readonly masterPortfoliosService: MasterPortfoliosService,
+        private readonly plansService: PlansService,
+        private readonly tasksService: TasksService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
@@ -505,6 +511,52 @@ export class ProjectsService {
         const users = allUserProjects.map(UserInProjectDto.from);
 
         return UpdateProfileResponseDto.fromEntity(users);
+    }
+
+    async getTeamCalender(userId: number, projectId: number, startDate: string, endDate: string) {
+        //검색 범위 제한 - 최대 31일
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const diffInMs = end.getTime() - start.getTime();
+        const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+        if (diffInDays > 31) {
+            throw new InvalidDateException({
+                startDate: startDate,
+                endDate: endDate,
+            });
+        }
+        // 사용자 조회 권한 체크
+        await this.checkProjectMember(userId, projectId);
+
+        //팀캘린더 조회
+        //1. tasks 카드 조회
+        const tasks: Record<string, CalenderCardResponseDto[]> =
+            await this.tasksService.getTasksByDeadline(projectId, start, end);
+        //2. plans 카드 조회
+        const plans: Record<string, CalenderCardResponseDto[]> =
+            await this.plansService.getPlansByDate(projectId, start, end);
+        //3. Grouping && DTO 조립
+        const mergedMap = new Map<string, CalenderCardResponseDto[]>();
+
+        for (const [date, list] of Object.entries(tasks)) {
+            mergedMap.set(date, [...list]);
+        }
+
+        for (const [date, list] of Object.entries(plans)) {
+            if (mergedMap.has(date)) {
+                mergedMap.get(date)!.push(...list);
+            } else {
+                mergedMap.set(date, [...list]);
+            }
+        }
+
+        const mergedArray: TeamCalenderResponseDto[] = Array.from(mergedMap.entries())
+            .map(([date, list]) => TeamCalenderResponseDto.fromEntity({ date, list }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        return mergedArray;
     }
 
     // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
