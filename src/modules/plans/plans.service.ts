@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Plan } from './plans.entity';
+import { Plan } from './entities/plan.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { PlanDetails } from './dtos/plan-details.dto';
 import {

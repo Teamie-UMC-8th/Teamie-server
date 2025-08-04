@@ -1,17 +1,19 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { In, QueryRunner, Repository } from 'typeorm';
 import { MasterPortfolio } from './entities/master-portfolios.entity';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import {
+    AIGenerationAlreadyExists,
     ForbiddenUserForMasterPortfolioException,
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
+    ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { QuestionResponseDto } from './dtos/question-response.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
@@ -20,7 +22,39 @@ import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-r
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
+import { Task } from '../tasks/entities/tasks.entity';
+import { Plan } from '../plans/entities/plan.entity';
+import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
+import { portfolioType } from 'src/common/enums/portfolio-type.enum';
+import { Project } from '../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
+import { User } from '../users/entities/users.entity';
+import { UserProject } from '../mappings/user-projects/userProjects.entity';
+
+function getPeriod(createdAt: Date, completedAt: Date): string {
+    let years = completedAt.getFullYear() - createdAt.getFullYear();
+    let months = completedAt.getMonth() - createdAt.getMonth();
+    let days = completedAt.getDate() - createdAt.getDate();
+
+    // 월 차이가 음수인 경우 보정
+    if (days < 0) {
+        months -= 1;
+        const prevMonth = new Date(completedAt.getFullYear(), completedAt.getMonth(), 0);
+        days += prevMonth.getDate();
+    }
+    // 연 차이가 음수인 경우 보정
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+
+    // 0인 단위는 표시하지 않음
+    const period: string[] = [];
+    if (years > 0) period.push(`${years}년`);
+    if (months > 0) period.push(`${months}개월`);
+    if (days > 0) period.push(`${days}일`);
+    return period.join(' ');
+}
 
 @Injectable()
 export class MasterPortfoliosService {
@@ -31,26 +65,121 @@ export class MasterPortfoliosService {
         private readonly masterPortfolioRepository: Repository<MasterPortfolio>,
         @InjectRepository(MasterPortfolioAI)
         private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>,
         private readonly llmService: LLMService
     ) {}
 
     // 마스터 포트폴리오 질문 생성
-    async createQuestions(qr: QueryRunner, userId: number, projectId: number) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+    async createQuestions(
+        qr: QueryRunner,
+        userId: number,
+        portfolioId: number,
+        recordIdList: number[]
+    ) {
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
         const masterPortfolioId = masterPortfolio.id;
+        const projectId = masterPortfolio.project.id;
+        const detailInfo = masterPortfolio.detailInfo;
+        const assignedTask = masterPortfolio.assignedTask;
+        const keyAchievement = masterPortfolio.keyAchievement;
+        const insight = masterPortfolio.insight;
+
+        // recordId 정보 저장하기 (선택된 회의록)
+        for (const recordId of recordIdList) {
+            await qr.manager.update(Plan, { id: recordId }, { masterPortfolioId });
+        }
+
+        // 가져올 데이터
+        // 1. 선택된 회의록 내용
+        const records = await qr.manager.find(Plan, {
+            where: { id: In(recordIdList) },
+            select: ['meetingRecords'],
+        });
+        // 2. 담당자로 지정된 모든 업무명
+        const tasks = await qr.manager.find(Task, {
+            where: { managers: { user: { id: userId } }, step: { project: { id: projectId } } },
+            select: ['name'],
+        });
+        // 3. 개인회고 내용
+        const personalRecalls = await qr.manager.findOne(PersonalRecall, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['id', 'collaborationProfile', 'memorableExperience', 'strengthsAndGrowth'],
+        });
+        // 4. 프로젝트명, 진행기간
+        const projectInfo = await qr.manager.findOne(Project, {
+            where: { id: projectId },
+            select: ['createdAt', 'completedAt', 'name'],
+        });
+        if (!projectInfo) {
+            throw new ProjectNotFoundException(`Project with ID ${projectId} not found`);
+        }
+        const projectName: string = projectInfo.name; // 프로젝트명
+        const createdAt: Date = projectInfo.createdAt; // 2025-07-26T06:05:35.998Z, Date 객체
+        const completedAt: Date = projectInfo.completedAt || new Date(); // 완료일이 없으면 현재 시간으로 설정
+        const projectPeriod: string = getPeriod(createdAt, completedAt);
+
+        // 5. 분류 태그, 기여도
+        const masterPortfolioData = await qr.manager.findOne(MasterPortfolio, {
+            where: { id: masterPortfolioId },
+            select: ['category', 'contributionRate'],
+        });
+        if (!masterPortfolioData) {
+            throw new MasterPortfolioNotFoundException(
+                `Master portfolio with ID ${masterPortfolioId} not found`
+            );
+        }
+        const category: string = masterPortfolioData.category;
+        const contributionRate: number = masterPortfolioData.contributionRate;
+
+        // 6. 이름과 역할(role)
+        const userName = await qr.manager.findOne(User, {
+            where: { id: userId },
+            select: ['name'],
+        });
+        const role = await qr.manager.findOne(UserProject, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['id', 'role'],
+        });
+
+        // TODO: inputData 형태 정리
+        const inputData: string = JSON.stringify({
+            userName: userName?.name,
+            role: role?.role,
+            projectName,
+            projectPeriod,
+            createdAt,
+            completedAt,
+            category,
+            contributionRate,
+            records,
+            tasks,
+            personalRecalls,
+            masterPortfolio: {
+                detailInfo,
+                assignedTask,
+                keyAchievement,
+                insight,
+            },
+        });
+
+        // 이미 생성된 질문이 있는지 확인합니다.
+        const existingQuestions = await qr.manager.findOne(Questions, {
+            where: { masterPortfolio: { id: masterPortfolioId } },
+        });
+        if (existingQuestions) {
+            throw new AIGenerationAlreadyExists();
+        }
 
         // LLM을 호출하여 질문을 생성합니다.
-        // const questions: Array<Question> = await this.llmService.generateQuestions();
-        const questions: Array<Question> = [
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 1' },
-            { id: 1, questionType: QuestionType.TEXT, question: '테스트 질문 2' },
-        ];
+        const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
 
         // 생성된 질문들을 데이터베이스에 저장합니다.
         const questionEntities: QuestionResponseDto[] = [];
@@ -80,13 +209,25 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(qr: QueryRunner, userId: number, projectId: number) {
-        // 프로젝트 ID로 마스터 포트폴리오를 찾습니다.
+    async generateMasterPortfolio(qr: QueryRunner, userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { project: { id: projectId }, user: { id: userId } },
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
+        }
+
+        // 프로젝트 ID를 가져옵니다.
+        const projectId = masterPortfolio.project.id;
+
+        // 이미 생성된 마스터 포트폴리오 AI가 있는지 확인합니다.
+        const existingPortfolioAI = await this.masterPortfolioAIRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (existingPortfolioAI) {
+            throw new AIGenerationAlreadyExists();
         }
 
         // 임시로 더미 데이터 사용
@@ -127,9 +268,18 @@ export class MasterPortfoliosService {
     }
 
     // 마스터 포트폴리오 AI 생성 결과 조회
-    async getMasterPortfolioGenerationResult(userId: number, projectId: number) {
+    async getMasterPortfolioGenerationResult(userId: number, portfolioId: number) {
+        // 포트폴리오 ID로 project ID를 찾습니다.
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+
         const masterPortfolioAI = await this.masterPortfolioAIRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, project: { id: masterPortfolio.project.id } },
         });
         if (!masterPortfolioAI) {
             throw new MasterPortfolioAINotFoundException();
@@ -149,15 +299,18 @@ export class MasterPortfoliosService {
         const masterPortfolio = this.masterPortfolioRepository.create({
             user: { id: userId },
             project: { id: projectId },
+            category: portfolioType.COURSE, // 기본 카테고리 설정 (수업)
+            contributionRate: 0, // 초기 기여도 설정 (0%)
         });
         await manager.save(MasterPortfolio, masterPortfolio);
         return MasterPortfolioResponseDto.from(masterPortfolio);
     }
 
     // 마스터 포트폴리오 조회
-    async getMasterPortfolio(userId: number, projectId: number) {
+    async getMasterPortfolio(userId: number, portfolioId: number) {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
@@ -169,20 +322,21 @@ export class MasterPortfoliosService {
     async updateMasterPortfolio(
         qr: QueryRunner,
         userId: number,
-        projectId: number,
+        portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
         await qr.manager.update(
             MasterPortfolio,
             {
                 user: { id: userId },
-                project: { id: projectId },
+                id: portfolioId,
             },
             updateDataDto
         );
 
         const masterPortfolio = await qr.manager.findOne(MasterPortfolio, {
-            where: { user: { id: userId }, project: { id: projectId } },
+            where: { user: { id: userId }, id: portfolioId },
+            relations: ['project'],
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();

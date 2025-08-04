@@ -44,6 +44,11 @@ export class MasterPortfolioResponseDto {
         enum: portfolioType,
     })
     category: portfolioType;
+    @ApiProperty({
+        description: '프로젝트 ID',
+        example: 123,
+    })
+    projectId: number;
 
     static from(data: MasterPortfolio): MasterPortfolioResponseDto {
         const dto = new MasterPortfolioResponseDto();
@@ -55,6 +60,7 @@ export class MasterPortfolioResponseDto {
         dto.contributionRate = data.contributionRate;
         dto.mainTask = data.mainTask;
         dto.category = data.category;
+        dto.projectId = data.project.id;
 
         return dto;
     }

@@ -338,6 +338,17 @@ export class PlanDateConflictException extends CustomHttpException {
     }
 }
 
+export class AIGenerationAlreadyExists extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.AI_GENERATION_ALREADY_EXISTS,
+            '이미 AI 생성 결과가 존재합니다.',
+            HttpStatus.CONFLICT,
+            data
+        );
+    }
+}
+
 //500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
 import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
-import { Task } from '../tasks.entity';
+import { Task } from '../entities/tasks.entity';
 
 export class TaskInStepDto {
     @ApiProperty({
