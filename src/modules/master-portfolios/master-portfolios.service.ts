@@ -30,6 +30,7 @@ import { Project } from '../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
 import { User } from '../users/entities/users.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
+import { SelectablePlanResponseDto } from './dtos/selectable-plan.dto';
 
 function getPeriod(createdAt: Date, completedAt: Date): string {
     let years = completedAt.getFullYear() - createdAt.getFullYear();
@@ -67,6 +68,8 @@ export class MasterPortfoliosService {
         private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
+        @InjectRepository(Plan)
+        private readonly planRepository: Repository<Plan>,
         private readonly llmService: LLMService
     ) {}
 
@@ -97,6 +100,7 @@ export class MasterPortfoliosService {
             await qr.manager.update(Plan, { id: recordId }, { masterPortfolioId });
         }
 
+        // TODO: 가져오는 데이터가 많음, 정리할 것
         // 가져올 데이터
         // 1. 선택된 회의록 내용
         const records = await qr.manager.find(Plan, {
@@ -381,5 +385,28 @@ export class MasterPortfoliosService {
         }
         if (masterPortfolio.user.id !== userId) return false;
         return true;
+    }
+
+    // 선택 가능한 회의록 조회
+    async getProjectRecords(userId: number, portfolioId: number) {
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId, user: { id: userId } },
+            relations: ['project'],
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException();
+        }
+        const projectId = masterPortfolio.project?.id;
+
+        // projectId에 해당하는 프로젝트에서 해당 user가 참여한 일정만 가져오기 (참석자 기준)
+        const plans = await this.planRepository.find({
+            where: { project: { id: projectId }, attendees: { user: { id: userId } } },
+            select: ['id', 'name', 'date', 'meetingRecords'],
+            order: { date: 'ASC' }, // 날짜 빠른 순으로 정렬
+        });
+
+        // TODO: 글자 수 바탕으로 토큰 수 계산 -> 토큰 수 바탕으로 크레딧 계산 (BM 확정 필요)
+
+        return plans.map((plan) => SelectablePlanResponseDto.fromEntity(plan));
     }
 }
