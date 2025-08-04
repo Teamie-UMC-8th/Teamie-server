@@ -29,11 +29,19 @@ export class TaskInStepDto {
     })
     managers: ManagerResponseDto[];
 
+    @ApiProperty({
+        example: '2025-08-31T15:00:00.000Z',
+        description: '업무 마감일',
+        nullable: true,
+    })
+    deadline: Date | null;
+
     static from(task: Task): TaskInStepDto {
         const dto = new TaskInStepDto();
         dto.taskId = task.id;
         dto.taskName = task.name;
         dto.status = task.status;
+        dto.deadline = task.deadline;
         dto.managers = (task.managers ?? []).map((m) => ({
             userId: m.user.id,
             userName: m.user.name,

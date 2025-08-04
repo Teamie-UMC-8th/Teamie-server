@@ -34,12 +34,20 @@ export class TaskInStatusDto {
     })
     managers: ManagerResponseDto[];
 
+    @ApiProperty({
+        example: '2025-08-31T15:00:00.000Z',
+        description: '업무 마감일',
+        nullable: true,
+    })
+    deadline: Date | null;
+
     static from(task: Task): TaskInStatusDto {
         const dto = new TaskInStatusDto();
         dto.taskId = task.id;
         dto.taskName = task.name;
         dto.stepId = task.step.id;
         dto.stepName = task.step.name;
+        dto.deadline = task.deadline;
         dto.managers = (task.managers ?? []).map((m) => ({
             userId: m.user.id,
             userName: m.user.name,
