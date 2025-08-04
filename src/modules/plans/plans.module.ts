@@ -6,9 +6,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Plan } from './entities/plan.entity';
 import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
+import { Writer } from '../mappings/writers/writers.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Plan]), forwardRef(() => ProjectsModule), AuthModule],
+    imports: [
+        TypeOrmModule.forFeature([Plan, Writer]),
+        forwardRef(() => ProjectsModule),
+        AuthModule,
+    ],
     controllers: [PlansController],
     providers: [PlansGateway, PlansService],
     exports: [PlansService],
