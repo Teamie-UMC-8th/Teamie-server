@@ -30,6 +30,7 @@ import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { CreateQuestions } from './dtos/create-questions.dto';
+import { SelectablePlanResponseDto } from './dtos/selectable-plan.dto';
 
 @ApiTags('MasterPortfolios')
 @Controller('master-portfolios')
@@ -167,8 +168,8 @@ export class MasterPortfoliosController {
     @Transactional()
     async updateMasterPortfolio(
         @Req() req: TransactionalRequest,
-        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @User('id') userId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
         return this.masterPortfoliosService.updateMasterPortfolio(
@@ -177,5 +178,20 @@ export class MasterPortfoliosController {
             portfolioId,
             updateDataDto
         );
+    }
+
+    // 선택 가능한 회의록 조회 API
+    @ApiOperation({
+        summary: '선택 가능한 회의록 조회 API',
+        description: '프로젝트의 일정 중에 사용자가 참여한 일정 목록을 조회합니다.',
+    })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
+    @ApiCommonResponseArray(SelectablePlanResponseDto)
+    @Get(':portfolioId/records')
+    async getProjectRecords(
+        @User('id') userId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number
+    ) {
+        return this.masterPortfoliosService.getProjectRecords(userId, portfolioId);
     }
 }
