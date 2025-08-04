@@ -125,7 +125,7 @@ export class ProjectsService {
         //meta 키 추가
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.set(`invite:meta:${code}`, '' /* no EX */);
+        await this.redis.set(`invite:meta:${code}`, `${projectId}`);
 
         // 프로젝트 별 코드 목록 Set
         await this.redis.sAdd(`project:${projectId}:invites`, code);
@@ -339,8 +339,8 @@ export class ProjectsService {
             }
         }
 
-        // 4) 최대 10개 제한
-        if (posts.length >= 10) {
+        // 4) 최대 16개 제한
+        if (posts.length >= 16) {
             throw new PostsExceededException();
         }
 

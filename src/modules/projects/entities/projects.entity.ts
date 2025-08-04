@@ -12,10 +12,10 @@ export class Project extends BaseEntity {
     @Column({ length: 20 })
     name: string;
 
-    @Column({ length: 300 })
+    @Column({ length: 400 })
     goal: string;
 
-    @Column({ length: 300 })
+    @Column({ length: 400 })
     rule: string;
 
     @Column({ default: false })
