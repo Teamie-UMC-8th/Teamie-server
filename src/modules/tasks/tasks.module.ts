@@ -19,5 +19,6 @@ import { Comment } from '../comments/comments.entity';
     ],
     controllers: [TasksController],
     providers: [TasksService, UploadService],
+    exports: [TasksService],
 })
 export class TasksModule {}
