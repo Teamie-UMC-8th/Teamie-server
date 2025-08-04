@@ -47,6 +47,7 @@ export class ProjectsService {
     private readonly postsKeyPrefix: string;
     private readonly POSTS_KEY = (projectId: number) => `${this.postsKeyPrefix}:${projectId}`;
     private readonly POST_TTL_SECONDS: number;
+    private readonly POST_MAX: number;
     constructor(
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
@@ -73,6 +74,7 @@ export class ProjectsService {
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
         //숫자로 변환해서 실제 필드에 할당
         this.POST_TTL_SECONDS = parseInt(ttlStr, 10);
+        this.POST_MAX = this.configService.get<number>('POST_MAX', 16);
     }
 
     async createProject(
@@ -340,7 +342,7 @@ export class ProjectsService {
         }
 
         // 4) 최대 16개 제한
-        if (posts.length >= 16) {
+        if (posts.length >= this.POST_MAX) {
             throw new PostsExceededException();
         }
 
