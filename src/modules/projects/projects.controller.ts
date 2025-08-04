@@ -9,6 +9,7 @@ import {
     Param,
     ParseIntPipe,
     Req,
+    ValidationPipe,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -17,6 +18,7 @@ import { ApiBody, ApiTags, ApiParam, ApiOperation } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
+    ApiCommonResponseArray,
 } from '../../common/response/swagger-response.helper';
 import { UpdateProjectDto } from './dtos/update-project.dto';
 import { User } from 'src/common/decorators/user.decorator';
@@ -31,6 +33,8 @@ import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto';
 import { PlansService } from '../plans/plans.service';
+import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
+import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
@@ -250,6 +254,23 @@ export class ProjectsController {
         @Body() dto: UpdateProfileDto
     ) {
         return await this.projectsService.updateProfile(req.queryRunner, projectId, userId, dto);
+    }
+
+    @ApiOperation({
+        summary: '팀 캘린더 조회 API',
+        description:
+            '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
+    })
+    @ApiCommonResponseArray(TeamCalenderResponseDto)
+    @Get('/:projectId/plans')
+    async getTeamCalender(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Query(new ValidationPipe({ transform: true })) query: CalenderQueryDto
+    ) {
+        const startDate = query.startDate;
+        const endDate = query.endDate;
+        return await this.projectsService.getTeamCalender(userId, projectId, startDate, endDate);
     }
 
     @ApiOperation({
