@@ -33,7 +33,8 @@ import {
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-
+import { GetSearchTaskDto } from './dtos/get-search-task.dto';
+import { Brackets } from 'typeorm';
 @Injectable()
 export class TasksService {
     constructor(
@@ -591,5 +592,89 @@ export class TasksService {
 
         // DTO 변환
         return GetCommentResponseDto.from(comments, totalCount, offset, limit);
+    }
+
+    async getSearchTask(
+        userId: number,
+        projectId: number,
+        view: string,
+        dto: GetSearchTaskDto
+    ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        if (view !== 'step' && view !== 'status') {
+            throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
+        }
+        // 1. 프로젝트 존재 및 참여자 검증
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: ['userProjects'],
+        });
+
+        if (!project) throw new ProjectNotFoundException();
+
+        const isMember = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+
+        if (!isMember) throw new ProjectForbiddenException();
+
+        // 2) QueryBuilder 준비
+        const qb = this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
+            .addSelect(['user.id', 'user.name'])
+            .where('step.projectId = :projectId', { projectId })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .limit(40);
+
+        // 3) DTO 기반 필터 적용 :contentReference[oaicite:3]{index=3}
+        if (dto.statuses?.length) {
+            qb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });
+        }
+        if (dto.managerIds?.length) {
+            qb.andWhere('user.id IN (:...managerIds)', { managerIds: dto.managerIds });
+        }
+        // dateBefore OR dateAfter 조건을 하나의 그룹으로 묶기
+        if (dto.dateBefore || dto.dateAfter) {
+            qb.andWhere(
+                new Brackets((qb1) => {
+                    if (dto.dateBefore) {
+                        qb1.where('task.deadline <= :dateBefore', {
+                            dateBefore: `${dto.dateBefore} 23:59:59`,
+                        });
+                    }
+                    if (dto.dateAfter) {
+                        // 앞에 이미 where 가 붙어 있으면 orWhere 사용
+                        qb1[dto.dateBefore ? 'orWhere' : 'where']('task.deadline >= :dateAfter', {
+                            dateAfter: `${dto.dateAfter} 00:00:00`,
+                        });
+                    }
+                })
+            );
+        }
+
+        // 4) 조회 및 그룹핑
+        const tasks = await qb.getMany();
+        const totalCount = await qb.clone().limit(undefined).getCount();
+
+        if (view === 'status') {
+            const statusGroups = this.groupByStatus(tasks);
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                statusGroups,
+                totalCount,
+            };
+        } else {
+            const stepGroups = this.groupByStep(tasks);
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                steps: stepGroups,
+                totalCount,
+            };
+        }
     }
 }
