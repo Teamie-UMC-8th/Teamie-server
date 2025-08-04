@@ -24,7 +24,7 @@ import { Transactional, TransactionalRequest } from 'src/common/decorators/trans
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
 import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
-
+import { UserProjectResponseDto } from './dtos/user-project.dto';
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
@@ -79,5 +79,15 @@ export class UsersController {
             portfolioId,
             body
         );
+    }
+
+    @ApiOperation({
+        summary: '프로젝트들 조회',
+        description: '사용자가 속한 프로젝트의 id,이름,프로젝트 내 역할을 반환하는 API입니다.',
+    })
+    @ApiCommonResponse(UserProjectResponseDto)
+    @Get('/me/projects')
+    async getUserProject(@User('id') userId: number) {
+        return await this.userService.getUserProject(userId);
     }
 }

@@ -51,6 +51,7 @@ export class ProjectsService {
     private readonly postsKeyPrefix: string;
     private readonly POSTS_KEY = (projectId: number) => `${this.postsKeyPrefix}:${projectId}`;
     private readonly POST_TTL_SECONDS: number;
+    private readonly POST_MAX: number;
     constructor(
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
@@ -79,6 +80,7 @@ export class ProjectsService {
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
         //숫자로 변환해서 실제 필드에 할당
         this.POST_TTL_SECONDS = parseInt(ttlStr, 10);
+        this.POST_MAX = this.configService.get<number>('POST_MAX', 16);
     }
 
     async createProject(
@@ -131,7 +133,7 @@ export class ProjectsService {
         //meta 키 추가
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.set(`invite:meta:${code}`, '' /* no EX */);
+        await this.redis.set(`invite:meta:${code}`, `${projectId}`);
 
         // 프로젝트 별 코드 목록 Set
         await this.redis.sAdd(`project:${projectId}:invites`, code);
@@ -345,8 +347,8 @@ export class ProjectsService {
             }
         }
 
-        // 4) 최대 10개 제한
-        if (posts.length >= 10) {
+        // 4) 최대 16개 제한
+        if (posts.length >= this.POST_MAX) {
             throw new PostsExceededException();
         }
 
@@ -419,7 +421,7 @@ export class ProjectsService {
         currentUserId: number
     ): Promise<ChangeLeaderResponseDto> {
         await this.assertProjectIsEditable(projectId);
-        await this.checkProjectLeader(currentUserId, projectId);
+        await this.checkProjectMember(currentUserId, projectId);
         const { newLeaderId } = dto;
         const newId = newLeaderId;
 
@@ -647,11 +649,12 @@ export class ProjectsService {
         userId: number,
         projectId: number,
         role: string,
-        qr
+        qr: QueryRunner
     ): Promise<void> {
-        let userProject!: UserProject;
+        let userProject: UserProject;
         try {
-            const userProject = qr.manager.create(UserProject, {
+            //  userProject 에 할당
+            userProject = qr.manager.create(UserProject, {
                 user: { id: userId },
                 project: { id: projectId },
                 permission: projectPermission.MEMBER,
@@ -660,7 +663,9 @@ export class ProjectsService {
         } catch (err) {
             throw new ProjectTransactionException();
         }
-        await this.userProjectRepository.save(userProject);
+
+        // 트랜잭션 같은 컨텍스트로 저장
+        await qr.manager.save(UserProject, userProject);
     }
 }
 
