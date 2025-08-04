@@ -22,6 +22,9 @@
     "dependencies": {
         "@aws-sdk/client-s3": "^3.844.0",
         "@aws-sdk/s3-request-presigner": "^3.844.0",
+        "@langchain/community": "^0.3.49",
+        "@langchain/core": "^0.3.66",
+        "@langchain/openai": "^0.6.3",
         "@nestjs/cache-manager": "^3.0.1",
         "@nestjs/common": "^11.0.1",
         "@nestjs/config": "^4.0.2",
@@ -47,7 +50,8 @@
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.1",
         "swagger-ui-express": "^5.0.1",
-        "typeorm": "^0.3.25"
+        "typeorm": "^0.3.25",
+        "zod": "^3.25.76"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.2.0",
