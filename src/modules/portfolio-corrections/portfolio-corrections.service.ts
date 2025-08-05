@@ -14,6 +14,7 @@ import { Project } from '../projects/entities/projects.entity';
 import { CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
 import { RAGData } from './entities/rag-data.entity';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
+import { ProjectResponseDto } from './dtos/project-response.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -118,7 +119,7 @@ export class PortfolioCorrectionsService {
                     projectId,
                     portfolioCorrection: existCorrectionPortfolio,
                     modelName:
-                        process.env.LLM_CORRECTION_MODEL_NAME ||
+                        process.env.LLM_CORRECTION_MODEL ||
                         'google/gemini-2.5-flash-lite-preview-06-17',
                     llmTemperature: 0.3,
                     correctionResult: correction,
@@ -181,7 +182,7 @@ export class PortfolioCorrectionsService {
             .where('user.id = :userId', { userId })
             .getMany();
 
-        return projects;
+        return projects.map(ProjectResponseDto.from);
     }
 
     async createPortfolioCorrection(
