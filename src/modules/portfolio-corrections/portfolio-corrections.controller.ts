@@ -39,6 +39,13 @@ export class PortfolioCorrectionsController {
         );
     }
 
+    @Get('projects')
+    async getSelectableProjects(
+        @User('id') userId: number
+    ) {
+        return await this.portfolioCorrectionsService.getSelectableProjects(userId);
+    }
+
     @Transactional()
     @Post(':correctionId/generate')
     async generateCorrection(
@@ -57,6 +64,6 @@ export class PortfolioCorrectionsController {
 
     @Get(':correctionId')
     async getCorrection() {
-        await this.portfolioCorrectionsService.getCorrection();
+        return await this.portfolioCorrectionsService.getCorrection();
     }
 }

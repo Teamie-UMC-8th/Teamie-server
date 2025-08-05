@@ -10,6 +10,7 @@ import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto
 import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
+import { Project } from '../projects/entities/projects.entity';
 
 @Injectable()
 export class PortfolioCorrectionsService {
@@ -19,7 +20,9 @@ export class PortfolioCorrectionsService {
         @InjectRepository(PortfolioCorrection)
         private readonly correctionRepository: Repository<PortfolioCorrection>,
         @InjectRepository(AICorrection)
-        private readonly aiCorrectionRepository: Repository<AICorrection>
+        private readonly aiCorrectionRepository: Repository<AICorrection>,
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>
     ) {}
     async getFinalPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
@@ -122,4 +125,16 @@ export class PortfolioCorrectionsService {
     }
 
     async getCorrection() {}
+
+    async getSelectableProjects(userId: number) {
+        // userId로 project들 조회
+        const projects = await this.projectRepository
+            .createQueryBuilder('project')
+            .innerJoin('project.userProjects', 'userProject')
+            .innerJoin('userProject.user', 'user')
+            .where('user.id = :userId', { userId })
+            .getMany();
+
+        return projects
+    }
 }
