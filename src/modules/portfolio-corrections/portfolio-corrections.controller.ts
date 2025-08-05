@@ -1,6 +1,16 @@
-import { Body, Controller, Get, Param, Post, Query, Req, ValidationPipe } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+    Req,
+    ValidationPipe,
+} from '@nestjs/common';
 import { PortfolioCorrectionsService } from './portfolio-corrections.service';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
@@ -9,6 +19,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correction-response.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { CreateCorrectionsDto, CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
+import { UpdateCompanyInsightDto } from './dtos/company-insight.dto';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -74,5 +85,36 @@ export class PortfolioCorrectionsController {
     @Get(':correctionId')
     async getCorrection(@Param('correctionId') correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrection(correctionId);
+    }
+
+    @Transactional()
+    @Post(':correctionId/rag')
+    async startRAG(@Req() req: TransactionalRequest, @Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.startRAG(req.queryRunner, correctionId);
+    }
+
+    @Get(':correctionId/rag')
+    async getRAGData(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getRAGData(correctionId);
+    }
+
+    @Get(':correctionId/company-insight')
+    async getCompanyInsight(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCompanyInsight(correctionId);
+    }
+
+    @ApiBody({ type: UpdateCompanyInsightDto })
+    @Transactional()
+    @Patch(':correctionId/company-insight')
+    async updateCompanyInsight(
+        @Req() req: TransactionalRequest,
+        @Param('correctionId') correctionId: number,
+        @Body() updateCompanyInsightDto: UpdateCompanyInsightDto
+    ) {
+        return await this.portfolioCorrectionsService.updateCompanyInsight(
+            req.queryRunner,
+            correctionId,
+            updateCompanyInsightDto.companyInsight
+        );
     }
 }
