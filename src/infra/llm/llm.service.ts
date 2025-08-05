@@ -193,16 +193,14 @@ export class LLMService {
             {
                 name: 'correction',
             }
-        )
-        const correctionResult = await correctionPrompt
-            .pipe(structuredLLM)
-            .invoke({
-                companyName: dummyData.submissionTarget,
-                jobTitle: dummyData.jobTitle,
-                jobDescription: dummyData.jobDescription,
-                companyInsight: dummyData.companyInsight,
-                portfolioData: portfolioData,
-            });
+        );
+        const correctionResult = await correctionPrompt.pipe(structuredLLM).invoke({
+            companyName: dummyData.submissionTarget,
+            jobTitle: dummyData.jobTitle,
+            jobDescription: dummyData.jobDescription,
+            companyInsight: dummyData.companyInsight,
+            portfolioData: portfolioData,
+        });
 
         return correctionResult;
     }

@@ -41,13 +41,18 @@ export class PortfolioCorrectionsService {
         return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 
-    async generateCorrection(qr: QueryRunner, userId: number, correctionId: number, selectedProjects: number[]) {
+    async generateCorrection(
+        qr: QueryRunner,
+        userId: number,
+        correctionId: number,
+        selectedProjects: number[]
+    ) {
         const dummyData = await this.promptLoader.load('dummy-correction.json');
 
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
         const existCorrectionPortfolio = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId, user: { id: userId } },
-        })
+        });
         if (!existCorrectionPortfolio) {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
@@ -86,10 +91,12 @@ export class PortfolioCorrectionsService {
                 await qr.manager.save(AICorrection, {
                     projectId,
                     portfolioCorrection: existCorrectionPortfolio,
-                    modelName: process.env.LLM_CORRECTION_MODEL_NAME || 'google/gemini-2.5-flash-lite-preview-06-17',
+                    modelName:
+                        process.env.LLM_CORRECTION_MODEL_NAME ||
+                        'google/gemini-2.5-flash-lite-preview-06-17',
                     llmTemperature: 0.3,
                     correctionResult: correction,
-                })
+                });
 
                 return {
                     projectId,
