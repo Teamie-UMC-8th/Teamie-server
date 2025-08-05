@@ -63,7 +63,10 @@ export class PortfolioCorrectionsController {
     }
 
     @Get(':correctionId')
-    async getCorrection() {
-        return await this.portfolioCorrectionsService.getCorrection();
+    async getCorrection(
+        @User('id') userId: number,
+        @Param('correctionId') correctionId: number
+    ) {
+        return await this.portfolioCorrectionsService.getCorrection(userId, correctionId);
     }
 }
