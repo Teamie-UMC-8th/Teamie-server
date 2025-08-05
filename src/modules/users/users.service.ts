@@ -1,14 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/users.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { In, QueryRunner, Repository } from 'typeorm';
 import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UpdateProfileRequestDto, UserProfileResponseDto } from './dtos/user-profile.dto';
 import {
     BadRequestException,
     ForbiddenUserForMasterPortfolioException,
     MasterPortfolioNotFoundException,
-    ProjectNotFoundException,
     TransactionException,
     UserNotFoundException,
 } from 'src/common/exceptions/custom.errors';
@@ -48,6 +47,28 @@ export class UsersService {
             kakaoId: kakaoUser.id,
         });
         return await this.userRepostiory.save(user);
+    }
+
+    //사용자 리스트의 유효성 체크
+    async checkIsUserExistByArray(arr: number[], projectId?: number) {
+        const users = await this.userRepostiory.findBy({ id: In(arr) });
+        if (users.length !== arr.length)
+            throw new BadRequestException('유효하지 않은 사용자 ID가 포함되어 있습니다.');
+        if (projectId) {
+            const userIds = users.map((user) => user.id);
+            const userProjects = await this.userProjectRepository.find({
+                where: {
+                    user: { id: In(userIds) },
+                    project: { id: projectId },
+                },
+            });
+
+            if (userProjects.length !== users.length) {
+                throw new BadRequestException(
+                    '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.'
+                );
+            }
+        }
     }
 
     //사용자 프로필 조회
