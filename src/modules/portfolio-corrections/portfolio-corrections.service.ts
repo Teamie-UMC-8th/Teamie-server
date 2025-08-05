@@ -11,6 +11,7 @@ import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correc
 import { InjectRepository } from '@nestjs/typeorm';
 import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
 import { Project } from '../projects/entities/projects.entity';
+import { CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
 
 @Injectable()
 export class PortfolioCorrectionsService {
@@ -131,10 +132,28 @@ export class PortfolioCorrectionsService {
         }
     }
 
+    // TODO: correctionId로 해당하는 프로젝트 id들과 첫 결과만 가져오고, 다른 프로젝트들을 각각 projectId로 로드하는 API를 따로 만들까 생각 중
     // 생성된 AI 첨삭 결과 조회
-    async getCorrection(userId: number, correctionId: number) {
-        
-        
+    async getCorrection(correctionId: number) {
+        // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
+        const existCorrectionPortfolio = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!existCorrectionPortfolio) {
+            throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+        }
+        // correctionId에 해당하는 AI 첨삭 엔티티가 있는지
+        const existAICorrection = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        if (!existAICorrection) {
+            throw new NotFoundException(`AI 첨삭 결과가 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        const result = await this.aiCorrectionRepository.find({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        return result;
     }
 
     async getSelectableProjects(userId: number) {
@@ -146,6 +165,20 @@ export class PortfolioCorrectionsService {
             .where('user.id = :userId', { userId })
             .getMany();
 
-        return projects
+        return projects;
+    }
+
+    async createPortfolioCorrection(
+        userId: number,
+        createPortfolioCorrectionDto: CreatePortfolioCorrectionDto
+    ) {
+        const newCorrection = this.correctionRepository.create({
+            title: createPortfolioCorrectionDto.title || '새로운 첨삭 A',
+            submissionTarget: createPortfolioCorrectionDto.submissionTarget,
+            jobTitle: createPortfolioCorrectionDto.jobTitle,
+            jd: createPortfolioCorrectionDto.jd,
+            user: { id: userId },
+        });
+        return await this.correctionRepository.save(newCorrection);
     }
 }

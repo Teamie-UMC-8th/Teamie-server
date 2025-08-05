@@ -6,24 +6,16 @@ import { AICorrection } from './ai-correction.entity';
 
 @Entity()
 export class PortfolioCorrection extends BaseEntity {
-    @Column({ length: 20 })
+    @Column({ length: 20, default: '새로운 첨삭 A' })
     title: string;
 
     @Column({ length: 20, select: false })
     submissionTarget: string;
 
-    @Column({
-        type: 'enum',
-        enum: ApplicationType,
-        default: ApplicationType.INTERN,
-        select: false,
-    })
-    applicationType: string;
-
     @Column({ length: 15 })
     jobTitle: string;
 
-    @Column({ length: 400, select: false })
+    @Column({ length: 400, select: false, nullable: true })
     companyInsight: string;
 
     @Column({ length: 500, select: false })

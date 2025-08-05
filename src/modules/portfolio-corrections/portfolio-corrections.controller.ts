@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, Req, ValidationPipe } from '@nestjs/common';
 import { PortfolioCorrectionsService } from './portfolio-corrections.service';
-import { CreateCorrectionsDto } from './dtos/create-corrections.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { ApiCommonResponseWithPagination } from 'src/common/response/swagger-response.helper';
@@ -9,6 +8,7 @@ import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { ConfigService } from '@nestjs/config';
 import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correction-response.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
+import { CreateCorrectionsDto, CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -17,6 +17,17 @@ export class PortfolioCorrectionsController {
         private readonly configService: ConfigService,
         private readonly portfolioCorrectionsService: PortfolioCorrectionsService
     ) {}
+
+    @Post()
+    async createPortfolioCorrection(
+        @User('id') userId: number,
+        @Body() createPortfolioCorrectionDto: CreatePortfolioCorrectionDto
+    ) {
+        return await this.portfolioCorrectionsService.createPortfolioCorrection(
+            userId,
+            createPortfolioCorrectionDto
+        );
+    }
 
     @Get('/me')
     @ApiOperation({
@@ -40,9 +51,7 @@ export class PortfolioCorrectionsController {
     }
 
     @Get('projects')
-    async getSelectableProjects(
-        @User('id') userId: number
-    ) {
+    async getSelectableProjects(@User('id') userId: number) {
         return await this.portfolioCorrectionsService.getSelectableProjects(userId);
     }
 
@@ -63,10 +72,7 @@ export class PortfolioCorrectionsController {
     }
 
     @Get(':correctionId')
-    async getCorrection(
-        @User('id') userId: number,
-        @Param('correctionId') correctionId: number
-    ) {
-        return await this.portfolioCorrectionsService.getCorrection(userId, correctionId);
+    async getCorrection(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCorrection(correctionId);
     }
 }
