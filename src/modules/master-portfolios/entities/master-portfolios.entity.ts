@@ -4,6 +4,7 @@ import { User } from '../../users/entities/users.entity';
 import { Project } from '../../projects/entities/projects.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Questions } from './questions.entity';
+import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
 @Entity()
 @Unique(['user', 'project'])
@@ -32,6 +33,13 @@ export class MasterPortfolio extends BaseEntity {
         default: portfolioType.OTHER,
     })
     category: portfolioType;
+
+    @Column({
+        type: 'enum',
+        enum: MasterPortfolioStatus,
+        default: MasterPortfolioStatus.NOT_STARTED,
+    })
+    status: MasterPortfolioStatus;
 
     @ManyToOne(() => User, (user) => user.masterPFs, { onDelete: 'CASCADE' })
     user: User;
