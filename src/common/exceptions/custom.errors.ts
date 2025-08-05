@@ -180,6 +180,17 @@ export class ForbiddenUserForMasterPortfolioException extends CustomHttpExceptio
     }
 }
 
+export class NotPlanWriterException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_NOT_PLAN_WRITER,
+            '일정의 회의록/비고의 수정권한이 없는 사용자입니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
 //404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
