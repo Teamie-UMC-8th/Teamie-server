@@ -19,8 +19,6 @@ import { TaskFilesModule } from './modules/mappings/task-files/task-files.module
 import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { CocommentsModule } from './modules/comments/cocomments/cocomments.module';
-import { FinalPortfoliosModule } from './modules/final-portfolios/final-portfolios.module';
-import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 import { PortfolioCorrectionsModule } from './modules/portfolio-corrections/portfolio-corrections.module';
 @Module({
     imports: [
@@ -53,7 +51,6 @@ import { PortfolioCorrectionsModule } from './modules/portfolio-corrections/port
         TaskFilesModule,
         PlansModule,
         CommentsModule,
-        FinalPortfoliosModule,
         CocommentsModule,
         PortfolioCorrectionsModule,
     ],

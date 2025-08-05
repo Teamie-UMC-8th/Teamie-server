@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class UserFinalPortfoliosResponseDto {
+export class UserPortfolioCorrectionResponseDto {
     @ApiProperty({
         example: 123,
         description: 'AI 첨삭 id',
     })
-    portfolioId: number;
+    correctionId: number;
 
     @ApiProperty({
         example: 'A기업1',
@@ -26,8 +26,8 @@ export class UserFinalPortfoliosResponseDto {
     jobTitle: string;
 
     static fromEntity(entity: { id: number; title: string; createdAt: Date; jobTitle: string }) {
-        const dto = new UserFinalPortfoliosResponseDto();
-        dto.portfolioId = entity.id;
+        const dto = new UserPortfolioCorrectionResponseDto();
+        dto.correctionId = entity.id;
         dto.title = entity.title;
         dto.createdAt = entity.createdAt.toISOString();
         dto.jobTitle = entity.jobTitle;

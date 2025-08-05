@@ -1,11 +1,11 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { User } from '../users/entities/users.entity';
-import { PortfolioAIResult } from './portfolio-ai-result/portfolio-ai-results.entity';
 import { ApplicationType } from 'src/common/enums/application-type.enum';
+import { User } from 'src/modules/users/entities/users.entity';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { AICorrection } from './ai-correction.entity';
 
 @Entity()
-export class FinalPortfolio extends BaseEntity {
+export class PortfolioCorrection extends BaseEntity {
     @Column({ length: 20 })
     title: string;
 
@@ -18,13 +18,10 @@ export class FinalPortfolio extends BaseEntity {
         default: ApplicationType.INTERN,
         select: false,
     })
-    applicationType: ApplicationType;
+    applicationType: string;
 
     @Column({ length: 15 })
     jobTitle: string;
-
-    @Column({ length: 80, select: false })
-    highlight: string;
 
     @Column({ length: 400, select: false })
     companyInsight: string;
@@ -32,11 +29,11 @@ export class FinalPortfolio extends BaseEntity {
     @Column({ length: 500, select: false })
     jd: string;
 
-    @ManyToOne(() => User, (user) => user.finalPortfolios, {
+    @ManyToOne(() => User, (user) => user.portfolioCorrections, {
         onDelete: 'CASCADE',
     })
     user: User;
 
-    @OneToMany(() => PortfolioAIResult, (result) => result.finalPortfolio)
-    results: PortfolioAIResult[];
+    @OneToMany(() => AICorrection, (aiCorrection) => aiCorrection.portfolioCorrection)
+    aiCorrection: AICorrection;
 }
