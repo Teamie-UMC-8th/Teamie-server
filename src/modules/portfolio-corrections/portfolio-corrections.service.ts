@@ -99,7 +99,8 @@ export class PortfolioCorrectionsService {
 
                 // LLM을 통해 첨삭 생성
                 const correctionResult = await this.llmService.generateCorrection(
-                    dummyData,
+                    qr,
+                    correctionId,
                     portfolioData
                 );
 

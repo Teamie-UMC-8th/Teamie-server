@@ -18,6 +18,7 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 import { QueryRunner } from 'typeorm';
 import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.entity';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
+import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 
 @Injectable()
 export class LLMService {
@@ -166,8 +167,15 @@ export class LLMService {
         return responseJsonData;
     }
 
-    async generateCorrection(dummyData: any, portfolioData: any) {
-        dummyData = JSON.parse(dummyData);
+    async generateCorrection(qr: QueryRunner, correctionId: number, portfolioData: any) {
+        const portfolioCorrectionData = await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
+        if (!portfolioCorrectionData) {
+            throw new InternalServerErrorException(
+                `포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`
+            );
+        }
 
         let correctionPromptText: string;
         try {
@@ -184,10 +192,10 @@ export class LLMService {
             }
         );
         const correctionResult = await correctionPrompt.pipe(structuredLLM).invoke({
-            companyName: dummyData.submissionTarget,
-            jobTitle: dummyData.jobTitle,
-            jobDescription: dummyData.jobDescription,
-            companyInsight: dummyData.companyInsight,
+            companyName: portfolioCorrectionData.submissionTarget,
+            jobTitle: portfolioCorrectionData.jobTitle,
+            jobDescription: portfolioCorrectionData.jd,
+            companyInsight: portfolioCorrectionData.companyInsight,
             portfolioData: portfolioData,
         });
 
