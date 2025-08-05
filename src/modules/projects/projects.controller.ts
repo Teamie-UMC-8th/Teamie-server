@@ -14,7 +14,7 @@ import {
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
-import { ApiBody, ApiTags, ApiParam, ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiTags, ApiParam, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
@@ -35,6 +35,8 @@ import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto
 import { PlansService } from '../plans/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
+import { ProjectMemberResponseDto } from './dtos/project-member-response.dto';
+
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
@@ -288,5 +290,16 @@ export class ProjectsController {
     ): Promise<CreatePlanResponse> {
         const date: Date = new Date(body.date);
         return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
+    }
+
+    @ApiOperation({
+        summary: '프로젝트 참여자 리스트 조회',
+        description: '프로젝에 참여자 리스트를 조회합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiOkResponse({ type: ProjectMemberResponseDto, isArray: true })
+    @Get('/:projectId/members')
+    async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
+        return await this.projectsService.getProjectMemberList(projectId);
     }
 }

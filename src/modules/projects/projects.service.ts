@@ -46,6 +46,8 @@ import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
 } from './dtos/team-calender-response.dto';
+import { ProjectMemberResponseDto } from './dtos/project-member-response.dto';
+
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -666,6 +668,18 @@ export class ProjectsService {
 
         // 트랜잭션 같은 컨텍스트로 저장
         await qr.manager.save(UserProject, userProject);
+    }
+
+    async getProjectMemberList(projectId: number): Promise<ProjectMemberResponseDto[]> {
+        const project = await this.projectRepository.findOne({ where: { id: projectId } });
+        if (!project) throw new ProjectNotFoundException();
+
+        const userProjects = await this.userProjectRepository.find({
+            where: { project: { id: projectId } },
+            relations: ['user'],
+        });
+
+        return userProjects.map((up) => ProjectMemberResponseDto.from(up.user));
     }
 }
 
