@@ -10,6 +10,7 @@ import {
     UseInterceptors,
     Query,
     Req,
+    ValidationPipe,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
@@ -23,7 +24,10 @@ import {
     ApiExtraModels,
     ApiConsumes,
 } from '@nestjs/swagger';
-import { ApiCommonResponse } from '../../common/response/swagger-response.helper';
+import {
+    ApiCommonResponse,
+    ApiCommonResponseWithPagination,
+} from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -40,6 +44,9 @@ import { TransactionalRequest } from 'src/common/decorators/transaction.decorato
 import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
 import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
 import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
+import { ProjectDashBoardDTO } from './dtos/user-task.dto';
+import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
+import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 
 @ApiTags('Tasks')
 @Controller('/tasks')
@@ -60,6 +67,20 @@ export class TasksController {
         @Body() dto: CreateTaskRequestDto
     ) {
         return await this.tasksService.createTask(req.queryRunner, userId, dto);
+    }
+
+    @ApiOperation({
+        summary: '나의 업무 조회 API',
+        description:
+            '홈 > 나의 업무 페이지의 업무 대시보드를 조회하는 API입니다. 페이징을 포함하며, 커서는 프로젝트의 생성일자를 기준으로 합니다.',
+    })
+    @ApiCommonResponseWithPagination(ProjectDashBoardDTO)
+    @Get('/my-task')
+    async getUserTask(
+        @User('id') userId: number,
+        @Query(new ValidationPipe({ transform: true })) query?: DateCursor
+    ): Promise<PaginatedResponseDto<ProjectDashBoardDTO>> {
+        return await this.tasksService.getTaskByUser(userId, query?.cursor);
     }
 
     @ApiOperation({

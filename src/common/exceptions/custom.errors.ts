@@ -20,6 +20,17 @@ export class InvalidInvitecodeException extends CustomHttpException {
     }
 }
 
+export class InvalidDateException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.PLAN_DATE_TOO_LONG,
+            '최대 31일까지만 조회할 수 있습니다.',
+            HttpStatus.BAD_REQUEST,
+            data
+        );
+    }
+}
+
 //401
 export class UnAuthorizedException extends CustomHttpException {
     constructor(data?: any) {
@@ -163,6 +174,17 @@ export class ForbiddenUserForMasterPortfolioException extends CustomHttpExceptio
         super(
             ErrorCode.FORBIDDEN_USER_FOR_MASTER_PORTFOLIO,
             '마스터포트폴리오 카드에 대해 수정권한이 없는 사용자입니다.',
+            HttpStatus.FORBIDDEN,
+            data
+        );
+    }
+}
+
+export class NotPlanWriterException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.FORBIDDEN_NOT_PLAN_WRITER,
+            '일정의 회의록/비고의 수정권한이 없는 사용자입니다.',
             HttpStatus.FORBIDDEN,
             data
         );
