@@ -158,7 +158,7 @@ export class UsersService {
     }
 
     // 사용자가 속한 프로젝트들 조회
-    async getUserProject(userId: number): Promise<UserProjectResponseDto[]> {
+    async getProjectsByUser(userId: number) {
         const mappings = await this.userProjectRepository.find({
             where: { user: { id: userId } },
             relations: ['project'],
@@ -167,10 +167,19 @@ export class UsersService {
                     id: true,
                     name: true,
                 },
-                role: true,
+                permission: true,
+                createdAt: true,
+            },
+            order: {
+                createdAt: 'ASC',
             },
         });
+        return mappings;
+    }
 
+    // 사용자가 속한 프로젝트들 조회
+    async getUserProject(userId: number): Promise<UserProjectResponseDto[]> {
+        const mappings = await this.getProjectsByUser(userId);
         return mappings.map(UserProjectResponseDto.fromEntity);
     }
 }
