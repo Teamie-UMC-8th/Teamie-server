@@ -34,6 +34,10 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
+import { UsersService } from '../users/users.service';
+import { ProjectDashBoardDTO, TaskCardDTO } from './dtos/user-task.dto';
+import { ConfigService } from '@nestjs/config';
+import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 
 @Injectable()
 export class TasksService {
@@ -59,7 +63,9 @@ export class TasksService {
         private readonly taskFileRepository: Repository<TaskFile>,
 
         @InjectRepository(CommentEntity)
-        private readonly commentRepository: Repository<CommentEntity>
+        private readonly commentRepository: Repository<CommentEntity>,
+        private readonly usersService: UsersService,
+        private readonly configService: ConfigService
     ) {}
 
     async createTask(
@@ -631,5 +637,91 @@ export class TasksService {
             {} as Record<string, CalenderCardResponseDto[]>
         );
         return grouped;
+    }
+
+    // 사용자 별 업무 조회
+    async getTaskByUser(
+        userId: number,
+        cursor?: string
+    ): Promise<PaginatedResponseDto<ProjectDashBoardDTO>> {
+        const maxProjectNum: number = Number(this.configService.get('MAX_PROJECT_PAGE')) || 4;
+        //1. 사용자가 참여한 프로젝트 조회
+        const projects = await this.usersService.getProjectsByUser(userId);
+
+        //2. 커서값 및 maxProjectNum에 따라 projects 파싱
+        let startIndex: number = 0;
+        if (cursor) {
+            startIndex = projects.findIndex((project) => project.createdAt > new Date(cursor));
+            if (startIndex === -1) startIndex = projects.length;
+        }
+        let lastIndex: number = projects.length;
+        let nextCursor: string | null = null;
+        let hasNextPage: boolean = false;
+        if (startIndex + maxProjectNum + 1 <= projects.length) {
+            lastIndex = startIndex + maxProjectNum;
+            nextCursor = projects[lastIndex - 1].createdAt.toISOString();
+            hasNextPage = true;
+        }
+        const pagedProjects = projects.slice(startIndex, lastIndex);
+
+        //3. 프로젝트 별 업무 조회
+        const results = await Promise.all(
+            pagedProjects.map(async (p) => {
+                return ProjectDashBoardDTO.from({
+                    id: p.project.id,
+                    name: p.project.name,
+                    tasks: await this.getTaskByProject(userId, p.project.id),
+                });
+            })
+        );
+        return PaginatedResponseDto.of(results, nextCursor, hasNextPage);
+    }
+
+    // 프로젝트 별 나의 업무 조회
+    async getTaskByProject(
+        userId: number,
+        projectId: number,
+        cursor?: any
+    ): Promise<TaskCardDTO[]> {
+        const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
+        // 1. 커서값과 maxCardNum에 따라 task 필터링
+        const taskIds = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('(task.status = :ongoing or task.status = :notstart)', {
+                ongoing: Status.ONGOING,
+                notstart: Status.NOTSTART,
+            })
+            .andWhere((qb) => {
+                const subQuery = qb
+                    .subQuery()
+                    .select('1')
+                    .from('manager', 'm')
+                    .where('m.taskId = task.id')
+                    .andWhere('m.userId = :userId', { userId })
+                    .getQuery();
+                return `EXISTS ${subQuery}`; //SQL Injection 방지
+            })
+            //TODO: cursor 적용
+            .orderBy('task.deadline IS NULL', 'ASC')
+            .addOrderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .limit(maxCardNum)
+            .distinct(true)
+            .getMany();
+
+        // 2. task 조회
+        const tasks = await this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoinAndSelect('task.managers', 'managers')
+            .leftJoinAndSelect('managers.user', 'user')
+            .whereInIds(taskIds.map((row) => row.id))
+            .orderBy('task.deadline IS NULL', 'ASC')
+            .addOrderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .getMany();
+        return tasks.map((task) => TaskCardDTO.from(task));
     }
 }
