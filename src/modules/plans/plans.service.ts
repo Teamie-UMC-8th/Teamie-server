@@ -28,15 +28,6 @@ export class PlansService {
         private readonly projectsService: ProjectsService
     ) {}
 
-    // 사용자의 일정 기록 권한 확인을 위한 유틸 함수
-    private async checkIsUserWriter(userId: number, planId: number): Promise<Boolean> {
-        const writer = await this.writersRepository.findOne({
-            where: { user: { id: userId }, plan: { id: planId } },
-        });
-        if (!writer) throw new NotPlanWriterException({ planId: planId });
-        return true;
-    }
-
     // 날짜 별 일정 조회
     async getPlansByDate(
         projectId: number,
@@ -142,21 +133,11 @@ export class PlansService {
                 planId: planId,
             });
 
-        // 2. 프로젝트 권한 체크: 기본 수정 권한
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
-            userId,
-            plan.project.id
-        );
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
+        // 2. 수정 권한 체크
+        console.log('plan.project.id : ', plan.project.id);
+        await this.projectsService.checkProjectMember(userId, plan.project.id);
 
-        // 3. 기록자 권한 체크: 회의록/비고 필드의 수정 권한
-        if ('meetingRecord' in body || 'memo' in body) {
-            await this.checkIsUserWriter(userId, planId);
-        }
-
-        // 4. 일정 수정
+        // 3. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);
             const planDetail = await qr.manager
