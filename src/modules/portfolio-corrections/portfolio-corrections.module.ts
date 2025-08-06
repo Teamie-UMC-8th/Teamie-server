@@ -6,9 +6,10 @@ import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PortfolioCorrection } from './entities/portfolio-correction.entity';
 import { AICorrection } from './entities/ai-correction.entity';
+import { Project } from '../projects/entities/projects.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([PortfolioCorrection, AICorrection]), LLMModule],
+    imports: [TypeOrmModule.forFeature([PortfolioCorrection, AICorrection, Project]), LLMModule],
     controllers: [PortfolioCorrectionsController],
     providers: [PortfolioCorrectionsService, PromptLoader],
 })

@@ -42,6 +42,7 @@ import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto'
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { PlansService } from '../plans/plans.service';
 import { TasksService } from '../tasks/tasks.service';
+import { UserProfile } from '../../common/dtos/user-profile.dto';
 import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
@@ -661,6 +662,19 @@ export class ProjectsService {
 
         // 트랜잭션 같은 컨텍스트로 저장
         await qr.manager.save(UserProject, userProject);
+    }
+
+    
+    async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
+        const project = await this.projectRepository.findOne({ where: { id: projectId } });
+        if (!project) throw new ProjectNotFoundException();
+
+        const userProjects = await this.userProjectRepository.find({
+            where: { project: { id: projectId } },
+            relations: ['user'],
+        });
+
+        return userProjects.map((up) => UserProfile.from(up.user));
     }
 }
 
