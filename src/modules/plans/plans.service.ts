@@ -4,7 +4,6 @@ import { Plan } from './entities/plan.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { PlanDetails } from './dtos/plan-details.dto';
 import {
-    NotPlanWriterException,
     PlanDateConflictException,
     PlanNotFoundException,
     PlanTransactionException,
@@ -134,9 +133,7 @@ export class PlansService {
             });
 
         // 2. 수정 권한 체크
-        console.log('plan.project.id : ', plan.project.id);
         await this.projectsService.checkProjectMember(userId, plan.project.id);
-
         // 3. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);

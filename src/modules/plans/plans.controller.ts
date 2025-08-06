@@ -73,14 +73,6 @@ export class PlansController {
         @Param('planId', ParseIntPipe) planId: number,
         @Body() body: BasicUpdatePlanReqDTO
     ): Promise<PlanDetails> {
-        console.log('userId:' + userId);
-        console.log('planId:' + planId);
-        console.log('날짜:' + body.date);
-        console.log('장소:' + body.location);
-        console.log('이름:' + body.name);
-        console.log('회의록:' + body.meetingRecords);
-        console.log('비고:' + body.memo);
-        console.log('시작시간:' + body.startHour);
         return await this.plansService.updatePlan(req.queryRunner, userId, planId, body);
     }
 
