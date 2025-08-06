@@ -46,7 +46,7 @@ import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
 } from './dtos/team-calender-response.dto';
-import { ProjectMemberResponseDto } from './dtos/project-member-response.dto';
+import { UserProfile } from '../../common/dtos/user-profile.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -670,7 +670,7 @@ export class ProjectsService {
         await qr.manager.save(UserProject, userProject);
     }
 
-    async getProjectMemberList(projectId: number): Promise<ProjectMemberResponseDto[]> {
+    async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
         if (!project) throw new ProjectNotFoundException();
 
@@ -679,7 +679,7 @@ export class ProjectsService {
             relations: ['user'],
         });
 
-        return userProjects.map((up) => ProjectMemberResponseDto.from(up.user));
+        return userProjects.map((up) => UserProfile.from(up.user));
     }
 }
 

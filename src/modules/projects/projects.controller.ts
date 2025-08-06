@@ -35,7 +35,7 @@ import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto
 import { PlansService } from '../plans/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
-import { ProjectMemberResponseDto } from './dtos/project-member-response.dto';
+import { UserProfile } from '../../common/dtos/user-profile.dto';
 
 @ApiTags('Projects')
 @Controller('/projects')
@@ -297,7 +297,7 @@ export class ProjectsController {
         description: '프로젝에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiOkResponse({ type: ProjectMemberResponseDto, isArray: true })
+    @ApiOkResponse({ type: UserProfile, isArray: true })
     @Get('/:projectId/members')
     async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
         return await this.projectsService.getProjectMemberList(projectId);
