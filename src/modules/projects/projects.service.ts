@@ -425,12 +425,7 @@ export class ProjectsService {
         const { newLeaderId } = dto;
         const newId = newLeaderId;
 
-        // 1) 자기 자신 지목 방지
-        if (currentUserId === newId) {
-            throw new ForbiddenSelfAssignException();
-        }
-
-        // 2) 현재 팀장 ID만 조회
+        // 1) 현재 팀장 ID만 조회
         const currentLeaderRaw = await this.userProjectRepository
             .createQueryBuilder('up')
             .select('up.userId', 'oldLeaderId') // alias: oldLeaderId
@@ -438,13 +433,13 @@ export class ProjectsService {
             .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
             .getRawOne<{ oldLeaderId: number }>();
 
-        // 3) 이미 팀장인 경우 방지
+        // 2) 이미 팀장인 경우 방지
         if (currentLeaderRaw?.oldLeaderId === newId) {
             throw new AlreadyLeaderException();
         }
 
         try {
-            // 4) 기존 팀장 MEMBER로 강등
+            // 3) 기존 팀장 MEMBER로 강등
             if (currentLeaderRaw) {
                 await qr.manager.update(
                     UserProject,
@@ -453,7 +448,7 @@ export class ProjectsService {
                 );
             }
 
-            // 5) 새 팀장 LEAD로 승격
+            // 4) 새 팀장 LEAD로 승격
             await qr.manager.update(
                 UserProject,
                 { user: { id: newLeaderId }, project: { id: projectId } },
@@ -465,7 +460,7 @@ export class ProjectsService {
             throw new ProjectTransactionException();
         }
 
-        // 7) 응답 반환 (permission은 LEAD로 고정)
+        // 5) 응답 반환 (permission은 LEAD로 고정)
         return ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD);
     }
 
