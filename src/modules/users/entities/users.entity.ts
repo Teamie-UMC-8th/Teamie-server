@@ -9,8 +9,8 @@ import { ProjectFile } from '../../mappings/project-files/project-files.entity';
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
-import { FinalPortfolio } from '../../final-portfolios/final-portfolios.entity';
 import { Cocomment } from '../../comments/cocomments/cocomments.entity';
+import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -100,6 +100,6 @@ export class User extends BaseEntity {
     @OneToMany(() => MasterPortfolio, (masterPF) => masterPF.user)
     masterPFs: MasterPortfolio[];
 
-    @OneToMany(() => FinalPortfolio, (finalPortfolio) => finalPortfolio.user)
-    finalPortfolios: FinalPortfolio[];
+    @OneToMany(() => PortfolioCorrection, (portfolioCorrection) => portfolioCorrection.user)
+    portfolioCorrections: PortfolioCorrection[];
 }
