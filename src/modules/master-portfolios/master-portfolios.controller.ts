@@ -24,7 +24,7 @@ import {
     ApiCommonResponseArray,
     ApiCommonResponseWithPagination,
 } from 'src/common/response/swagger-response.helper';
-import { QuestionResponseDto } from './dtos/question-response.dto';
+import { QuestionResponseDto, UpdateQuestionDto } from './dtos/question.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
@@ -99,6 +99,35 @@ export class MasterPortfoliosController {
             userId,
             portfolioId,
             createQuestionsDto.recordIdList
+        );
+    }
+
+    @ApiOperation({
+        summary: '마스터 포트폴리오 질문 조회 API',
+        description: '프로젝트의 마스터 포트폴리오 질문을 조회합니다.',
+    })
+    @Get(':portfolioId/questions')
+    async getQuestions(@Param('portfolioId', ParseIntPipe) portfolioId: number) {
+        return this.masterPortfoliosService.getQuestions(portfolioId);
+    }
+
+    @ApiOperation({
+        summary: '마스터 포트폴리오 질문(답변) 업데이트 API',
+        description: '프로젝트의 마스터 포트폴리오 질문에 대한 답변을 업데이트합니다.',
+    })
+    @ApiBody({ type: UpdateQuestionDto, isArray: true })
+    @Transactional()
+    @Patch(':portfolioId/questions')
+    async updateQuestions(
+        @Req() req: TransactionalRequest,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
+        @Body(new ParseArrayPipe({ items: UpdateQuestionDto, optional: true }))
+        questions: UpdateQuestionDto[]
+    ) {
+        return this.masterPortfoliosService.updateQuestions(
+            req.queryRunner,
+            portfolioId,
+            questions
         );
     }
 
