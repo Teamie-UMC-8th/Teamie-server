@@ -664,7 +664,6 @@ export class ProjectsService {
         await qr.manager.save(UserProject, userProject);
     }
 
-    
     async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
         const project = await this.projectRepository.findOne({ where: { id: projectId } });
         if (!project) throw new ProjectNotFoundException();

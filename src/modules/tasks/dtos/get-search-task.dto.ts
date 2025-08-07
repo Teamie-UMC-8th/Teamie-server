@@ -1,5 +1,5 @@
 import { IsOptional, IsEnum, IsArray, IsISO8601 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform as ToArray, Type } from 'class-transformer';
 import { Status } from 'src/common/enums/status.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -10,7 +10,15 @@ export class GetSearchTaskDto {
         enum: Status,
         isArray: true,
         example: [Status.NOTSTART, Status.ONGOING],
+        required: false,
     })
+    @ToArray(
+        ({ value }) => {
+            if (value === undefined || value === '' || value === null) return undefined;
+            return Array.isArray(value) ? value : [value];
+        },
+        { toClassOnly: true }
+    )
     @IsOptional()
     @IsArray()
     @IsEnum(Status, { each: true })
@@ -21,7 +29,15 @@ export class GetSearchTaskDto {
         description: '검색할 담당자 ID 배열',
         type: [Number],
         example: [1, 2, 3],
+        required: false,
     })
+    @ToArray(
+        ({ value }) => {
+            if (value === undefined || value === '' || value === null) return undefined;
+            return Array.isArray(value) ? value : [value];
+        },
+        { toClassOnly: true }
+    )
     @IsOptional()
     @IsArray()
     @Type(() => Number)
@@ -31,6 +47,7 @@ export class GetSearchTaskDto {
     @ApiProperty({
         description: '마감일이 지정일 이전인 업무 조회',
         example: '2025-08-10',
+        required: false,
     })
     @IsOptional()
     @IsISO8601()
@@ -40,6 +57,7 @@ export class GetSearchTaskDto {
     @ApiProperty({
         description: '마감일이 지정일 이후인 업무 조회',
         example: '2025-08-01',
+        required: false,
     })
     @IsOptional()
     @IsISO8601()

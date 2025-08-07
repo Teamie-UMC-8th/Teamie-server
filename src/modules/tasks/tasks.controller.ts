@@ -261,13 +261,12 @@ export class TasksController {
             ],
         },
     })
-    @Post('/:projectId/search')
+    @Get('/:projectId/search')
     async getSearchTask(
-        @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Query('view') view: string,
-        @Body() dto: GetSearchTaskDto
+        @Query() dto: GetSearchTaskDto
     ) {
         return this.tasksService.getSearchTask(userId, projectId, view, dto);
     }
