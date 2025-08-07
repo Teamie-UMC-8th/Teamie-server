@@ -160,7 +160,7 @@ export class LLMService {
         try {
             responseJsonData = JSON.parse(responseData.choices[0].message.content);
         } catch (e) {
-            // 별도 처리 필요
+            // 별도 처리 필요 (파싱 에러가 발생하면 이 에러가 발생함. Bad control character in string literal in JSON at position ~)
             throw new InternalServerErrorException(`Failed to parse response: ${e.message}`);
         }
 
