@@ -61,6 +61,19 @@ export class MasterPortfoliosController {
         );
     }
 
+    @ApiOperation({
+        summary: '마스터 포트폴리오 진행 상태 조회 API',
+        description: '프로젝트의 마스터 포트폴리오 진행 상태를 조회합니다.',
+    })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
+    @Get(':portfolioId/status')
+    async getStatus(
+        @User('id') userId: number,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number
+    ) {
+        return this.masterPortfoliosService.getStatus(userId, portfolioId);
+    }
+
     @Post(':portfolioId/questions')
     @ApiOperation({
         summary: '마스터 포트폴리오 질문 AI 생성 API',

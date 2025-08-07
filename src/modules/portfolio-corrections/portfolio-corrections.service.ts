@@ -10,6 +10,21 @@ import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto
 import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
+import { Project } from '../projects/entities/projects.entity';
+import { CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
+import { RAGData } from './entities/rag-data.entity';
+import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
+import { ProjectResponseDto } from './dtos/project-response.dto';
+
+async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
+    // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
+    const existCorrectionPortfolio = await qr.manager.findOne(PortfolioCorrection, {
+        where: { id: correctionId },
+    });
+    if (!existCorrectionPortfolio) {
+        throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+    }
+}
 
 @Injectable()
 export class PortfolioCorrectionsService {
@@ -19,7 +34,11 @@ export class PortfolioCorrectionsService {
         @InjectRepository(PortfolioCorrection)
         private readonly correctionRepository: Repository<PortfolioCorrection>,
         @InjectRepository(AICorrection)
-        private readonly aiCorrectionRepository: Repository<AICorrection>
+        private readonly aiCorrectionRepository: Repository<AICorrection>,
+        @InjectRepository(Project)
+        private readonly projectRepository: Repository<Project>,
+        @InjectRepository(RAGData)
+        private readonly ragDataRepository: Repository<RAGData>
     ) {}
     async getFinalPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
@@ -41,6 +60,7 @@ export class PortfolioCorrectionsService {
         return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 
+    // TODO: selectedProjects에 해당하는 id들 DB에 저장하기
     async generateCorrection(
         qr: QueryRunner,
         userId: number,
@@ -48,7 +68,13 @@ export class PortfolioCorrectionsService {
         selectedProjects: number[]
     ) {
         const dummyData = await this.promptLoader.load('dummy-correction.json');
-
+          
+        // 프로젝트 최대 선택 개수 6개로 제한
+        if (selectedProjects.length > 6) {
+            // TODO: 커스텀 에러 생성 필요
+            throw new InternalServerErrorException('프로젝트는 최대 6개까지 선택할 수 있습니다.');
+        }
+          
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
         const existCorrectionPortfolio = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId, user: { id: userId } },
@@ -74,7 +100,8 @@ export class PortfolioCorrectionsService {
 
                 // LLM을 통해 첨삭 생성
                 const correctionResult = await this.llmService.generateCorrection(
-                    dummyData,
+                    qr,
+                    correctionId,
                     portfolioData
                 );
 
@@ -92,7 +119,7 @@ export class PortfolioCorrectionsService {
                     projectId,
                     portfolioCorrection: existCorrectionPortfolio,
                     modelName:
-                        process.env.LLM_CORRECTION_MODEL_NAME ||
+                        process.env.LLM_CORRECTION_MODEL ||
                         'google/gemini-2.5-flash-lite-preview-06-17',
                     llmTemperature: 0.3,
                     correctionResult: correction,
@@ -121,5 +148,105 @@ export class PortfolioCorrectionsService {
         }
     }
 
-    async getCorrection() {}
+    // TODO: correctionId로 해당하는 프로젝트 id들과 첫 결과만 가져오고, 다른 프로젝트들을 각각 projectId로 로드하는 API를 따로 만들까 생각 중
+    // 생성된 AI 첨삭 결과 조회
+    async getCorrection(correctionId: number) {
+        // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
+        const existCorrectionPortfolio = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!existCorrectionPortfolio) {
+            throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        // correctionId에 해당하는 AI 첨삭 엔티티가 있는지
+        const existAICorrection = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        if (!existAICorrection) {
+            throw new NotFoundException(`AI 첨삭 결과가 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        const result = await this.aiCorrectionRepository.find({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        return result;
+    }
+
+    async getSelectableProjects(userId: number) {
+        // userId로 project들 조회
+        const projects = await this.projectRepository
+            .createQueryBuilder('project')
+            .innerJoin('project.userProjects', 'userProject')
+            .innerJoin('userProject.user', 'user')
+            .where('user.id = :userId', { userId })
+            .getMany();
+
+        return projects.map(ProjectResponseDto.from);
+    }
+
+    async createPortfolioCorrection(
+        userId: number,
+        createPortfolioCorrectionDto: CreatePortfolioCorrectionDto
+    ) {
+        const newCorrection = this.correctionRepository.create({
+            title: createPortfolioCorrectionDto.title || '새로운 첨삭 A',
+            submissionTarget: createPortfolioCorrectionDto.submissionTarget,
+            jobTitle: createPortfolioCorrectionDto.jobTitle,
+            jd: createPortfolioCorrectionDto.jd,
+            user: { id: userId },
+        });
+        return await this.correctionRepository.save(newCorrection);
+    }
+
+    async startRAG(qr: QueryRunner, correctionId: number) {
+        await checkCorrectionExists(qr, correctionId);
+
+        // TODO: correctionId로 제출처, 직무명, JD 등을 DB에서 가져와 사용
+        const companyProfile = await this.llmService.startRAG(qr, correctionId);
+        await qr.manager.update(PortfolioCorrection, correctionId, {
+            companyInsight: companyProfile,
+        });
+        return await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
+    }
+
+    async getRAGData(correctionId: number) {
+        const ragData = await this.ragDataRepository.find({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        const keywords: string[] = [];
+        const links: string[] = [];
+        ragData.forEach((item) => {
+            if (item.type === RAGDataType.KEYWORD) {
+                keywords.push(item.keyword);
+            } else if (item.type === RAGDataType.LINK) {
+                links.push(item.link);
+            }
+        });
+        return {
+            keywords,
+            links,
+        };
+    }
+
+    async getCompanyInsight(correctionId: number) {
+        return await this.correctionRepository.findOne({
+            where: { id: correctionId },
+            select: ['companyInsight'],
+        });
+    }
+
+    async updateCompanyInsight(qr: QueryRunner, correctionId: number, companyInsight: string) {
+        await checkCorrectionExists(qr, correctionId);
+
+        await qr.manager.update(PortfolioCorrection, correctionId, {
+            companyInsight,
+        });
+
+        return await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
+    }
 }

@@ -8,6 +8,7 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 import * as cookieParser from 'cookie-parser';
 import * as session from 'express-session';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -39,6 +40,12 @@ async function bootstrap() {
             cookie: {
                 maxAge: 360000,
             },
+        })
+    );
+
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
         })
     );
 

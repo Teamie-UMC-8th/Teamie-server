@@ -31,6 +31,7 @@ import { EntityManager } from 'typeorm';
 import { User } from '../users/entities/users.entity';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
 import { SelectablePlanResponseDto } from './dtos/selectable-plan.dto';
+import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
 function getPeriod(createdAt: Date, completedAt: Date): string {
     let years = completedAt.getFullYear() - createdAt.getFullYear();
@@ -209,6 +210,13 @@ export class MasterPortfoliosService {
             }
         }
 
+        // 마스터 포트폴리오 상태 업데이트
+        await qr.manager.update(
+            MasterPortfolio,
+            { id: masterPortfolioId },
+            { status: MasterPortfolioStatus.NEED_ANSWERS }
+        );
+
         return questionEntities;
     }
 
@@ -236,9 +244,22 @@ export class MasterPortfoliosService {
 
         // 임시로 더미 데이터 사용
         let projectData: any;
+
+        // 진행 상태를 `GENERATING`으로 업데이트합니다.
+        await this.masterPortfolioRepository.update(
+            { id: portfolioId },
+            { status: MasterPortfolioStatus.GENERATING }
+        );
+
         const generatedPortfolio: MasterPortfolioOutput =
             await this.llmService.generateMasterPortfolio(projectData);
         if (!generatedPortfolio) {
+            // 실패 시, 상태를 이전으로 돌립니다.
+            await this.masterPortfolioRepository.update(
+                { id: portfolioId },
+                { status: MasterPortfolioStatus.NEED_ANSWERS }
+            );
+
             throw new InternalServerErrorException('Failed to generate master portfolio');
         }
 
@@ -268,6 +289,14 @@ export class MasterPortfoliosService {
         if (!generatedPortfolioResponse) {
             throw new MasterPortfolioAINotFoundException();
         }
+
+        // 마스터 포트폴리오 상태 업데이트
+        await qr.manager.update(
+            MasterPortfolio,
+            { id: portfolioId },
+            { status: MasterPortfolioStatus.DONE }
+        );
+
         return MasterPortfolioAIResponseDto.from(generatedPortfolioResponse);
     }
 
@@ -408,5 +437,20 @@ export class MasterPortfoliosService {
         // TODO: 글자 수 바탕으로 토큰 수 계산 -> 토큰 수 바탕으로 크레딧 계산 (BM 확정 필요)
 
         return plans.map((plan) => SelectablePlanResponseDto.fromEntity(plan));
+    }
+
+    async getStatus(userId: number, portfolioId: number) {
+        const status = await this.masterPortfolioRepository.findOne({
+            where: { id: portfolioId },
+            select: ['status'],
+        });
+        if (!status) {
+            throw new MasterPortfolioNotFoundException();
+        }
+
+        return {
+            id: portfolioId,
+            status: status.status,
+        };
     }
 }
