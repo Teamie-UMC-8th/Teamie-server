@@ -12,6 +12,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
 import { Project } from '../projects/entities/projects.entity';
 import { CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
+import { RAGData } from './entities/rag-data.entity';
+import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
+import { ProjectResponseDto } from './dtos/project-response.dto';
+
+async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
+    // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
+    const existCorrectionPortfolio = await qr.manager.findOne(PortfolioCorrection, {
+        where: { id: correctionId },
+    });
+    if (!existCorrectionPortfolio) {
+        throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+    }
+}
 
 @Injectable()
 export class PortfolioCorrectionsService {
@@ -23,7 +36,9 @@ export class PortfolioCorrectionsService {
         @InjectRepository(AICorrection)
         private readonly aiCorrectionRepository: Repository<AICorrection>,
         @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>
+        private readonly projectRepository: Repository<Project>,
+        @InjectRepository(RAGData)
+        private readonly ragDataRepository: Repository<RAGData>
     ) {}
     async getFinalPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
@@ -85,7 +100,8 @@ export class PortfolioCorrectionsService {
 
                 // LLM을 통해 첨삭 생성
                 const correctionResult = await this.llmService.generateCorrection(
-                    dummyData,
+                    qr,
+                    correctionId,
                     portfolioData
                 );
 
@@ -103,7 +119,7 @@ export class PortfolioCorrectionsService {
                     projectId,
                     portfolioCorrection: existCorrectionPortfolio,
                     modelName:
-                        process.env.LLM_CORRECTION_MODEL_NAME ||
+                        process.env.LLM_CORRECTION_MODEL ||
                         'google/gemini-2.5-flash-lite-preview-06-17',
                     llmTemperature: 0.3,
                     correctionResult: correction,
@@ -142,6 +158,7 @@ export class PortfolioCorrectionsService {
         if (!existCorrectionPortfolio) {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
+
         // correctionId에 해당하는 AI 첨삭 엔티티가 있는지
         const existAICorrection = await this.aiCorrectionRepository.findOne({
             where: { portfolioCorrection: { id: correctionId } },
@@ -165,7 +182,7 @@ export class PortfolioCorrectionsService {
             .where('user.id = :userId', { userId })
             .getMany();
 
-        return projects;
+        return projects.map(ProjectResponseDto.from);
     }
 
     async createPortfolioCorrection(
@@ -180,5 +197,56 @@ export class PortfolioCorrectionsService {
             user: { id: userId },
         });
         return await this.correctionRepository.save(newCorrection);
+    }
+
+    async startRAG(qr: QueryRunner, correctionId: number) {
+        await checkCorrectionExists(qr, correctionId);
+
+        // TODO: correctionId로 제출처, 직무명, JD 등을 DB에서 가져와 사용
+        const companyProfile = await this.llmService.startRAG(qr, correctionId);
+        await qr.manager.update(PortfolioCorrection, correctionId, {
+            companyInsight: companyProfile,
+        });
+        return await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
+    }
+
+    async getRAGData(correctionId: number) {
+        const ragData = await this.ragDataRepository.find({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        const keywords: string[] = [];
+        const links: string[] = [];
+        ragData.forEach((item) => {
+            if (item.type === RAGDataType.KEYWORD) {
+                keywords.push(item.keyword);
+            } else if (item.type === RAGDataType.LINK) {
+                links.push(item.link);
+            }
+        });
+        return {
+            keywords,
+            links,
+        };
+    }
+
+    async getCompanyInsight(correctionId: number) {
+        return await this.correctionRepository.findOne({
+            where: { id: correctionId },
+            select: ['companyInsight'],
+        });
+    }
+
+    async updateCompanyInsight(qr: QueryRunner, correctionId: number, companyInsight: string) {
+        await checkCorrectionExists(qr, correctionId);
+
+        await qr.manager.update(PortfolioCorrection, correctionId, {
+            companyInsight,
+        });
+
+        return await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
     }
 }

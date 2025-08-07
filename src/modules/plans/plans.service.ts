@@ -9,13 +9,16 @@ import {
     PlanNotFoundException,
     PlanTransactionException,
     ProjectForbiddenException,
+    TransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../projects/projects.service';
 import { CreatePlanResponse } from './dtos/create-plan.dto';
 import { DeletePlanResponseDto } from './dtos/delete-plan.dto';
 import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
-import { BasicUpdatePlanReqDTO } from './dtos/update-plan.dto';
+import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from './dtos/update-plan.dto';
 import { Writer } from '../mappings/writers/writers.entity';
+import { Attendee } from '../mappings/attendees/attendees.entity';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class PlansService {
@@ -25,7 +28,8 @@ export class PlansService {
         @InjectRepository(Writer)
         private readonly writersRepository: Repository<Writer>,
         @Inject(forwardRef(() => ProjectsService))
-        private readonly projectsService: ProjectsService
+        private readonly projectsService: ProjectsService,
+        private readonly usersService: UsersService
     ) {}
 
     // 사용자의 일정 기록 권한 확인을 위한 유틸 함수
@@ -35,6 +39,90 @@ export class PlansService {
         });
         if (!writer) throw new NotPlanWriterException({ planId: planId });
         return true;
+    }
+
+    // 기록자 수정 유틸 함수
+    private async updateWriters(
+        qr: QueryRunner,
+        planId: number,
+        oldSet: Set<number>,
+        newSet: Set<number>
+    ): Promise<Writer[]> {
+        const deleteWriters = [...oldSet].filter((id) => !newSet.has(id));
+        const addWriters = [...newSet].filter((id) => !oldSet.has(id));
+
+        try {
+            // 기존 배열에 있었으나 body에 없으면 => 삭제
+            await Promise.all(
+                deleteWriters.map((id) =>
+                    qr.manager.delete(Writer, {
+                        plan: { id: planId },
+                        user: { id },
+                    })
+                )
+            );
+            // 기존 배열에 없었으나 body에 있으면 => 추가
+            await Promise.all(
+                addWriters.map((id) => {
+                    const newWriter = qr.manager.create(Writer, {
+                        plan: { id: planId },
+                        user: { id },
+                    });
+                    return qr.manager.save(newWriter);
+                })
+            );
+            // 최신 사항 조회
+            const plan = await qr.manager.findOne(Plan, {
+                where: { id: planId },
+            });
+            if (!plan) throw new PlanNotFoundException();
+            return plan.writers;
+        } catch (e) {
+            console.log(e);
+            throw new TransactionException('WRITER');
+        }
+    }
+
+    // 참여자 수정 유틸 함수
+    private async updateAttendees(
+        qr: QueryRunner,
+        planId: number,
+        oldSet: Set<number>,
+        newSet: Set<number>
+    ): Promise<Attendee[]> {
+        const deleteAttendees = [...oldSet].filter((id) => !newSet.has(id));
+        const addAttendees = [...newSet].filter((id) => !oldSet.has(id));
+
+        try {
+            // 기존 배열에 있었으나 body에 없으면 => 삭제
+            await Promise.all(
+                deleteAttendees.map((id) =>
+                    qr.manager.delete(Attendee, {
+                        plan: { id: planId },
+                        user: { id },
+                    })
+                )
+            );
+            // 기존 배열에 없었으나 body에 있으면 => 추가
+            await Promise.all(
+                addAttendees.map((id) => {
+                    const newAttendee = qr.manager.create(Attendee, {
+                        plan: { id: planId },
+                        user: { id },
+                    });
+                    return qr.manager.save(newAttendee);
+                })
+            );
+            // 최신 사항 조회
+            const plan = await qr.manager.findOne(Plan, {
+                where: { id: planId },
+            });
+            if (!plan) throw new PlanNotFoundException();
+            return plan.attendees;
+        } catch (e) {
+            console.log(e);
+            throw new TransactionException('Attendee');
+        }
     }
 
     // 날짜 별 일정 조회
@@ -77,6 +165,16 @@ export class PlansService {
             .getOne();
         if (!plan) throw new PlanNotFoundException(planId);
         return PlanDetails.from(plan);
+    }
+    private async getDetailsWithQueryRunner(qr: QueryRunner, planId: number): Promise<Plan | null> {
+        return await qr.manager
+            .createQueryBuilder(Plan, 'plan')
+            .leftJoinAndSelect('plan.attendees', 'attendee')
+            .leftJoinAndSelect('plan.writers', 'writer')
+            .leftJoinAndSelect('attendee.user', 'attendeeUser')
+            .leftJoinAndSelect('writer.user', 'writerUser')
+            .where('plan.id = :planId', { planId })
+            .getOne();
     }
 
     // NOTE: 사용자의 권한 체크, Custom Guard로 추후 리팩토링 예정
@@ -159,16 +257,69 @@ export class PlansService {
         // 4. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);
-            const planDetail = await qr.manager
-                .createQueryBuilder(Plan, 'plan')
-                .leftJoinAndSelect('plan.attendees', 'attendee')
-                .leftJoinAndSelect('plan.writers', 'writer')
-                .leftJoinAndSelect('attendee.user', 'attendeeUser')
-                .leftJoinAndSelect('writer.user', 'writerUser')
-                .where('plan.id = :planId', { planId })
-                .getOne();
+            const planDetail = await this.getDetailsWithQueryRunner(qr, planId);
             if (!planDetail) throw new PlanNotFoundException();
             return PlanDetails.from(planDetail);
+        } catch (e) {
+            console.log(e);
+            throw new PlanTransactionException();
+        }
+    }
+
+    // 일정의 참여자/기록자 수정
+    async updatePlanMembers(
+        qr: QueryRunner,
+        userId: number,
+        planId: number,
+        body: UpdatePlanUserReqDTO
+    ) {
+        // 1. planId에 해당하는 plan의 존재 여부 확인
+        const plan = await qr.manager.findOne(Plan, {
+            where: { id: planId },
+            relations: ['project'],
+        });
+        if (!plan)
+            throw new PlanNotFoundException({
+                planId: planId,
+            });
+
+        // 2. 프로젝트 권한 체크: 기본 수정 권한
+        const checkUserIsMember = await this.projectsService.checkProjectMember(
+            userId,
+            plan.project.id
+        );
+        if (!checkUserIsMember) {
+            throw new ProjectForbiddenException();
+        }
+
+        // 3. req의 유효성 체크
+        if (Array.isArray(body.writers))
+            await this.usersService.checkIsUserExistByArray(body.writers, plan.project.id);
+        if (Array.isArray(body.attendees))
+            await this.usersService.checkIsUserExistByArray(body.attendees, plan.project.id);
+
+        try {
+            const planDetail = await this.getDetailsWithQueryRunner(qr, planId);
+            if (!planDetail) throw new PlanNotFoundException();
+            // 4. 참여자 수정
+            if (Array.isArray(body.writers)) {
+                const oldSet = new Set(planDetail.writers.map((w) => w.user.id));
+                const newSet = new Set(body.writers || []);
+                const writers = await this.updateWriters(qr, planId, oldSet, newSet);
+                planDetail.writers = writers;
+            }
+            // 5. 기록자 수정
+            if (Array.isArray(body.attendees)) {
+                const oldSet = new Set(planDetail.attendees.map((a) => a.user.id));
+                const newSet = new Set(body.attendees || []);
+                const attendees = await this.updateAttendees(qr, planId, oldSet, newSet);
+                planDetail.attendees = attendees;
+            }
+            // 6. 일정 수정
+            await qr.manager.save(Plan, planDetail);
+            const updatedPlan = await this.getDetailsWithQueryRunner(qr, planId);
+            if (!updatedPlan) throw new PlanNotFoundException();
+            return PlanDetails.from(updatedPlan);
         } catch (e) {
             console.log(e);
             throw new PlanTransactionException();

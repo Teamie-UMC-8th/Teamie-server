@@ -82,13 +82,13 @@ export class PlansController {
     })
     @ApiCommonResponse(PlanDetails)
     @Transactional()
-    @Patch('/:planId/users')
+    @Patch('/:planId/members')
     async updatePlanUserList(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('planId', ParseIntPipe) planId: number,
         @Body() body: UpdatePlanUserReqDTO
     ): Promise<PlanDetails> {
-        throw new NotImplementedException('서브 이슈로 추후 처리 예정입니다.');
+        return await this.plansService.updatePlanMembers(req.queryRunner, userId, planId, body);
     }
 }

@@ -1,5 +1,6 @@
 import z from 'zod';
 
+// AI 첨삭
 export const correctionSchema = z.object({
     detailInfo: z.object({
         lines: z.array(
@@ -48,3 +49,10 @@ export const correctionSchema = z.object({
 });
 
 export type Correction = z.infer<typeof correctionSchema>;
+
+// 검색어
+export const searchQuerySchema = z.object({
+    query: z.string().describe('검색에 사용할 최적화된 검색어'),
+});
+
+export type SearchQuery = z.infer<typeof searchQuerySchema>;

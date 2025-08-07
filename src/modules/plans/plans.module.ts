@@ -7,12 +7,14 @@ import { Plan } from './entities/plan.entity';
 import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 import { Writer } from '../mappings/writers/writers.entity';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Plan, Writer]),
         forwardRef(() => ProjectsModule),
         AuthModule,
+        UsersModule,
     ],
     controllers: [PlansController],
     providers: [PlansGateway, PlansService],
