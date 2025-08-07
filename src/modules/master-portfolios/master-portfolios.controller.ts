@@ -106,6 +106,7 @@ export class MasterPortfoliosController {
         summary: '마스터 포트폴리오 질문 조회 API',
         description: '프로젝트의 마스터 포트폴리오 질문을 조회합니다.',
     })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @Get(':portfolioId/questions')
     async getQuestions(@Param('portfolioId', ParseIntPipe) portfolioId: number) {
         return this.masterPortfoliosService.getQuestions(portfolioId);
@@ -116,6 +117,7 @@ export class MasterPortfoliosController {
         description: '프로젝트의 마스터 포트폴리오 질문에 대한 답변을 업데이트합니다.',
     })
     @ApiBody({ type: UpdateQuestionDto, isArray: true })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @Transactional()
     @Patch(':portfolioId/questions')
     async updateQuestions(
