@@ -227,7 +227,7 @@ export class MasterPortfoliosService {
             order: { questionId: 'ASC' },
         });
         if (questions.length === 0) {
-            throw new Error('No questions found for this master portfolio');
+            throw new BadRequestException('생성된 질문이 없습니다. 먼저 질문을 생성해주세요.');
         }
 
         return questions;
@@ -297,6 +297,16 @@ export class MasterPortfoliosService {
             throw new MasterPortfolioNotFoundException();
         }
 
+        // 질문이 생성된 상태인지 확인합니다.
+        const checkQuestions = await qr.manager.findOne(Questions, {
+            where: { masterPortfolio: { id: portfolioId } },
+        });
+        if (!checkQuestions) {
+            throw new BadRequestException(
+                '마스터 포트폴리오 AI 생성을 하기 위해서는 질문이 먼저 생성되어야 합니다.'
+            );
+        }
+
         // 프로젝트 ID를 가져옵니다.
         const projectId = masterPortfolio.project.id;
 
@@ -338,6 +348,19 @@ export class MasterPortfoliosService {
             keyAchievement: generatedPortfolio.keyAchievement,
             insight: generatedPortfolio.insight,
         });
+
+        // TODO: 직접작성 기능을 도입하는 시점에는 해당 코드 삭제
+        // 생성된 결과를 마스터 포트폴리오 엔티티에도 저장합니다.
+        qr.manager.update(
+            MasterPortfolio,
+            { id: portfolioId },
+            {
+                detailInfo: generatedPortfolio.detailInfo,
+                assignedTask: generatedPortfolio.assignedTask,
+                keyAchievement: generatedPortfolio.keyAchievement,
+                insight: generatedPortfolio.insight,
+            }
+        );
 
         try {
             await qr.manager.save(MasterPortfolioAI, createdPortfolio);
