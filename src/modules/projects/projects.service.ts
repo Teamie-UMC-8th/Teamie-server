@@ -614,6 +614,18 @@ export class ProjectsService {
         return !!mapping;
     }
 
+    // 사용자의 프로젝트 권한 조회
+    async getUserPermissionOfProject(userId: number, projectId: number) {
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
+        if (!userProject) throw new ProjectForbiddenException();
+        return { permission: userProject.permission };
+    }
+
     // 참여코드로 프로젝트 id 조회
     private async getProjectByInviteCode(inviteCode: string) {
         const codeKey = `invite:${inviteCode}`;

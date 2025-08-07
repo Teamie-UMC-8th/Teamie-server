@@ -294,12 +294,24 @@ export class ProjectsController {
 
     @ApiOperation({
         summary: '프로젝트 참여자 리스트 조회',
-        description: '프로젝에 참여자 리스트를 조회합니다.',
+        description: '프로젝트에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiOkResponse({ type: UserProfile, isArray: true })
     @Get('/:projectId/members')
     async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
         return await this.projectsService.getProjectMemberList(projectId);
+    }
+
+    @ApiOperation({
+        summary: '사용자의 프로젝트 권한 조회 API',
+        description: '사용자의 프로젝트 권한을 조회합니다.',
+    })
+    @Get('/:projectId/my-permission')
+    async getUserProjectPermission(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
+        return await this.projectsService.getUserPermissionOfProject(userId, projectId);
     }
 }
