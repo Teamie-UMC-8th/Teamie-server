@@ -8,6 +8,7 @@ import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 import { Writer } from '../mappings/writers/writers.entity';
 import { UsersModule } from '../users/users.module';
+import { PlanRepository } from './repositories/plan.repository';
 
 @Module({
     imports: [
@@ -17,7 +18,7 @@ import { UsersModule } from '../users/users.module';
         UsersModule,
     ],
     controllers: [PlansController],
-    providers: [PlansGateway, PlansService],
+    providers: [PlansGateway, PlansService, PlanRepository],
     exports: [PlansService],
 })
 export class PlansModule {}
