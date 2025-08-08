@@ -514,7 +514,7 @@ export class ProjectsService {
         return UpdateProfileResponseDto.fromEntity(users);
     }
 
-    async getTeamCalender(userId: number, projectId: number, startDate: string, endDate: string) {
+    async getTeamCalender(projectId: number, startDate: string, endDate: string) {
         //검색 범위 제한 - 최대 31일
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -528,8 +528,6 @@ export class ProjectsService {
                 endDate: endDate,
             });
         }
-        // 사용자 조회 권한 체크
-        await this.checkProjectMember(userId, projectId);
 
         //팀캘린더 조회
         //1. tasks 카드 조회

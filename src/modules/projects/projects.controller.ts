@@ -10,6 +10,7 @@ import {
     ParseIntPipe,
     Req,
     ValidationPipe,
+    UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -36,6 +37,7 @@ import { PlansService } from '../plans/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
+import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 
 @ApiTags('Projects')
 @Controller('/projects')
@@ -264,6 +266,7 @@ export class ProjectsController {
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
         @User('id') userId: number,
@@ -272,7 +275,7 @@ export class ProjectsController {
     ) {
         const startDate = query.startDate;
         const endDate = query.endDate;
-        return await this.projectsService.getTeamCalender(userId, projectId, startDate, endDate);
+        return await this.projectsService.getTeamCalender(projectId, startDate, endDate);
     }
 
     @ApiOperation({
