@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';
 import { In, QueryRunner, Repository } from 'typeorm';
@@ -15,7 +15,7 @@ import {
     MasterPortfolioNotFoundException,
     ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
-import { QuestionResponseDto } from './dtos/question-response.dto';
+import { QuestionResponseDto, UpdateQuestionDto } from './dtos/question.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
@@ -220,6 +220,72 @@ export class MasterPortfoliosService {
         return questionEntities;
     }
 
+    // 마스터 포트폴리오 질문 조회
+    async getQuestions(portfolioId: number) {
+        const questions = await this.questionsRepository.find({
+            where: { masterPortfolio: { id: portfolioId } },
+            order: { questionId: 'ASC' },
+        });
+        if (questions.length === 0) {
+            throw new BadRequestException('생성된 질문이 없습니다. 먼저 질문을 생성해주세요.');
+        }
+
+        return questions;
+    }
+
+    // TODO: 커스텀 에러 추가
+    // 마스터 포트폴리오 질문(답변) 업데이트
+    async updateQuestions(qr: QueryRunner, portfolioId: number, questions: UpdateQuestionDto[]) {
+        for (const q of questions) {
+            const questionId = q.questionId;
+            const questionExists = await qr.manager.findOne(Questions, {
+                where: { questionId, masterPortfolio: { id: portfolioId } },
+            });
+            if (!questionExists) {
+                // questionId+portfolioId가 존재하지 않을 때
+                throw new BadRequestException(
+                    `Question with ID ${questionId} does not exist for portfolio ${portfolioId}`
+                );
+            }
+
+            const questionType = questionExists.questionType;
+            if (questionType === QuestionType.YES_NO) {
+                if (q.answer) {
+                    await qr.manager.update(
+                        Questions,
+                        { questionId, masterPortfolio: { id: portfolioId } },
+                        {
+                            answer: q.answer,
+                            reason: q.reason,
+                        }
+                    );
+                } else {
+                    throw new BadRequestException(
+                        `Answer is required for question type ${QuestionType.YES_NO} with ID ${questionId}`
+                    );
+                }
+            } else if (questionType === QuestionType.TEXT) {
+                // answer가 있으면 안됨
+                if (q.answer) {
+                    throw new BadRequestException(
+                        `Answer is not allowed for question type ${QuestionType.TEXT} with ID ${questionId}`
+                    );
+                }
+                await qr.manager.update(
+                    Questions,
+                    { questionId, masterPortfolio: { id: portfolioId } },
+                    {
+                        reason: q.reason,
+                    }
+                );
+            }
+        }
+        return await qr.manager.find(Questions, {
+            where: { masterPortfolio: { id: portfolioId } },
+            order: { questionId: 'ASC' },
+        });
+    }
+
     // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(qr: QueryRunner, userId: number, portfolioId: number) {
         // 포트폴리오 ID로 마스터 포트폴리오를 찾습니다.
@@ -229,6 +295,16 @@ export class MasterPortfoliosService {
         });
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
+        }
+
+        // 질문이 생성된 상태인지 확인합니다.
+        const checkQuestions = await qr.manager.findOne(Questions, {
+            where: { masterPortfolio: { id: portfolioId } },
+        });
+        if (!checkQuestions) {
+            throw new BadRequestException(
+                '마스터 포트폴리오 AI 생성을 하기 위해서는 질문이 먼저 생성되어야 합니다.'
+            );
         }
 
         // 프로젝트 ID를 가져옵니다.
@@ -272,6 +348,19 @@ export class MasterPortfoliosService {
             keyAchievement: generatedPortfolio.keyAchievement,
             insight: generatedPortfolio.insight,
         });
+
+        // TODO: 직접작성 기능을 도입하는 시점에는 해당 코드 삭제
+        // 생성된 결과를 마스터 포트폴리오 엔티티에도 저장합니다.
+        qr.manager.update(
+            MasterPortfolio,
+            { id: portfolioId },
+            {
+                detailInfo: generatedPortfolio.detailInfo,
+                assignedTask: generatedPortfolio.assignedTask,
+                keyAchievement: generatedPortfolio.keyAchievement,
+                insight: generatedPortfolio.insight,
+            }
+        );
 
         try {
             await qr.manager.save(MasterPortfolioAI, createdPortfolio);
