@@ -509,7 +509,7 @@ export class ProjectsService {
         return UpdateProfileResponseDto.fromEntity(users);
     }
 
-    async getTeamCalender(userId: number, projectId: number, startDate: string, endDate: string) {
+    async getTeamCalender(projectId: number, startDate: string, endDate: string) {
         //검색 범위 제한 - 최대 31일
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -523,8 +523,6 @@ export class ProjectsService {
                 endDate: endDate,
             });
         }
-        // 사용자 조회 권한 체크
-        await this.checkProjectMember(userId, projectId);
 
         //팀캘린더 조회
         //1. tasks 카드 조회
@@ -607,6 +605,18 @@ export class ProjectsService {
         });
         if (!mapping) throw new ProjectForbiddenException();
         return !!mapping;
+    }
+
+    // 사용자의 프로젝트 권한 조회
+    async getUserPermissionOfProject(userId: number, projectId: number) {
+        const userProject = await this.userProjectRepository.findOne({
+            where: {
+                user: { id: userId },
+                project: { id: projectId },
+            },
+        });
+        if (!userProject) throw new ProjectForbiddenException();
+        return { permission: userProject.permission };
     }
 
     // 참여코드로 프로젝트 id 조회
