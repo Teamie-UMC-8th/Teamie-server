@@ -6,10 +6,11 @@ import { User } from './entities/users.entity';
 import { UploadModule } from 'src/infra/upload/upload.module';
 import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.module';
 import { UserProject } from '../mappings/user-projects/userProjects.entity';
+import { UserRepository } from './repositories/user.repository';
 @Module({
     imports: [TypeOrmModule.forFeature([User, UserProject]), UploadModule, MasterPortfoliosModule],
     controllers: [UsersController],
-    providers: [UsersService],
+    providers: [UsersService, UserRepository],
     exports: [UsersService, TypeOrmModule],
 })
 export class UsersModule {}
