@@ -3,18 +3,19 @@ import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { correctionSchema, Correction } from 'src/infra/llm/schemas/portfolio-correction.schema';
 import z from 'zod';
-import { PortfolioCorrection } from './entities/portfolio-correction.entity';
+import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
 import { QueryRunner, Repository } from 'typeorm';
-import { AICorrection } from './entities/ai-correction.entity';
+import { AICorrection } from '../entities/ai-correction.entity';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { UserPortfolioCorrectionResponseDto } from './dtos/user-portfolio-correction-response.dto';
+import { UserPortfolioCorrectionResponseDto } from '../dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
-import { Project } from '../projects/entities/projects.entity';
-import { CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
-import { RAGData } from './entities/rag-data.entity';
+import { Project } from '../../projects/entities/projects.entity';
+import { CreatePortfolioCorrectionDto } from '../dtos/create-corrections.dto';
+import { RAGData } from '../entities/rag-data.entity';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
-import { ProjectResponseDto } from './dtos/project-response.dto';
+import { ProjectResponseDto } from '../dtos/project-response.dto';
+import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -98,6 +99,12 @@ export class PortfolioCorrectionsService {
                     throw new AIGenerationAlreadyExists(`project ID: ${projectId}`);
                 }
 
+                // TODO: 생성 중 실패 시에 롤백 처리 필요
+                // 진행 상태 업데이트
+                await this.correctionRepository.update(correctionId, {
+                    status: PortfolioCorrectionStatus.GENERATING,
+                });
+
                 // LLM을 통해 첨삭 생성
                 const correctionResult = await this.llmService.generateCorrection(
                     qr,
@@ -136,6 +143,11 @@ export class PortfolioCorrectionsService {
             const correctionResults = await Promise.all(correctionPromises);
             // 결과 합치기
             const mergedCorrection = [...correctionResults];
+
+            // 진행 상태 업데이트
+            await qr.manager.update(PortfolioCorrection, correctionId, {
+                status: PortfolioCorrectionStatus.DONE,
+            });
 
             return mergedCorrection;
         } catch (error) {
@@ -196,6 +208,10 @@ export class PortfolioCorrectionsService {
             jd: createPortfolioCorrectionDto.jd,
             user: { id: userId },
         });
+
+        // 진행 상태 업데이트
+        newCorrection.status = PortfolioCorrectionStatus.DOING_RAG;
+
         return await this.correctionRepository.save(newCorrection);
     }
 
@@ -207,6 +223,12 @@ export class PortfolioCorrectionsService {
         await qr.manager.update(PortfolioCorrection, correctionId, {
             companyInsight: companyProfile,
         });
+
+        // 진행 상태 업데이트
+        await qr.manager.update(PortfolioCorrection, correctionId, {
+            status: PortfolioCorrectionStatus.COMPANY_INSIGHT,
+        });
+
         return await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
         });
@@ -248,5 +270,18 @@ export class PortfolioCorrectionsService {
         return await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
         });
+    }
+
+    async getCorrectionStatus(correctionId: number) {
+        const correction = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+            select: ['status'],
+        });
+
+        if (!correction) {
+            throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        return { status: correction.status };
     }
 }

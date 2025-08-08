@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
-import { Cocomment } from '../cocomments.entity';
+import { Cocomment } from '../entities/cocomments.entity';
 export class UpdateCocommentRequestDto {
     @ApiProperty({
         example: '업무 기한 다음주로 바꿔야할 것 같아요',

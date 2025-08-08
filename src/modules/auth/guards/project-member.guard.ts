@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { ProjectsService } from 'src/modules/projects/projects.service';
+import { ProjectsService } from 'src/modules/projects/services/projects.service';
 
 @Injectable()
 export class ProjectMemberGuard implements CanActivate {

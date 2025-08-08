@@ -9,7 +9,7 @@ import {
     Req,
     ValidationPipe,
 } from '@nestjs/common';
-import { PortfolioCorrectionsService } from './portfolio-corrections.service';
+import { PortfolioCorrectionsService } from './services/portfolio-corrections.service';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import {
@@ -100,6 +100,16 @@ export class PortfolioCorrectionsController {
             correctionId,
             createCorrectionDto.selectedProjects
         );
+    }
+
+    @ApiOperation({
+        summary: 'AI 첨삭 상태 조회 API',
+        description: '특정 AI 첨삭의 상태를 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @Get(':correctionId/status')
+    async getCorrectionStatus(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCorrectionStatus(correctionId);
     }
 
     @ApiOperation({

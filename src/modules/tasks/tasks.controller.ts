@@ -11,8 +11,9 @@ import {
     Query,
     Req,
     ValidationPipe,
+    ParseIntPipe,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
+import { TasksService } from './services/tasks.service';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
     ApiBody,
@@ -47,6 +48,7 @@ import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
 import { ProjectDashBoardDTO } from './dtos/user-task.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
+import { GetSearchTaskDto } from './dtos/get-search-task.dto';
 
 @ApiTags('Tasks')
 @Controller('/tasks')
@@ -238,5 +240,34 @@ export class TasksController {
     @Get('/:taskId/comments')
     async getComment(@Param('taskId') taskId: number, @Query('offset') offset: number) {
         return this.tasksService.getComment(taskId, offset);
+    }
+
+    @ApiOperation({
+        summary: '업무 검색',
+        description: '검색 필터로 업무를 검색합니다',
+    })
+    @ApiExtraModels(TaskDashboardStepViewDto, TaskDashboardStatusViewDto)
+    @ApiQuery({
+        name: 'view',
+        required: false,
+        description: '조회 방식: step 또는 status',
+    })
+    @ApiOkResponse({
+        description: '단계별 또는 상태별로 업무를 그룹화한 대시보드 응답',
+        schema: {
+            oneOf: [
+                { $ref: getSchemaPath(TaskDashboardStepViewDto) },
+                { $ref: getSchemaPath(TaskDashboardStatusViewDto) },
+            ],
+        },
+    })
+    @Get('/:projectId/search')
+    async getSearchTask(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number,
+        @Query('view') view: string,
+        @Query() dto: GetSearchTaskDto
+    ) {
+        return this.tasksService.getSearchTask(userId, projectId, view, dto);
     }
 }
