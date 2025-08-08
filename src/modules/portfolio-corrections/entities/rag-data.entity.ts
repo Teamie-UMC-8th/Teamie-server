@@ -11,6 +11,9 @@ export class RAGData extends BaseEntity {
     @Column({ nullable: true })
     link: string;
 
+    @Column({ nullable: true })
+    title: string;
+
     @Column({ type: 'enum', enum: RAGDataType, nullable: false })
     type: RAGDataType;
 
