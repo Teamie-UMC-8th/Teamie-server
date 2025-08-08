@@ -16,11 +16,15 @@ import { Writer } from '../entities/writers.entity';
 import { Attendee } from '../entities/attendees.entity';
 import { UsersService } from '../../users/services/users.service';
 import { PlanRepository } from '../repositories/plan.repository';
+import { WriterRepository } from '../repositories/writers.repository';
+import { AttendeeRepository } from '../repositories/attendees.repository';
 
 @Injectable()
 export class PlansService {
     constructor(
         private readonly planRepository: PlanRepository,
+        private readonly writerRepository: WriterRepository,
+        private readonly attendeeRepository: AttendeeRepository,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
         private readonly usersService: UsersService
@@ -39,21 +43,18 @@ export class PlansService {
         try {
             // 기존 배열에 있었으나 body에 없으면 => 삭제
             await Promise.all(
-                deleteWriters.map((id) =>
-                    qr.manager.delete(Writer, {
-                        plan: { id: planId },
-                        user: { id },
-                    })
+                deleteWriters.map(
+                    async (id) => await this.writerRepository.deleteWriter(qr, planId, id)
                 )
             );
             // 기존 배열에 없었으나 body에 있으면 => 추가
             await Promise.all(
-                addWriters.map((id) => {
-                    const newWriter = qr.manager.create(Writer, {
+                addWriters.map(async (id) => {
+                    const writer = qr.manager.create(Writer, {
                         plan: { id: planId },
                         user: { id },
                     });
-                    return qr.manager.save(newWriter);
+                    return await this.writerRepository.saveWriter(qr, writer);
                 })
             );
             // 최신 사항 조회
@@ -78,21 +79,18 @@ export class PlansService {
         try {
             // 기존 배열에 있었으나 body에 없으면 => 삭제
             await Promise.all(
-                deleteAttendees.map((id) =>
-                    qr.manager.delete(Attendee, {
-                        plan: { id: planId },
-                        user: { id },
-                    })
+                deleteAttendees.map(
+                    async (id) => await this.attendeeRepository.deleteAttendee(qr, planId, id)
                 )
             );
             // 기존 배열에 없었으나 body에 있으면 => 추가
             await Promise.all(
                 addAttendees.map((id) => {
-                    const newAttendee = qr.manager.create(Attendee, {
+                    const attendee = qr.manager.create(Attendee, {
                         plan: { id: planId },
                         user: { id },
                     });
-                    return qr.manager.save(newAttendee);
+                    return this.attendeeRepository.saveAttendee(qr, attendee);
                 })
             );
             // 최신 사항 조회

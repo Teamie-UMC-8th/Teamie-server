@@ -8,6 +8,8 @@ import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { PlanRepository } from './repositories/plan.repository';
+import { WriterRepository } from './repositories/writers.repository';
+import { AttendeeRepository } from './repositories/attendees.repository';
 
 @Module({
     imports: [
@@ -17,7 +19,7 @@ import { PlanRepository } from './repositories/plan.repository';
         UsersModule,
     ],
     controllers: [PlansController],
-    providers: [PlansGateway, PlansService, PlanRepository],
+    providers: [PlansGateway, PlansService, PlanRepository, WriterRepository, AttendeeRepository],
     exports: [PlansService],
 })
 export class PlansModule {}
