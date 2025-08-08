@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
-import { Comment } from '../../comments.entity';
-import { Cocomment } from '../cocomments.entity';
+import { Comment } from '../../entities/comments.entity';
+import { Cocomment } from '../entities/cocomments.entity';
 
 export class CreateCocommentRequestDto {
     @ApiProperty({

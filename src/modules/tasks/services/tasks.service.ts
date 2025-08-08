@@ -1,30 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Task } from './entities/tasks.entity';
+import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
-import { Step } from '../steps/entities/steps.entity';
-import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { User } from '../users/entities/users.entity';
-import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
+import { Step } from '../../steps/entities/steps.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { User } from '../../users/entities/users.entity';
+import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
-} from '../comments/dto/create-comment.dto';
-import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
-import { Manager } from '../mappings/managers/managers.entity';
-import { Project } from '../projects/entities/projects.entity';
-import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
-import { TaskFile } from '../mappings/task-files/task-files.entity';
-import { Comment as CommentEntity } from '../comments/comments.entity';
-import { GetTaskResponseDto } from './dtos/get-task.dto';
-import { UploadService } from '../../infra/upload/upload.service';
-import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
-import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
-import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
-import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
-import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
-import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
-import { Status } from '../../common/enums/status.enum';
+} from '../../comments/dto/create-comment.dto';
+import { UpdateTaskRequestDto, UpdateTaskResponseDto } from '../dtos/update-task.dto';
+import { Manager } from '../../mappings/managers/managers.entity';
+import { Project } from '../../projects/entities/projects.entity';
+import { DeleteTaskResponseDto } from '../dtos/delete-task.dto';
+import { TaskFile } from '../../mappings/task-files/task-files.entity';
+import { Comment as CommentEntity } from '../../comments/entities/comments.entity';
+import { GetTaskResponseDto } from '../dtos/get-task.dto';
+import { UploadService } from '../../../infra/upload/upload.service';
+import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
+import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
+import { StepGroupDto, TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
+import { StatusGroupDto, TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
+import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
+import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
+import { Status } from '../../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
     StepNotFoundException,
@@ -33,12 +33,12 @@ import {
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
-import { UsersService } from '../users/users.service';
-import { ProjectDashBoardDTO, TaskCardDTO } from './dtos/user-task.dto';
+import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
+import { UsersService } from '../../users/services/users.service';
+import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { GetSearchTaskDto } from './dtos/get-search-task.dto';
+import { GetSearchTaskDto } from '../dtos/get-search-task.dto';
 import { Brackets } from 'typeorm';
 @Injectable()
 export class TasksService {

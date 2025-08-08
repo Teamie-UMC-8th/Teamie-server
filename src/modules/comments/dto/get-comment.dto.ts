@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
-import { Comment } from '../comments.entity';
+import { Comment } from '../entities/comments.entity';
 import { User } from '../../users/entities/users.entity';
-import { Cocomment } from '../cocomments/cocomments.entity';
+import { Cocomment } from '../cocomments/entities/cocomments.entity';
 
 export class UserInCommentDto {
     @ApiProperty({

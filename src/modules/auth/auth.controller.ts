@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthService } from './auth.service';
+import { AuthService } from './services/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { KakaoUser, KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { Response } from 'express';

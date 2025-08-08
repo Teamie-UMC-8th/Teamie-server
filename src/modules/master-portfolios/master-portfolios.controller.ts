@@ -15,7 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
-import { MasterPortfoliosService } from './master-portfolios.service';
+import { MasterPortfoliosService } from './services/master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 import {
@@ -24,7 +24,7 @@ import {
     ApiCommonResponseArray,
     ApiCommonResponseWithPagination,
 } from 'src/common/response/swagger-response.helper';
-import { QuestionResponseDto } from './dtos/question-response.dto';
+import { QuestionResponseDto, UpdateQuestionDto } from './dtos/question.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
@@ -99,6 +99,37 @@ export class MasterPortfoliosController {
             userId,
             portfolioId,
             createQuestionsDto.recordIdList
+        );
+    }
+
+    @ApiOperation({
+        summary: '마스터 포트폴리오 질문 조회 API',
+        description: '프로젝트의 마스터 포트폴리오 질문을 조회합니다.',
+    })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
+    @Get(':portfolioId/questions')
+    async getQuestions(@Param('portfolioId', ParseIntPipe) portfolioId: number) {
+        return this.masterPortfoliosService.getQuestions(portfolioId);
+    }
+
+    @ApiOperation({
+        summary: '마스터 포트폴리오 질문(답변) 업데이트 API',
+        description: '프로젝트의 마스터 포트폴리오 질문에 대한 답변을 업데이트합니다.',
+    })
+    @ApiBody({ type: UpdateQuestionDto, isArray: true })
+    @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
+    @Transactional()
+    @Patch(':portfolioId/questions')
+    async updateQuestions(
+        @Req() req: TransactionalRequest,
+        @Param('portfolioId', ParseIntPipe) portfolioId: number,
+        @Body(new ParseArrayPipe({ items: UpdateQuestionDto, optional: true }))
+        questions: UpdateQuestionDto[]
+    ) {
+        return this.masterPortfoliosService.updateQuestions(
+            req.queryRunner,
+            portfolioId,
+            questions
         );
     }
 

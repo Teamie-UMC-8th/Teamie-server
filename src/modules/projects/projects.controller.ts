@@ -11,7 +11,7 @@ import {
     Req,
     ValidationPipe,
 } from '@nestjs/common';
-import { ProjectsService } from './projects.service';
+import { ProjectsService } from './services/projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
 import { ApiBody, ApiTags, ApiParam, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
@@ -32,7 +32,7 @@ import { Transactional, TransactionalRequest } from 'src/common/decorators/trans
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto';
-import { PlansService } from '../plans/plans.service';
+import { PlansService } from '../plans/services/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
