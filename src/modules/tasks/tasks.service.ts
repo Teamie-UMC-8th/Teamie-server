@@ -38,7 +38,8 @@ import { UsersService } from '../users/users.service';
 import { ProjectDashBoardDTO, TaskCardDTO } from './dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-
+import { GetSearchTaskDto } from './dtos/get-search-task.dto';
+import { Brackets } from 'typeorm';
 @Injectable()
 export class TasksService {
     constructor(
@@ -723,5 +724,111 @@ export class TasksService {
             .addOrderBy('task.createdAt', 'ASC')
             .getMany();
         return tasks.map((task) => TaskCardDTO.from(task));
+    }
+
+    async getSearchTask(
+        userId: number,
+        projectId: number,
+        view: string,
+        dto: GetSearchTaskDto
+    ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        if (view !== 'step' && view !== 'status') {
+            throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
+        }
+
+        // ───  프로젝트 + 참여자 검증 ─────────────────────
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: ['userProjects'],
+        });
+        if (!project) throw new ProjectNotFoundException();
+
+        const isMember = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!isMember) throw new ProjectForbiddenException();
+
+        // ─── 2) 필터용 baseQb + totalCount ────────────────
+        // 1) baseQb: 필터용 + 기본 조인
+        const baseQb = this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
+            .addSelect(['user.id', 'user.name'])
+            .where('step.projectId = :projectId', { projectId });
+
+        // DTO 기반 필터
+        if (dto.statuses?.length) {
+            baseQb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });
+        }
+        if (dto.managerIds?.length) {
+            baseQb.andWhere('user.id IN (:...managerIds)', { managerIds: dto.managerIds });
+        }
+        if (dto.dateBefore || dto.dateAfter) {
+            baseQb.andWhere(
+                new Brackets((q) => {
+                    if (dto.dateBefore)
+                        q.where('task.deadline <= :dateBefore', {
+                            dateBefore: `${dto.dateBefore} 23:59:59`,
+                        });
+                    if (dto.dateAfter)
+                        q.orWhere('task.deadline >= :dateAfter', {
+                            dateAfter: `${dto.dateAfter} 00:00:00`,
+                        });
+                })
+            );
+        }
+
+        // 2) 전체 개수
+        const totalCount = await baseQb.getCount();
+
+        // 3) 그룹별 5개씩 병렬 조회
+        if (view === 'status') {
+            const statuses = [Status.NOTSTART, Status.ONGOING, Status.COMPLETED];
+            const statusGroups = await Promise.all(
+                statuses.map(async (status) => {
+                    const tasks = await baseQb
+                        .clone() // 이미 모든 조인이 들어있음
+                        .andWhere('task.status = :status', { status })
+                        .orderBy('task.deadline', 'ASC')
+                        .addOrderBy('task.createdAt', 'ASC')
+                        .limit(5)
+                        .getMany();
+
+                    return {
+                        status,
+                        tasks: tasks.map(TaskInStatusDto.from),
+                    };
+                })
+            );
+
+            return { projectId, projectName: project.name, statusGroups, totalCount };
+        } else {
+            const steps = await this.stepRepository.find({
+                where: { project: { id: projectId } },
+                order: { createdAt: 'ASC' },
+            });
+
+            const stepGroups = await Promise.all(
+                steps.map(async (step) => {
+                    const tasks = await baseQb
+                        .clone()
+                        .andWhere('task.stepId = :stepId', { stepId: step.id })
+                        .orderBy('task.deadline', 'ASC')
+                        .addOrderBy('task.createdAt', 'ASC')
+                        .limit(5)
+                        .getMany();
+
+                    return {
+                        stepId: step.id,
+                        stepName: step.name,
+                        tasks: tasks.map(TaskInStepDto.from),
+                    };
+                })
+            );
+
+            return { projectId, projectName: project.name, steps: stepGroups, totalCount };
+        }
     }
 }
