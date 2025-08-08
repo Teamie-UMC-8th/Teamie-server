@@ -24,8 +24,6 @@ export class PlansService {
     constructor(
         @InjectRepository(Plan)
         private readonly plansRepository: Repository<Plan>,
-        @InjectRepository(Writer)
-        private readonly writersRepository: Repository<Writer>,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
         private readonly usersService: UsersService
@@ -180,18 +178,8 @@ export class PlansService {
     }
 
     // 일정 생성
-    async createPlan(
-        qr: QueryRunner,
-        userId: number,
-        projectId: number,
-        date: Date
-    ): Promise<CreatePlanResponse> {
-        // 유효한 식별자인지 & 사용자 권한 check
+    async createPlan(qr: QueryRunner, projectId: number, date: Date): Promise<CreatePlanResponse> {
         const project = await this.projectsService.assertProjectExists(projectId);
-        const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
 
         // 프로젝트 생성일자와 일정 생성일자 비교
         if (project.createdAt > date) {

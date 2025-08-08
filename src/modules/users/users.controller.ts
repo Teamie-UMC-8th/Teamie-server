@@ -25,17 +25,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
 import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
 import { UserProjectResponseDto } from './dtos/user-project.dto';
+
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
     constructor(private readonly userService: UsersService) {}
 
-    @Get('/me')
     @ApiOperation({
         summary: '마이페이지/사용자 프로필 조회 API',
         description: '사용자의 프로필을 조회하는 API입니다.',
     })
     @ApiCommonResponse(UserProfileResponseDto)
+    @Get('/me')
     async getUserProfile(@User('id') userId: number) {
         return await this.userService.getUserProfile(userId);
     }
