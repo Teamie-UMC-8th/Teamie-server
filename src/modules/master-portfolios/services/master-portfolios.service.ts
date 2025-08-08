@@ -1,12 +1,12 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Questions } from './entities/questions.entity';
+import { Questions } from '../entities/questions.entity';
 import { In, QueryRunner, Repository } from 'typeorm';
-import { MasterPortfolio } from './entities/master-portfolios.entity';
+import { MasterPortfolio } from '../entities/master-portfolios.entity';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
-import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
+import { MasterPortfolioResponseDto } from '../dtos/master-portfolio-response.dto';
 import {
     AIGenerationAlreadyExists,
     ForbiddenUserForMasterPortfolioException,
@@ -15,22 +15,22 @@ import {
     MasterPortfolioNotFoundException,
     ProjectNotFoundException,
 } from 'src/common/exceptions/custom.errors';
-import { QuestionResponseDto, UpdateQuestionDto } from './dtos/question.dto';
+import { QuestionResponseDto, UpdateQuestionDto } from '../dtos/question.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
-import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
-import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
+import { MasterPortfolioRequestDto } from '../dtos/master-portfolio-request.dto';
+import { UserMasterPortfoliosResponseDto } from '../dtos/user-master-portfolios-response.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { MasterPortfolioAI } from './entities/master-portfolio-ai.entity';
-import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
-import { Task } from '../tasks/entities/tasks.entity';
-import { Plan } from '../plans/entities/plan.entity';
-import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
+import { MasterPortfolioAI } from '../entities/master-portfolio-ai.entity';
+import { MasterPortfolioAIResponseDto } from '../dtos/master-portfolio-ai-response.dto';
+import { Task } from '../../tasks/entities/tasks.entity';
+import { Plan } from '../../plans/entities/plan.entity';
+import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { portfolioType } from 'src/common/enums/portfolio-type.enum';
-import { Project } from '../projects/entities/projects.entity';
+import { Project } from '../../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
-import { User } from '../users/entities/users.entity';
-import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { SelectablePlanResponseDto } from './dtos/selectable-plan.dto';
+import { User } from '../../users/entities/users.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
 function getPeriod(createdAt: Date, completedAt: Date): string {

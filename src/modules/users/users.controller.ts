@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
-import { UsersService } from './users.service';
+import { UsersService } from './services/users.service';
 import {
     UpdateProfileRequestDto,
     UpdateProfileRequestWithFileDto,

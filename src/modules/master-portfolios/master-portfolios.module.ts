@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { MasterPortfoliosService } from './master-portfolios.service';
+import { MasterPortfoliosService } from './services/master-portfolios.service';
 import { MasterPortfoliosController } from './master-portfolios.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Questions } from './entities/questions.entity';

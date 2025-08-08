@@ -1,21 +1,21 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Step } from './entities/steps.entity';
-import { Project } from '../projects/entities/projects.entity';
+import { Step } from '../entities/steps.entity';
+import { Project } from '../../projects/entities/projects.entity';
 import { Repository } from 'typeorm';
-import { CreateStepDto, CreateStepResponseDto } from './dtos/create-step.dto';
+import { CreateStepDto, CreateStepResponseDto } from '../dtos/create-step.dto';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
-import { CommonResponse } from '../../common/response/common-response.dto';
+import { CommonResponse } from '../../../common/response/common-response.dto';
 import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
-import { UpdateStepDto, UpdateStepResponseDto } from './dtos/update-step.dto';
+import { UpdateStepDto, UpdateStepResponseDto } from '../dtos/update-step.dto';
 import {
     StepNotFoundException,
     TaskNotFoundException,
     StepDeleteForBiddenException,
-} from '../../common/exceptions/custom.errors';
-import { Task } from '../tasks/entities/tasks.entity';
-import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
+} from '../../../common/exceptions/custom.errors';
+import { Task } from '../../tasks/entities/tasks.entity';
+import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-task-step.dto';
 
 @Injectable()
 export class StepsService {

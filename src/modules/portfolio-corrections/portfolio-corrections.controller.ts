@@ -9,7 +9,7 @@ import {
     Req,
     ValidationPipe,
 } from '@nestjs/common';
-import { PortfolioCorrectionsService } from './portfolio-corrections.service';
+import { PortfolioCorrectionsService } from './services/portfolio-corrections.service';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import {

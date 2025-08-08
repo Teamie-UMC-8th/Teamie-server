@@ -1,7 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { PlansGateway } from './gateways/plans.gateway';
 import { PlansController } from './plans.controller';
-import { PlansService } from './plans.service';
+import { PlansService } from './services/plans.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Plan } from './entities/plan.entity';
 import { ProjectsModule } from '../projects/projects.module';
