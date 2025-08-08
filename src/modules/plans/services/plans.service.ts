@@ -1,8 +1,8 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Plan } from './entities/plan.entity';
+import { Plan } from '../entities/plan.entity';
 import { QueryRunner, Repository } from 'typeorm';
-import { PlanDetails } from './dtos/plan-details.dto';
+import { PlanDetails } from '../dtos/plan-details.dto';
 import {
     PlanDateConflictException,
     PlanNotFoundException,
@@ -10,14 +10,14 @@ import {
     ProjectForbiddenException,
     TransactionException,
 } from 'src/common/exceptions/custom.errors';
-import { ProjectsService } from '../projects/projects.service';
-import { CreatePlanResponse } from './dtos/create-plan.dto';
-import { DeletePlanResponseDto } from './dtos/delete-plan.dto';
-import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
-import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from './dtos/update-plan.dto';
-import { Writer } from '../mappings/writers/writers.entity';
-import { Attendee } from '../mappings/attendees/attendees.entity';
-import { UsersService } from '../users/users.service';
+import { ProjectsService } from '../../projects/services/projects.service';
+import { CreatePlanResponse } from '../dtos/create-plan.dto';
+import { DeletePlanResponseDto } from '../dtos/delete-plan.dto';
+import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
+import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from '../dtos/update-plan.dto';
+import { Writer } from '../../mappings/writers/writers.entity';
+import { Attendee } from '../../mappings/attendees/attendees.entity';
+import { UsersService } from '../../users/services/users.service';
 
 @Injectable()
 export class PlansService {

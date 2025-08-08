@@ -13,7 +13,7 @@ import {
     ValidationPipe,
     ParseIntPipe,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
+import { TasksService } from './services/tasks.service';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
     ApiBody,

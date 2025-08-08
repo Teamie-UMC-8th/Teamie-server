@@ -13,12 +13,12 @@ import {
     RealTimeType,
 } from 'src/common/response/real-time-response.dto';
 import { PlanDetails } from '../dtos/plan-details.dto';
-import { PlansService } from '../plans.service';
+import { PlansService } from '../services/plans.service';
 import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
 import { UseFilters, UseGuards } from '@nestjs/common';
 import { WsAuthGuard } from 'src/modules/auth/guards/ws-auth.guard';
 import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
-import { AuthService } from 'src/modules/auth/auth.service';
+import { AuthService } from 'src/modules/auth/services/auth.service';
 
 @UseFilters(new WebSocketExceptionFilter())
 @UseGuards(WsAuthGuard)

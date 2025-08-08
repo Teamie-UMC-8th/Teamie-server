@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlansService } from './plans.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ProjectsService } from '../projects/projects.service';
+import { ProjectsService } from '../../projects/services/projects.service';
 import { Repository } from 'typeorm';
-import { Plan } from './entities/plan.entity';
-import { PlanDetails } from './dtos/plan-details.dto';
+import { Plan } from '../entities/plan.entity';
+import { PlanDetails } from '../dtos/plan-details.dto';
 import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
 
 describe('PlansService', () => {

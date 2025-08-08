@@ -1,15 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Project } from './entities/projects.entity';
-import { UserProject } from '../mappings/user-projects/userProjects.entity';
+import { Project } from '../entities/projects.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
-import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
+import { CreateProjectDto, CreateProjectResponseDto } from '../dtos/create-project.dto';
 import { ConfigService } from '@nestjs/config';
-import { UserInProjectDto, AllProjectResponseDto, PostDto } from './dtos/all-project-response.dto';
-import { UpdateProjectDto } from './dtos/update-project.dto';
-import { CompleteProjectResponseDto } from './dtos/complete-project.dto';
-import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
+import { UserInProjectDto, AllProjectResponseDto, PostDto } from '../dtos/all-project-response.dto';
+import { UpdateProjectDto } from '../dtos/update-project.dto';
+import { CompleteProjectResponseDto } from '../dtos/complete-project.dto';
+import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import {
     AlreadyProjectCompletedException,
     ProjectNotFoundException,
@@ -28,25 +28,25 @@ import {
     AlreadyJoinException,
     InvalidDateException,
 } from 'src/common/exceptions/custom.errors';
-import { Step } from '../steps/entities/steps.entity';
-import { CreateStepDto, CreateStepResponseDto } from '../steps/dtos/create-step.dto';
-import { StepsService } from '../steps/steps.service';
-import { CreatePostDto, CreatePostResponseDto } from './dtos/create-post.dto';
-import { DeletePostResponseDto } from './dtos/delete-post-response.dto';
+import { Step } from '../../steps/entities/steps.entity';
+import { CreateStepDto, CreateStepResponseDto } from '../../steps/dtos/create-step.dto';
+import { StepsService } from '../../steps/services/steps.service';
+import { CreatePostDto, CreatePostResponseDto } from '../dtos/create-post.dto';
+import { DeletePostResponseDto } from '../dtos/delete-post-response.dto';
 import { RedisClientType } from 'redis';
-import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
-import { ChangeLeaderDto, ChangeLeaderResponseDto } from './dtos/change-leader.dto';
-import { User } from '../users/entities/users.entity';
-import { UpdateProfileDto, UpdateProfileResponseDto } from './dtos/update-profile.dto';
-import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
-import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
-import { PlansService } from '../plans/plans.service';
-import { TasksService } from '../tasks/tasks.service';
-import { UserProfile } from '../../common/dtos/user-profile.dto';
+import { MasterPortfoliosService } from '../../master-portfolios/services/master-portfolios.service';
+import { ChangeLeaderDto, ChangeLeaderResponseDto } from '../dtos/change-leader.dto';
+import { User } from '../../users/entities/users.entity';
+import { UpdateProfileDto, UpdateProfileResponseDto } from '../dtos/update-profile.dto';
+import { JoinProjectDto, JoinProjectResponseDto } from '../dtos/join-project.dto';
+import { ValidateInviteResponseDto } from '../dtos/validate-invite.dto';
+import { PlansService } from '../../plans/services/plans.service';
+import { TasksService } from '../../tasks/services/tasks.service';
+import { UserProfile } from '../../../common/dtos/user-profile.dto';
 import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
-} from './dtos/team-calender-response.dto';
+} from '../dtos/team-calender-response.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;

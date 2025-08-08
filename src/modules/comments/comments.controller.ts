@@ -1,7 +1,7 @@
 import { Controller, Param, Delete, Patch, Body, Req, Post } from '@nestjs/common';
 import { ApiTags, ApiOkResponse, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
-import { CommentsService } from './comments.service';
+import { CommentsService } from './services/comments.service';
 import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-comment.dto';
 import { Transactional } from 'src/common/decorators/transaction.decorator';

@@ -1,5 +1,5 @@
 import { Controller, Body, ParseIntPipe, Patch, Delete, Param } from '@nestjs/common';
-import { StepsService } from './steps.service';
+import { StepsService } from './services/steps.service';
 import { ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
