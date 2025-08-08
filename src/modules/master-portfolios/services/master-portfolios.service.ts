@@ -6,7 +6,10 @@ import { MasterPortfolio } from '../entities/master-portfolios.entity';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
-import { MasterPortfolioResponseDto } from '../dtos/master-portfolio-response.dto';
+import {
+    MasterPortfolioDetailResponseDto,
+    MasterPortfolioResponseDto,
+} from '../dtos/master-portfolio-response.dto';
 import {
     AIGenerationAlreadyExists,
     ForbiddenUserForMasterPortfolioException,
@@ -437,7 +440,7 @@ export class MasterPortfoliosService {
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
-        return MasterPortfolioResponseDto.from(masterPortfolio);
+        return MasterPortfolioDetailResponseDto.from(masterPortfolio);
     }
 
     // 마스터 포트폴리오 업데이트
