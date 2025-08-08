@@ -103,6 +103,16 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
+        summary: 'AI 첨삭 상태 조회 API',
+        description: '특정 AI 첨삭의 상태를 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @Get(':correctionId/status')
+    async getCorrectionStatus(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCorrectionStatus(correctionId);
+    }
+
+    @ApiOperation({
         summary: 'AI 첨삭 결과 조회 API',
         description: '특정 AI 첨삭의 결과를 조회합니다.',
     })

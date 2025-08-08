@@ -3,6 +3,7 @@ import { User } from 'src/modules/users/entities/users.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { AICorrection } from './ai-correction.entity';
 import { RAGData } from './rag-data.entity';
+import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
 
 @Entity()
 export class PortfolioCorrection extends BaseEntity {
@@ -20,6 +21,13 @@ export class PortfolioCorrection extends BaseEntity {
 
     @Column({ length: 500 })
     jd: string;
+
+    @Column({
+        type: 'enum',
+        enum: PortfolioCorrectionStatus,
+        default: PortfolioCorrectionStatus.NOT_STARTED,
+    })
+    status: PortfolioCorrectionStatus;
 
     @ManyToOne(() => User, (user) => user.portfolioCorrections, {
         onDelete: 'CASCADE',
