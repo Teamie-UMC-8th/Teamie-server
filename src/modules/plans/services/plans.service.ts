@@ -12,8 +12,8 @@ import { CreatePlanResponse } from '../dtos/create-plan.dto';
 import { DeletePlanResponseDto } from '../dtos/delete-plan.dto';
 import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
 import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from '../dtos/update-plan.dto';
-import { Writer } from '../../mappings/writers/writers.entity';
-import { Attendee } from '../../mappings/attendees/attendees.entity';
+import { Writer } from '../entities/writers.entity';
+import { Attendee } from '../entities/attendees.entity';
 import { UsersService } from '../../users/services/users.service';
 import { PlanRepository } from '../repositories/plan.repository';
 
