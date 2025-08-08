@@ -10,8 +10,9 @@ import {
     ParseIntPipe,
     Req,
     ValidationPipe,
+    UseGuards,
 } from '@nestjs/common';
-import { ProjectsService } from './projects.service';
+import { ProjectsService } from './services/projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
 import { AllProjectResponseDto } from './dtos/all-project-response.dto';
 import { ApiBody, ApiTags, ApiParam, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
@@ -32,10 +33,11 @@ import { Transactional, TransactionalRequest } from 'src/common/decorators/trans
 import { ValidateInviteResponseDto } from './dtos/validate-invite.dto';
 import { JoinProjectDto, JoinProjectResponseDto } from './dtos/join-project.dto';
 import { CreatePlanReq, CreatePlanResponse } from '../plans/dtos/create-plan.dto';
-import { PlansService } from '../plans/plans.service';
+import { PlansService } from '../plans/services/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
+import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 
 @ApiTags('Projects')
 @Controller('/projects')
@@ -264,6 +266,7 @@ export class ProjectsController {
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
         @User('id') userId: number,
@@ -272,7 +275,7 @@ export class ProjectsController {
     ) {
         const startDate = query.startDate;
         const endDate = query.endDate;
-        return await this.projectsService.getTeamCalender(userId, projectId, startDate, endDate);
+        return await this.projectsService.getTeamCalender(projectId, startDate, endDate);
     }
 
     @ApiOperation({
@@ -294,12 +297,24 @@ export class ProjectsController {
 
     @ApiOperation({
         summary: '프로젝트 참여자 리스트 조회',
-        description: '프로젝에 참여자 리스트를 조회합니다.',
+        description: '프로젝트에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiOkResponse({ type: UserProfile, isArray: true })
     @Get('/:projectId/members')
     async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
         return await this.projectsService.getProjectMemberList(projectId);
+    }
+
+    @ApiOperation({
+        summary: '사용자의 프로젝트 권한 조회 API',
+        description: '사용자의 프로젝트 권한을 조회합니다.',
+    })
+    @Get('/:projectId/my-permission')
+    async getUserProjectPermission(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
+        return await this.projectsService.getUserPermissionOfProject(userId, projectId);
     }
 }

@@ -17,7 +17,7 @@ import {
 } from 'src/common/response/swagger-response.helper';
 import { PlanDetails } from './dtos/plan-details.dto';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
-import { PlansService } from './plans.service';
+import { PlansService } from './services/plans.service';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { DeletePlanResponseDto } from './dtos/delete-plan.dto';

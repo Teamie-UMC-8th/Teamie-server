@@ -13,7 +13,7 @@ import {
     ValidationPipe,
     ParseIntPipe,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
+import { TasksService } from './services/tasks.service';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
 import {
     ApiBody,
@@ -269,5 +269,53 @@ export class TasksController {
         @Query() dto: GetSearchTaskDto
     ) {
         return this.tasksService.getSearchTask(userId, projectId, view, dto);
+    }
+
+    @ApiOperation({
+        summary: 'step별 검색한 업무 더보기',
+        description: 'step별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
+    })
+    @ApiCommonResponse(GetTaskResponseDto)
+    @Get('/:projectId/search/step/:stepId/more')
+    async getSearchStepMore(
+        @User('id') userId: number,
+        @Param('projectId') projectId: number,
+        @Param('stepId') stepId: number,
+        @Query('offset') offset: number,
+        @Query('limit') limit = 5,
+        @Query(new ValidationPipe({ transform: true })) dto: GetSearchTaskDto
+    ) {
+        return this.tasksService.getSearchMoreTasksByStep(
+            userId,
+            projectId,
+            stepId,
+            offset,
+            limit,
+            dto
+        );
+    }
+
+    @ApiOperation({
+        summary: '진행상황별 검색한 업무 더보기',
+        description: '진행상황별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
+    })
+    @ApiCommonResponse(GetTaskResponseDto)
+    @Get('/:projectId/search/status/:status/more')
+    async getSearchStatusMore(
+        @User('id') userId: number,
+        @Param('projectId') projectId: number,
+        @Param('status') status: Status,
+        @Query('offset') offset: number,
+        @Query('limit') limit = 5,
+        @Query(new ValidationPipe({ transform: true })) dto: GetSearchTaskDto
+    ) {
+        return this.tasksService.getSearchMoreTasksByStatus(
+            userId,
+            projectId,
+            status,
+            offset,
+            limit,
+            dto
+        );
     }
 }

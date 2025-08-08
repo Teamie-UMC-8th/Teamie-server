@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
-import { Comment } from './comments.entity';
-import { UpdateCommentResponseDto, UpdateCommentRequestDto } from './dto/update-comment.dto';
+import { Comment } from '../entities/comments.entity';
+import { UpdateCommentResponseDto, UpdateCommentRequestDto } from '../dto/update-comment.dto';
 import {
     CommentUpdateForbiddenException,
     CommentNotFoundException,
@@ -10,11 +10,11 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { QueryRunner } from 'typeorm';
-import { Cocomment } from './cocomments/cocomments.entity';
+import { Cocomment } from '../cocomments/entities/cocomments.entity';
 import {
     CreateCocommentRequestDto,
     CreateCocommentResponseDto,
-} from './cocomments/dto/create-cocomment.dto';
+} from '../cocomments/dto/create-cocomment.dto';
 
 @Injectable()
 export class CommentsService {

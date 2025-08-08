@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PersonalRecall } from './entities/personal-recalls.entity';
+import { PersonalRecall } from '../entities/personal-recalls.entity';
 import { Repository } from 'typeorm';
-import { PersonalRecallResponseDto } from './dtos/personal-recall-response.dto';
+import { PersonalRecallResponseDto } from '../dtos/personal-recall-response.dto';
 import { PersonalRecallNotFoundException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()

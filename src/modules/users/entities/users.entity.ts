@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { Comment } from '../../comments/comments.entity';
+import { Comment } from '../../comments/entities/comments.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { UserProject } from '../../mappings/user-projects/userProjects.entity';
@@ -9,7 +9,7 @@ import { ProjectFile } from '../../mappings/project-files/project-files.entity';
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
-import { Cocomment } from '../../comments/cocomments/cocomments.entity';
+import { Cocomment } from '../../comments/cocomments/entities/cocomments.entity';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 
 @Entity()

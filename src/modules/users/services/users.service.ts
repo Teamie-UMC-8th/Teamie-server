@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/users.entity';
+import { User } from '../entities/users.entity';
 import { In, QueryRunner, Repository } from 'typeorm';
 import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
-import { UpdateProfileRequestDto, UserProfileResponseDto } from './dtos/user-profile.dto';
+import { UpdateProfileRequestDto, UserProfileResponseDto } from '../dtos/user-profile.dto';
 import {
     BadRequestException,
     ForbiddenUserForMasterPortfolioException,
@@ -12,12 +12,12 @@ import {
     UserNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { UploadService } from 'src/infra/upload/upload.service';
-import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
-import { MasterPortfoliosService } from '../master-portfolios/master-portfolios.service';
-import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
-import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
-import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { UserProjectResponseDto } from './dtos/user-project.dto';
+import { UserMainTaskRequestDTO } from '../dtos/user-main-task.dto';
+import { MasterPortfoliosService } from '../../master-portfolios/services/master-portfolios.service';
+import { UserMasterPortfoliosResponseDto } from '../../master-portfolios/dtos/user-master-portfolios-response.dto';
+import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProjectResponseDto } from '../dtos/user-project.dto';
 @Injectable()
 export class UsersService {
     constructor(

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PersonalRecallsService } from './personal-recalls.service';
+import { PersonalRecallsService } from './services/personal-recalls.service';
 import { PersonalRecallsController } from './personal-recalls.controller';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';

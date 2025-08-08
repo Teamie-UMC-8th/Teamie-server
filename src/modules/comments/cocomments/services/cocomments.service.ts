@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
-import { Cocomment } from './cocomments.entity';
-import { UpdateCocommentResponseDto, UpdateCocommentRequestDto } from './dto/update-cocomment.dto';
+import { Cocomment } from '../entities/cocomments.entity';
+import { UpdateCocommentResponseDto, UpdateCocommentRequestDto } from '../dto/update-cocomment.dto';
 import {
     CocommentUpdateForbiddenException,
     CocommentNotFoundException,

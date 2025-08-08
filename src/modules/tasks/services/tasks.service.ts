@@ -1,30 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Task } from './entities/tasks.entity';
+import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
-import { Step } from '../steps/entities/steps.entity';
-import { UserProject } from '../mappings/user-projects/userProjects.entity';
-import { User } from '../users/entities/users.entity';
-import { CreateTaskRequestDto, CreateTaskResponseDto } from './dtos/create-task.dto';
+import { Step } from '../../steps/entities/steps.entity';
+import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { User } from '../../users/entities/users.entity';
+import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
     CreateCommentRequestDto,
-} from '../comments/dto/create-comment.dto';
-import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
-import { Manager } from '../mappings/managers/managers.entity';
-import { Project } from '../projects/entities/projects.entity';
-import { DeleteTaskResponseDto } from './dtos/delete-task.dto';
-import { TaskFile } from '../mappings/task-files/task-files.entity';
-import { Comment as CommentEntity } from '../comments/comments.entity';
-import { GetTaskResponseDto } from './dtos/get-task.dto';
-import { UploadService } from '../../infra/upload/upload.service';
-import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
-import { TaskDashboardStatusViewDto } from './dtos/task-dashboard-status-view-dto';
-import { StepGroupDto, TaskInStepDto } from './dtos/task-dashboard-step-view-dto';
-import { StatusGroupDto, TaskInStatusDto } from './dtos/task-dashboard-status-view-dto';
-import { CreateTaskFileResponseDto } from '../mappings/task-files/dtos/create-task-files.dto';
-import { GetCommentResponseDto } from '../comments/dto/get-comment.dto';
-import { Status } from '../../common/enums/status.enum';
+} from '../../comments/dto/create-comment.dto';
+import { UpdateTaskRequestDto, UpdateTaskResponseDto } from '../dtos/update-task.dto';
+import { Manager } from '../../mappings/managers/managers.entity';
+import { Project } from '../../projects/entities/projects.entity';
+import { DeleteTaskResponseDto } from '../dtos/delete-task.dto';
+import { TaskFile } from '../../mappings/task-files/task-files.entity';
+import { Comment as CommentEntity } from '../../comments/entities/comments.entity';
+import { GetTaskResponseDto } from '../dtos/get-task.dto';
+import { UploadService } from '../../../infra/upload/upload.service';
+import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
+import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
+import { StepGroupDto, TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
+import { StatusGroupDto, TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
+import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
+import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
+import { Status } from '../../../common/enums/status.enum';
 import {
     ProjectForbiddenException,
     StepNotFoundException,
@@ -33,12 +33,12 @@ import {
     BadRequestException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import { CalenderCardResponseDto } from '../projects/dtos/team-calender-response.dto';
-import { UsersService } from '../users/users.service';
-import { ProjectDashBoardDTO, TaskCardDTO } from './dtos/user-task.dto';
+import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
+import { UsersService } from '../../users/services/users.service';
+import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { GetSearchTaskDto } from './dtos/get-search-task.dto';
+import { GetSearchTaskDto } from '../dtos/get-search-task.dto';
 import { Brackets } from 'typeorm';
 @Injectable()
 export class TasksService {
@@ -748,42 +748,13 @@ export class TasksService {
         });
         if (!isMember) throw new ProjectForbiddenException();
 
-        // ─── 2) 필터용 baseQb + totalCount ────────────────
-        // 1) baseQb: 필터용 + 기본 조인
-        const baseQb = this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoinAndSelect('task.managers', 'manager')
-            .leftJoinAndSelect('manager.user', 'user')
-            .addSelect(['user.id', 'user.name'])
-            .where('step.projectId = :projectId', { projectId });
+        //2) 필터용 baseQb
+        const baseQb = this.buildSearchBaseQb(projectId, dto);
 
-        // DTO 기반 필터
-        if (dto.statuses?.length) {
-            baseQb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });
-        }
-        if (dto.managerIds?.length) {
-            baseQb.andWhere('user.id IN (:...managerIds)', { managerIds: dto.managerIds });
-        }
-        if (dto.dateBefore || dto.dateAfter) {
-            baseQb.andWhere(
-                new Brackets((q) => {
-                    if (dto.dateBefore)
-                        q.where('task.deadline <= :dateBefore', {
-                            dateBefore: `${dto.dateBefore} 23:59:59`,
-                        });
-                    if (dto.dateAfter)
-                        q.orWhere('task.deadline >= :dateAfter', {
-                            dateAfter: `${dto.dateAfter} 00:00:00`,
-                        });
-                })
-            );
-        }
-
-        // 2) 전체 개수
+        // 3) 전체 개수
         const totalCount = await baseQb.getCount();
 
-        // 3) 그룹별 5개씩 병렬 조회
+        // 4) 그룹별 5개씩 병렬 조회
         if (view === 'status') {
             const statuses = [Status.NOTSTART, Status.ONGOING, Status.COMPLETED];
             const statusGroups = await Promise.all(
@@ -830,5 +801,125 @@ export class TasksService {
 
             return { projectId, projectName: project.name, steps: stepGroups, totalCount };
         }
+    }
+    async getSearchMoreTasksByStep(
+        userId: number,
+        projectId: number,
+        stepId: number,
+        offset: number,
+        limit: number,
+        dto: GetSearchTaskDto
+    ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
+        // 프로젝트/멤버 검증은 기존 getSearchTask와 동일
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: ['userProjects'],
+        });
+        if (!project) throw new ProjectNotFoundException();
+        const isMember = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!isMember) throw new ProjectForbiddenException();
+
+        if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
+        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
+
+        const baseQb = this.buildSearchBaseQb(projectId, dto);
+
+        const tasks = await baseQb
+            .clone()
+            .andWhere('task.stepId = :stepId', { stepId })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .skip(offset)
+            .take(limit)
+            .getMany();
+
+        const totalCount = await baseQb
+            .clone()
+            .andWhere('task.stepId = :stepId', { stepId })
+            .getCount();
+
+        return { tasks: tasks.map(TaskInStepDto.from), totalCount };
+    }
+
+    async getSearchMoreTasksByStatus(
+        userId: number,
+        projectId: number,
+        status: Status,
+        offset: number,
+        limit: number,
+        dto: GetSearchTaskDto
+    ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        if (!Object.values(Status).includes(status)) {
+            throw new BadRequestException(
+                `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
+            );
+        }
+
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: ['userProjects'],
+        });
+        if (!project) throw new ProjectNotFoundException();
+        const isMember = await this.userProjectRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!isMember) throw new ProjectForbiddenException();
+
+        if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
+        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
+
+        const baseQb = this.buildSearchBaseQb(projectId, dto);
+
+        const tasks = await baseQb
+            .clone()
+            .andWhere('task.status = :status', { status })
+            .orderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
+            .skip(offset)
+            .take(limit)
+            .getMany();
+
+        const totalCount = await baseQb
+            .clone()
+            .andWhere('task.status = :status', { status })
+            .getCount();
+
+        return { tasks: tasks.map(TaskInStatusDto.from), totalCount };
+    }
+
+    //BaseQb  + dto 기반 필터 헬퍼 함수 (검색에서 필터링하는 함수)
+    private buildSearchBaseQb(projectId: number, dto: GetSearchTaskDto) {
+        const qb = this.taskRepository
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
+            .where('step.projectId = :projectId', { projectId });
+
+        if (dto.statuses?.length) {
+            qb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });
+        }
+        if (dto.managerIds?.length) {
+            qb.andWhere('user.id IN (:...managerIds)', { managerIds: dto.managerIds });
+        }
+        if (dto.dateBefore || dto.dateAfter) {
+            qb.andWhere(
+                new Brackets((q) => {
+                    if (dto.dateBefore) {
+                        q.where('task.deadline <= :dateBefore', {
+                            dateBefore: `${dto.dateBefore} 23:59:59`,
+                        });
+                    }
+                    if (dto.dateAfter) {
+                        q.orWhere('task.deadline >= :dateAfter', {
+                            dateAfter: `${dto.dateAfter} 00:00:00`,
+                        });
+                    }
+                })
+            );
+        }
+        return qb;
     }
 }

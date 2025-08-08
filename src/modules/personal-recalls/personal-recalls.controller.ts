@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
-import { PersonalRecallsService } from './personal-recalls.service';
+import { PersonalRecallsService } from './services/personal-recalls.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { UpdatePersonalRecallDto } from './dtos/update-personal-recall.dto';

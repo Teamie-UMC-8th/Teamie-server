@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
-import { Comment } from '../comments.entity';
+import { Comment } from '../entities/comments.entity';
 export class UpdateCommentRequestDto {
     @ApiProperty({
         example: '업무 기한 다음주로 바꿔야할 것 같아요',

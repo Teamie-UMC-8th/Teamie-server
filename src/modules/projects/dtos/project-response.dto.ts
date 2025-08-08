@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
 import { UserWithTasksDto } from '../../mappings/user-projects/dtos/user-with-task.dto';
 
-export class ProjectResponseDto {
+export class ProjectSummaryResponseDto {
     @ApiProperty({
         example: 544844,
         description: '프로젝트 ID',
@@ -33,8 +33,8 @@ export class ProjectResponseDto {
     users: UserWithTasksDto[];
 
     // 정적 메서드: entity → dto 매핑
-    static fromEntity(project: Project): ProjectResponseDto {
-        const dto = new ProjectResponseDto();
+    static fromEntity(project: Project): ProjectSummaryResponseDto {
+        const dto = new ProjectSummaryResponseDto();
         dto.id = project.id;
         dto.name = project.name;
         dto.goal = project.goal;
