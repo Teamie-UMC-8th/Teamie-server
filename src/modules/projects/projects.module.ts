@@ -22,7 +22,7 @@ import { TasksModule } from '../tasks/tasks.module';
         forwardRef(() => StepsModule), // Circular dependency handling
         MasterPortfoliosModule,
         forwardRef(() => PlansModule),
-        TasksModule,
+        forwardRef(() => TasksModule),
     ],
     controllers: [ProjectsController],
     providers: [ProjectsService],
