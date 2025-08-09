@@ -1,5 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule} from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './services/tasks.service';
 import { Task } from './entities/tasks.entity';
@@ -26,7 +26,21 @@ import { ProjectsModule } from '../projects/projects.module';
         forwardRef(() => ProjectsModule),
     ],
     controllers: [TasksController],
-    providers: [TasksService, UploadService, ManagerRepository, TaskRepository, CommentRepository, StepRepository, TaskFileRepository],
-    exports: [TaskRepository, CommentRepository, StepRepository, TaskFileRepository, ManagerRepository],
+    providers: [
+        TasksService,
+        UploadService,
+        ManagerRepository,
+        TaskRepository,
+        CommentRepository,
+        StepRepository,
+        TaskFileRepository,
+    ],
+    exports: [
+        TaskRepository,
+        CommentRepository,
+        StepRepository,
+        TaskFileRepository,
+        ManagerRepository,
+    ],
 })
 export class TasksModule {}

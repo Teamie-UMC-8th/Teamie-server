@@ -8,7 +8,10 @@ import { AICorrection } from '../entities/ai-correction.entity';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserPortfolioCorrectionResponseDto } from '../dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AIGenerationAlreadyExists, ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
+import {
+    AIGenerationAlreadyExists,
+    ProjectNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 import { Project } from '../../projects/entities/projects.entity';
 import { CreatePortfolioCorrectionDto } from '../dtos/create-corrections.dto';
 import { RAGData } from '../entities/rag-data.entity';

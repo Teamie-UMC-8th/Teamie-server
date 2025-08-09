@@ -77,7 +77,7 @@ export class ProjectsService {
         private readonly configService: ConfigService,
         private readonly stepsService: StepsService,
         private readonly masterPortfoliosService: MasterPortfoliosService,
-        private readonly plansService: PlansService,
+        private readonly plansService: PlansService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
@@ -528,8 +528,11 @@ export class ProjectsService {
 
         //팀캘린더 조회
         //1. tasks 카드 조회
-        const tasks: Record<string, CalenderCardResponseDto[]> =
-            await this.getTasksByDeadline(projectId, start, end);
+        const tasks: Record<string, CalenderCardResponseDto[]> = await this.getTasksByDeadline(
+            projectId,
+            start,
+            end
+        );
         //2. plans 카드 조회
         const plans: Record<string, CalenderCardResponseDto[]> =
             await this.plansService.getPlansByDate(projectId, start, end);
@@ -691,29 +694,29 @@ export class ProjectsService {
     }
 
     // 마감일 별 업무 조회
-        async getTasksByDeadline(
-            projectId: number,
-            startDate: Date,
-            endDate: Date
-        ): Promise<Record<string, CalenderCardResponseDto[]>> {
-            const tasks = await this.taskRepository.findCalendarByProjectAndRange(
-                projectId,
-                startDate,
-                endDate
-            );
-    
-            //날짜 별 그룹핑
-            const grouped = tasks.reduce(
-                (acc, curr) => {
-                    const date = curr.date.toISOString().split('T')[0];
-                    if (!acc[date]) acc[date] = [];
-                    acc[date].push(CalenderCardResponseDto.fromTask(curr));
-                    return acc;
-                },
-                {} as Record<string, CalenderCardResponseDto[]>
-            );
-            return grouped;
-        }
+    async getTasksByDeadline(
+        projectId: number,
+        startDate: Date,
+        endDate: Date
+    ): Promise<Record<string, CalenderCardResponseDto[]>> {
+        const tasks = await this.taskRepository.findCalendarByProjectAndRange(
+            projectId,
+            startDate,
+            endDate
+        );
+
+        //날짜 별 그룹핑
+        const grouped = tasks.reduce(
+            (acc, curr) => {
+                const date = curr.date.toISOString().split('T')[0];
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(CalenderCardResponseDto.fromTask(curr));
+                return acc;
+            },
+            {} as Record<string, CalenderCardResponseDto[]>
+        );
+        return grouped;
+    }
 }
 
 export function generateRandomCode(length = 10): string {
@@ -724,7 +727,3 @@ export function generateRandomCode(length = 10): string {
     }
     return code;
 }
-
-
-
-

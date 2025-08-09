@@ -211,7 +211,7 @@ export class TasksController {
     async getStepMore(
         @Param('projectId') projectId: number,
         @Param('stepId') stepId: number,
-        @Query('offset') offset: number,
+        @Query('offset') offset: number
     ) {
         return this.tasksService.getMoreTasksByStep(projectId, stepId, offset);
     }
@@ -225,7 +225,7 @@ export class TasksController {
     async getStatusMore(
         @Param('projectId') projectId: number,
         @Param('status') status: Status,
-        @Query('offset') offset: number,
+        @Query('offset') offset: number
     ) {
         return this.tasksService.getMoreTasksByStatus(projectId, status, offset);
     }
@@ -282,13 +282,7 @@ export class TasksController {
         @Query('offset') offset: number,
         @Query(new ValidationPipe({ transform: true })) dto: GetSearchTaskDto
     ) {
-        return this.tasksService.getSearchMoreTasksByStep(
-            userId,
-            projectId,
-            stepId,
-            offset,
-            dto
-        );
+        return this.tasksService.getSearchMoreTasksByStep(userId, projectId, stepId, offset, dto);
     }
 
     @ApiOperation({
@@ -304,12 +298,6 @@ export class TasksController {
         @Query('offset') offset: number,
         @Query(new ValidationPipe({ transform: true })) dto: GetSearchTaskDto
     ) {
-        return this.tasksService.getSearchMoreTasksByStatus(
-            userId,
-            projectId,
-            status,
-            offset,
-            dto
-        );
+        return this.tasksService.getSearchMoreTasksByStatus(userId, projectId, status, offset, dto);
     }
 }
