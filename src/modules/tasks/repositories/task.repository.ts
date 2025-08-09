@@ -6,12 +6,16 @@ import { TaskNotFoundException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
 import { Status } from '../../../common/enums/status.enum';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TaskRepository {
     constructor(
         @InjectRepository(Task)
-        private readonly repo: Repository<Task>
+        private readonly repo: Repository<Task>,
+
+        private readonly configService: ConfigService,
+        
     ) {}
 
     /* =======================
@@ -98,6 +102,7 @@ export class TaskRepository {
         projectId: number,
         status: string
     ): Promise<Task[]> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
@@ -108,7 +113,7 @@ export class TaskRepository {
             .andWhere('task.status = :status', { status })
             .orderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
-            .limit(5)
+            .limit(limit)
             .getMany();
     }
 
@@ -117,6 +122,7 @@ export class TaskRepository {
         projectId: number,
         stepId: number
     ): Promise<Task[]> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
@@ -127,7 +133,7 @@ export class TaskRepository {
             .andWhere('task.stepId = :stepId', { stepId })
             .orderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
-            .limit(5)
+            .limit(limit)
             .getMany();
     }
 
