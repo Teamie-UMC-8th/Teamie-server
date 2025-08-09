@@ -84,14 +84,16 @@ export class ProjectsService {
 
         let savedProject: Project;
         try {
-            savedProject = await this.projectRepository.createProjectWithLeader(
-                name,
-                userId,
-                qr.manager
-            );
+            savedProject = await this.projectRepository.createProjectWithLeader(name, qr.manager);
         } catch (e) {
             throw e; // 인터셉터에서 롤백됨
         }
+        await this.userProjectRepository.updateUserRole(
+            userId,
+            savedProject.id,
+            projectPermission.LEAD,
+            qr.manager
+        );
 
         const { code, expiresAt } = await this.inviteStore.saveActive(
             savedProject.id,
@@ -350,7 +352,7 @@ export class ProjectsService {
         await this.userProjectRepository.updateUserRole(projectId, userId, dto.role, qr.manager);
 
         // 4. 전체 userProject 조회 (task 정보 포함)
-        const allUserProjects = await this.projectRepository.findAllUserProjectsByProjectId(
+        const allUserProjects = await this.userProjectRepository.findAllUserProjectsByProjectId(
             projectId,
             qr.manager
         );
@@ -406,7 +408,8 @@ export class ProjectsService {
     }
 
     async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
-        const userProjects = await this.projectRepository.findAllUserProjectsByProjectId(projectId);
+        const userProjects =
+            await this.userProjectRepository.findAllUserProjectsByProjectId(projectId);
         return userProjects.map((up) => UserProfile.from(up.user));
     }
 

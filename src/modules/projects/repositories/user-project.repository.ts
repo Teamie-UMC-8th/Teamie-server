@@ -16,6 +16,9 @@ export class UserProjectRepository {
         @InjectRepository(UserProject)
         private readonly userProjectRepository: Repository<UserProject>
     ) {}
+    private m(manager?: EntityManager) {
+        return manager ?? this.userProjectRepository.manager;
+    }
     async findUserProject(projectId: number, userId: number): Promise<UserProject> {
         const userProject = await this.userProjectRepository.findOne({
             where: { project: { id: projectId }, user: { id: userId } },
@@ -29,6 +32,17 @@ export class UserProjectRepository {
             relations: ['user'],
         });
         return users;
+    }
+
+    async findAllUserProjectsByProjectId(
+        projectId: number,
+        manager?: EntityManager
+    ): Promise<UserProject[]> {
+        const m = this.m(manager);
+        return await m.find(UserProject, {
+            where: { project: { id: projectId } },
+            relations: ['user', 'user.managers', 'user.managers.task'],
+        });
     }
 
     async findProjectLeaderByProjectId(
@@ -54,6 +68,11 @@ export class UserProjectRepository {
         for (const { userId, projectNum } of raws) {
             await manager.update(User, { id: userId }, { projectNum: projectNum + 1 });
         }
+    }
+
+    // userProject 저장
+    async saveUserProject(userProject: UserProject, manager: EntityManager) {
+        return await manager.save(userProject);
     }
 
     //멤버로 프로젝트에 추가

@@ -29,32 +29,12 @@ export class ProjectRepository {
         if (!project) throw new ProjectNotFoundException();
         return project;
     }
-
-    async findAllUserProjectsByProjectId(
-        projectId: number,
-        manager?: EntityManager
-    ): Promise<UserProject[]> {
-        const m = this.m(manager);
-        return await m.find(UserProject, {
-            where: { project: { id: projectId } },
-            relations: ['user', 'user.managers', 'user.managers.task'],
-        });
-    }
-
     // 프로젝트 저장 (트랜잭션 컨텍스트 주입)
     async saveProject(project: Project, manager: EntityManager): Promise<Project> {
         return await manager.save(Project, project);
     }
-    // userProject 저장
-    async saveUserProject(userProject: UserProject, manager: EntityManager) {
-        return await manager.save(userProject);
-    }
 
-    async createProjectWithLeader(
-        name: string,
-        ownerUserId: number,
-        manager: EntityManager
-    ): Promise<Project> {
+    async createProjectWithLeader(name: string, manager: EntityManager): Promise<Project> {
         try {
             const saved = await manager.save(Project, {
                 name,
@@ -62,13 +42,6 @@ export class ProjectRepository {
                 rule: '',
                 isCompleted: false,
                 completedAt: null,
-            });
-
-            await manager.save(UserProject, {
-                user: { id: ownerUserId },
-                project: saved,
-                permission: projectPermission.LEAD,
-                role: '',
             });
 
             return saved;
