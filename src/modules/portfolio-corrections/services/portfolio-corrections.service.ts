@@ -2,7 +2,6 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { correctionSchema, Correction } from 'src/infra/llm/schemas/portfolio-correction.schema';
-import z from 'zod';
 import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { AICorrection } from '../entities/ai-correction.entity';
@@ -17,6 +16,7 @@ import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
 import { ProjectResponseDto } from '../dtos/project-response.dto';
 import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
 import { MasterPortfolioAI } from '../../master-portfolios/entities/master-portfolio-ai.entity';
+import { RagService } from 'src/infra/llm/rag.service';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -32,6 +32,7 @@ async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
 export class PortfolioCorrectionsService {
     constructor(
         private readonly llmService: LLMService,
+        private readonly ragService: RagService,
         private readonly promptLoader: PromptLoader,
         @InjectRepository(PortfolioCorrection)
         private readonly correctionRepository: Repository<PortfolioCorrection>,
@@ -248,7 +249,8 @@ export class PortfolioCorrectionsService {
     async startRAG(qr: QueryRunner, correctionId: number) {
         await checkCorrectionExists(qr, correctionId);
 
-        const companyProfile = await this.llmService.startRAG(qr, correctionId);
+        // TODO: correctionId로 제출처, 직무명, JD 등을 DB에서 가져와 사용
+        const companyProfile = await this.ragService.startRAG(qr, correctionId);
         await qr.manager.update(PortfolioCorrection, correctionId, {
             companyInsight: companyProfile,
         });

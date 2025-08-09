@@ -7,17 +7,8 @@ import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { TavilySearchAPIRetriever } from '@langchain/community/retrievers/tavily_search_api';
-import {
-    Correction,
-    correctionSchema,
-    SearchQuery,
-    searchQuerySchema,
-} from './schemas/portfolio-correction.schema';
-import { StringOutputParser } from '@langchain/core/output_parsers';
+import { Correction, correctionSchema } from './schemas/portfolio-correction.schema';
 import { QueryRunner } from 'typeorm';
-import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.entity';
-import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 
 @Injectable()
@@ -25,38 +16,10 @@ export class LLMService {
     private apiKey?: string;
     private baseURL: string;
     private correctionLLM: ChatOpenAI;
-    private queryLLM: ChatOpenAI;
-    private ragLLM: ChatOpenAI;
-    private retriever: TavilySearchAPIRetriever;
 
     constructor(private readonly promptLoader: PromptLoader) {
         this.apiKey = process.env.OPENROUTER_API_KEY;
         this.baseURL = process.env.OPENROUTER_API_BASE_URL || 'https://openrouter.ai/api/v1';
-
-        this.queryLLM = new ChatOpenAI({
-            model:
-                process.env.QUERY_GENERATION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
-            apiKey: this.apiKey,
-            configuration: {
-                baseURL: this.baseURL,
-            },
-        });
-
-        this.ragLLM = new ChatOpenAI({
-            model: process.env.RAG_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
-            apiKey: this.apiKey,
-            configuration: {
-                baseURL: this.baseURL,
-            },
-        });
-
-        this.retriever = new TavilySearchAPIRetriever({
-            apiKey: process.env.TAVILY_API_KEY,
-            searchDepth: 'advanced',
-            k: parseInt(process.env.REQUIRED_RESULTS_COUNT || '2', 10),
-        });
 
         this.correctionLLM = new ChatOpenAI({
             model: process.env.LLM_CORRECTION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
@@ -94,7 +57,6 @@ export class LLMService {
                 `LLM API 호출 실패: ${completions.status} - ${errorText}`
             );
         }
-
         return completions;
     }
 
@@ -131,6 +93,7 @@ export class LLMService {
         return questions;
     }
 
+    // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(projectData: any) {
         let masterPortfolioPrompt: string;
         try {
@@ -167,6 +130,7 @@ export class LLMService {
         return responseJsonData;
     }
 
+    // AI 첨삭 생성
     async generateCorrection(qr: QueryRunner, correctionId: number, portfolioData: any) {
         const portfolioCorrectionData = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },

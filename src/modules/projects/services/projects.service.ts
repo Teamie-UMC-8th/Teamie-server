@@ -43,6 +43,7 @@ import { ValidateInviteResponseDto } from '../dtos/validate-invite.dto';
 import { PlansService } from '../../plans/services/plans.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { UserProfile } from '../../../common/dtos/user-profile.dto';
+import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
@@ -69,13 +70,14 @@ export class ProjectsService {
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
 
+        private readonly taskRepository: TaskRepository,
+
         @Inject('REDIS_CLIENT')
         private readonly redis: RedisClientType,
         private readonly configService: ConfigService,
         private readonly stepsService: StepsService,
         private readonly masterPortfoliosService: MasterPortfoliosService,
         private readonly plansService: PlansService,
-        private readonly tasksService: TasksService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
@@ -527,7 +529,7 @@ export class ProjectsService {
         //팀캘린더 조회
         //1. tasks 카드 조회
         const tasks: Record<string, CalenderCardResponseDto[]> =
-            await this.tasksService.getTasksByDeadline(projectId, start, end);
+            await this.getTasksByDeadline(projectId, start, end);
         //2. plans 카드 조회
         const plans: Record<string, CalenderCardResponseDto[]> =
             await this.plansService.getPlansByDate(projectId, start, end);
@@ -607,6 +609,8 @@ export class ProjectsService {
         return !!mapping;
     }
 
+    //프로젝트 멤버인지 확인 및 예외처리
+
     // 사용자의 프로젝트 권한 조회
     async getUserPermissionOfProject(userId: number, projectId: number) {
         const userProject = await this.userProjectRepository.findOne({
@@ -685,6 +689,31 @@ export class ProjectsService {
 
         return userProjects.map((up) => UserProfile.from(up.user));
     }
+
+    // 마감일 별 업무 조회
+        async getTasksByDeadline(
+            projectId: number,
+            startDate: Date,
+            endDate: Date
+        ): Promise<Record<string, CalenderCardResponseDto[]>> {
+            const tasks = await this.taskRepository.findCalendarByProjectAndRange(
+                projectId,
+                startDate,
+                endDate
+            );
+    
+            //날짜 별 그룹핑
+            const grouped = tasks.reduce(
+                (acc, curr) => {
+                    const date = curr.date.toISOString().split('T')[0];
+                    if (!acc[date]) acc[date] = [];
+                    acc[date].push(CalenderCardResponseDto.fromTask(curr));
+                    return acc;
+                },
+                {} as Record<string, CalenderCardResponseDto[]>
+            );
+            return grouped;
+        }
 }
 
 export function generateRandomCode(length = 10): string {
@@ -695,3 +724,7 @@ export function generateRandomCode(length = 10): string {
     }
     return code;
 }
+
+
+
+
