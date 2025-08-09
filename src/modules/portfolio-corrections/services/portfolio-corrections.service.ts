@@ -8,13 +8,17 @@ import { AICorrection } from '../entities/ai-correction.entity';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserPortfolioCorrectionResponseDto } from '../dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
+import {
+    AIGenerationAlreadyExists,
+    ProjectNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 import { Project } from '../../projects/entities/projects.entity';
 import { CreatePortfolioCorrectionDto } from '../dtos/create-corrections.dto';
 import { RAGData } from '../entities/rag-data.entity';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
 import { ProjectResponseDto } from '../dtos/project-response.dto';
 import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
+import { MasterPortfolioAI } from '../../master-portfolios/entities/master-portfolio-ai.entity';
 import { RagService } from 'src/infra/llm/rag.service';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
@@ -62,19 +66,21 @@ export class PortfolioCorrectionsService {
         return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 
-    // TODO: selectedProjects에 해당하는 id들 DB에 저장하기
+    // TODO: 커스텀 에러 생성 필요
     async generateCorrection(
         qr: QueryRunner,
         userId: number,
         correctionId: number,
         selectedProjects: number[]
     ) {
-        const dummyData = await this.promptLoader.load('dummy-correction.json');
+        // selectedProjects가 비어있으면 에러 처리
+        if (selectedProjects.length === 0) {
+            throw new InternalServerErrorException('프로젝트를 선택해야 합니다.');
+        }
 
-        // 프로젝트 최대 선택 개수 6개로 제한
-        if (selectedProjects.length > 6) {
-            // TODO: 커스텀 에러 생성 필요
-            throw new InternalServerErrorException('프로젝트는 최대 6개까지 선택할 수 있습니다.');
+        // 프로젝트 최대 선택 개수 제한
+        if (selectedProjects.length > parseInt(process.env.MAX_SELECTED_PROJECTS || '6', 10)) {
+            throw new InternalServerErrorException(`프로젝트는 최대 ${process.env.MAX_SELECTED_PROJECTS || '6'}개까지 선택할 수 있습니다.`);
         }
 
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -85,20 +91,51 @@ export class PortfolioCorrectionsService {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
 
-        try {
-            const correctionPromises = selectedProjects.map(async (projectId) => {
-                // 각 프로젝트마다 portfolioData가 존재
-                // TODO: 실제 데이터로 교체 필요 (프로젝트명도 가져오기)
-                const portfolioData = await this.promptLoader.load('masterportfolio.json');
-                const projectName = `임시 프로젝트명 ${projectId}`;
+        await Promise.all(
+            selectedProjects.map(async (projectId) => {
+                // projectId에 해당하는 프로젝트가 있는지 확인
+                const project = await qr.manager.findOne(Project, {
+                    where: { id: projectId },
+                });
+                if (!project) {
+                    throw new ProjectNotFoundException(
+                        `프로젝트가 존재하지 않습니다. ID: ${projectId}`
+                    );
+                }
+
+                // 프로젝트에 해당하는 마스터 포트폴리오 AI 결과가 있는지 확인
+                const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
+                    where: { project: { id: projectId }, user: { id: userId } },
+                });
+                if (!portfolioData) {
+                    throw new NotFoundException(
+                        `마스터 포트폴리오 AI 결과가 존재하지 않습니다. 프로젝트 ID: ${projectId}`
+                    );
+                }
 
                 // 기존 첨삭 결과가 존재하는지 확인
                 const existingAICorrection = await qr.manager.findOne(AICorrection, {
                     where: { projectId, portfolioCorrection: { id: correctionId } },
                 });
                 if (existingAICorrection) {
-                    throw new AIGenerationAlreadyExists(`project ID: ${projectId}`);
+                    throw new AIGenerationAlreadyExists(
+                        `첨삭 ID: ${correctionId}, 프로젝트 ID: ${projectId}`
+                    );
                 }
+            })
+        );
+
+        try {
+            const correctionPromises = selectedProjects.map(async (projectId) => {
+                // 프로젝트에 해당하는 포트폴리오 데이터 조회
+                const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
+                    where: { project: { id: projectId }, user: { id: userId } },
+                });
+                const project = await qr.manager.findOne(Project, {
+                    where: { id: projectId },
+                    select: ['name'],
+                });
+                const projectName = project?.name;
 
                 // TODO: 생성 중 실패 시에 롤백 처리 필요
                 // 진행 상태 업데이트
@@ -152,10 +189,6 @@ export class PortfolioCorrectionsService {
 
             return mergedCorrection;
         } catch (error) {
-            if (error instanceof AIGenerationAlreadyExists) {
-                throw error;
-            }
-
             console.error('첨삭 과정 중 실패: ', error);
             throw new Error('첨삭 과정 중 실패');
         }
