@@ -9,7 +9,7 @@ export class EventBusService {
         this.eventEmitter.emit(event, payload);
     }
 
-    publishAsync<T>(event: string, payload: T) {
-        this.eventEmitter.emitAsync(event, payload);
+    async publishAsync<T>(event: string, payload: T) {
+        return this.eventEmitter.emitAsync(event, payload);
     }
 }
