@@ -84,7 +84,7 @@ export class ProjectsService {
 
         let savedProject: Project;
         try {
-            savedProject = await this.projectRepository.createProjectWithLeader(name, qr.manager);
+            savedProject = await this.projectRepository.createProject(name, qr.manager);
         } catch (e) {
             throw e; // 인터셉터에서 롤백됨
         }
