@@ -2,13 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Project } from '../entities/projects.entity';
-import { UserProject } from '../entities/userProjects.entity';
 import {
     ProjectNotFoundException,
     ProjectTransactionException,
     AlreadyProjectCompletedException,
 } from 'src/common/exceptions/custom.errors';
-import { projectPermission } from 'src/common/enums/project-permission.enum';
 
 @Injectable()
 export class ProjectRepository {
@@ -34,7 +32,7 @@ export class ProjectRepository {
         return await manager.save(Project, project);
     }
 
-    async createProjectWithLeader(name: string, manager: EntityManager): Promise<Project> {
+    async createProject(name: string, manager: EntityManager): Promise<Project> {
         try {
             const saved = await manager.save(Project, {
                 name,
