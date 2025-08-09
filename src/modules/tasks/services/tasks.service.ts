@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {

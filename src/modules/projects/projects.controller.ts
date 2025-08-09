@@ -10,7 +10,6 @@ import {
     ParseIntPipe,
     Req,
     ValidationPipe,
-    UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './services/projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -37,7 +36,6 @@ import { PlansService } from '../plans/services/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
-import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 
 @ApiTags('Projects')
 @Controller('/projects')
@@ -47,12 +45,11 @@ export class ProjectsController {
         private readonly plansService: PlansService
     ) {}
 
-    @Post()
-    @ApiBody({ type: CreateProjectDto })
     @ApiOperation({ summary: '프로젝트 생성', description: '새로운 프로젝트를 생성합니다.' })
     @ApiCommonResponse(CreateProjectResponseDto)
     @ApiCommonErrorResponse('UNAUTHORIZED_USER', '인증되지 않은 사용자입니다.') //추후에 실제 구현 필요
     @Transactional()
+    @Post()
     async createProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -61,7 +58,6 @@ export class ProjectsController {
         return await this.projectsService.createProject(req.queryRunner, dto, userId);
     }
 
-    @Get('/join/validate')
     @ApiOperation({
         summary: '초대코드 유효성 검사',
         description: 'inviteCode가 유효한지 확인합니다.',
@@ -71,14 +67,15 @@ export class ProjectsController {
     @ApiCommonErrorResponse('PROJECT_ALREADY_COMPLETED', '이미 완료된 프로젝트입니다', 403)
     @ApiCommonErrorResponse('EXPIRED_INVITE_CODE', '유효기간이 지난 url입니다.', 404)
     @ApiCommonErrorResponse('ALREDY_JOIN', '이미 프로젝트에 참여하였습니다.', 409)
+    @Get('/join/validate')
     async validateInvite(@User('id') userId: number, @Query('inviteCode') inviteCode: string) {
         return await this.projectsService.joinValidate(userId, inviteCode);
     }
 
-    @Post('/join')
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
     @ApiCommonResponse(JoinProjectResponseDto)
     @Transactional()
+    @Post('/join')
     async joinProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -87,7 +84,6 @@ export class ProjectsController {
         return await this.projectsService.joinProject(req.queryRunner, userId, dto);
     }
 
-    @Get('/:projectId')
     @ApiOperation({
         summary: '프로젝트 상세 조회',
         description: '프로젝트의 상세 정보를 조회합니다.',
@@ -100,6 +96,7 @@ export class ProjectsController {
         '해당 프로젝트에 접근 권한이 없습니다.',
         403
     )
+    @Get('/:projectId')
     async getProjectFullData(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number
@@ -107,14 +104,13 @@ export class ProjectsController {
         return await this.projectsService.getProjectFullData(userId, projectId);
     }
 
-    @Patch('/:projectId')
     @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiBody({ type: UpdateProjectDto })
     @ApiCommonResponse(AllProjectResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse('FORBIDDEN_USER_FOR_UPDATE', '해당 항목을 수정할 권한이 없습니다.', 403)
     @Transactional()
+    @Patch('/:projectId')
     async updateProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -124,7 +120,6 @@ export class ProjectsController {
         return await this.projectsService.updateProject(req.queryRunner, userId, projectId, dto);
     }
 
-    @Patch(':projectId/complete')
     @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(CompleteProjectResponseDto)
@@ -135,6 +130,7 @@ export class ProjectsController {
         403
     )
     @Transactional()
+    @Patch(':projectId/complete')
     async completeProject(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -143,16 +139,15 @@ export class ProjectsController {
         return await this.projectsService.completeProject(req.queryRunner, userId, projectId);
     }
 
-    @Post(':projectId/steps')
     @ApiOperation({
         summary: '프로젝트 step 생성',
         description: '프로젝트에 새로운 step을 추가합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiBody({ type: CreateStepDto })
     @ApiCommonResponse(CreateStepResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @Transactional()
+    @Post(':projectId/steps')
     async createStep(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -162,16 +157,15 @@ export class ProjectsController {
         return await this.projectsService.createStep(req.queryRunner, dto, projectId, userId);
     }
 
-    @Post(':projectId/posts')
     @ApiOperation({
         summary: '게시글 포스트잇 생성',
         description: '게시판에 새로운 포스트잇을 추가합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number })
-    @ApiBody({ type: CreatePostDto })
     @ApiCommonResponse(CreatePostResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse('POSTS_EXCEEDED', '포스트잇은 10개까지 생성될 수 있습니다.', 409)
+    @Post(':projectId/posts')
     async createPost(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
@@ -180,7 +174,6 @@ export class ProjectsController {
         return await this.projectsService.createPost(dto, userId, projectId);
     }
 
-    @Delete(':projectId/posts/:postId')
     @ApiOperation({
         summary: '게시글 포스트잇 삭제',
         description: '게시판에서 포스트잇을 삭제합니다.',
@@ -201,6 +194,7 @@ export class ProjectsController {
         'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
         500
     )
+    @Delete(':projectId/posts/:postId')
     async deletePost(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
@@ -209,13 +203,11 @@ export class ProjectsController {
         return await this.projectsService.deletePost(postId, userId, projectId);
     }
 
-    @Patch(':projectId/leader')
     @ApiOperation({
         summary: '프로젝트 팀장 변경',
         description: '프로젝트의 팀장을 변경합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiBody({ type: ChangeLeaderDto })
     @ApiCommonResponse(ChangeLeaderResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse(
@@ -226,6 +218,7 @@ export class ProjectsController {
     @ApiCommonErrorResponse('ASIGNEE_NOT_MEMBER', '해당 사람은 프로젝트 멤버가 아닙니다.', 409)
     @ApiCommonErrorResponse('ALREDY_LEADER', '이미 팀장인 사용자입니다.', 409)
     @Transactional()
+    @Patch(':projectId/leader')
     async changeProjectLeader(
         @Req() req: TransactionalRequest,
         @User('id') currentUserId: number,
@@ -240,17 +233,16 @@ export class ProjectsController {
         );
     }
 
-    @Patch('/:projectId/profile')
     @ApiOperation({
         summary: '프로필 카드 수정',
         description: '프로필 카드를 수정합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiBody({ type: UpdateProfileDto })
     @ApiCommonResponse(UpdateProfileResponseDto)
     @ApiCommonErrorResponse('NOT_YOUR_PROFILE', '자신의 프로필만 수정할 수 있습니다.')
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @Transactional()
+    @Patch('/:projectId/profile')
     async changeProfile(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
@@ -266,7 +258,6 @@ export class ProjectsController {
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
-    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
         @User('id') userId: number,
@@ -275,7 +266,7 @@ export class ProjectsController {
     ) {
         const startDate = query.startDate;
         const endDate = query.endDate;
-        return await this.projectsService.getTeamCalender(projectId, startDate, endDate);
+        return await this.projectsService.getTeamCalender(userId, projectId, startDate, endDate);
     }
 
     @ApiOperation({
@@ -297,24 +288,12 @@ export class ProjectsController {
 
     @ApiOperation({
         summary: '프로젝트 참여자 리스트 조회',
-        description: '프로젝트에 참여자 리스트를 조회합니다.',
+        description: '프로젝에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiOkResponse({ type: UserProfile, isArray: true })
     @Get('/:projectId/members')
     async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
         return await this.projectsService.getProjectMemberList(projectId);
-    }
-
-    @ApiOperation({
-        summary: '사용자의 프로젝트 권한 조회 API',
-        description: '사용자의 프로젝트 권한을 조회합니다.',
-    })
-    @Get('/:projectId/my-permission')
-    async getUserProjectPermission(
-        @User('id') userId: number,
-        @Param('projectId', ParseIntPipe) projectId: number
-    ) {
-        return await this.projectsService.getUserPermissionOfProject(userId, projectId);
     }
 }
