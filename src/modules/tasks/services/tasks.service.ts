@@ -12,7 +12,6 @@ import {
 } from '../../comments/dto/create-comment.dto';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from '../dtos/update-task.dto';
 import { Manager } from '../../mappings/managers/managers.entity';
-import { Project } from '../../projects/entities/projects.entity';
 import { DeleteTaskResponseDto } from '../dtos/delete-task.dto';
 import { TaskFile } from '../../mappings/task-files/task-files.entity';
 import { Comment as CommentEntity } from '../../comments/entities/comments.entity';
@@ -27,7 +26,6 @@ import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
 import { TaskNotFoundException, BadRequestException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
 import { UsersService } from '../../users/services/users.service';
 import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
@@ -79,8 +77,13 @@ export class TasksService {
         await this.projectsService.checkProjectMember(userId, projectId);
 
         // 업무 생성
-        const task = await this.taskRepository.createTaskWithQueryRunner(queryRunner, targetStep);
-
+        const task = queryRunner.manager.create(Task, {
+            targetStep,
+            name: '빈 업무',
+            memo: null,
+            deadline: null,
+        });
+        await this.taskRepository.saveWithQueryRunner(queryRunner, task);
         return CreateTaskResponseDto.fromEntity(task);
     }
 
@@ -209,6 +212,8 @@ export class TasksService {
             throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
         }
 
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         // 1. 프로젝트 존재 검증
         const project = await this.projectsService.assertProjectExists(projectId);
 
@@ -227,7 +232,8 @@ export class TasksService {
                 const tasks =
                     await this.taskRepository.findTop5ByProjectIdAndStatusOrderByDeadlineAsc(
                         projectId,
-                        status
+                        status,
+                        limit
                     );
 
                 statusGroups.push({
@@ -251,7 +257,8 @@ export class TasksService {
                 const tasks =
                     await this.taskRepository.findTop5ByProjectIdAndStepOrderByDeadlineAsc(
                         projectId,
-                        step.id
+                        step.id,
+                        limit
                     );
 
                 stepGroups.push({

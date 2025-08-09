@@ -4,18 +4,13 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Task } from '../entities/tasks.entity';
 import { TaskNotFoundException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import { Step } from '../../steps/entities/steps.entity';
 import { Status } from '../../../common/enums/status.enum';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TaskRepository {
     constructor(
         @InjectRepository(Task)
-        private readonly repo: Repository<Task>,
-
-        private readonly configService: ConfigService,
-        
+        private readonly repo: Repository<Task>
     ) {}
 
     /* =======================
@@ -62,17 +57,6 @@ export class TaskRepository {
      * =======================
      */
 
-    // task 생성
-    async createTaskWithQueryRunner(queryRunner: QueryRunner, step: Step): Promise<Task> {
-        const task = queryRunner.manager.create(Task, {
-            step,
-            name: '빈 업무',
-            memo: null,
-            deadline: null,
-        });
-        return queryRunner.manager.save(task);
-    }
-
     //task 저장
     async saveWithQueryRunner(queryRunner: QueryRunner, task: Task): Promise<Task> {
         return queryRunner.manager.save(Task, task);
@@ -100,9 +84,9 @@ export class TaskRepository {
     // 진행 상황별로 업무 5개씩 조회 마감기한 오름차순
     async findTop5ByProjectIdAndStatusOrderByDeadlineAsc(
         projectId: number,
-        status: string
+        status: string,
+        limit: number
     ): Promise<Task[]> {
-        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
@@ -120,9 +104,9 @@ export class TaskRepository {
     // step 별로 업무 5개씩 조회 마감기한 오름차순
     async findTop5ByProjectIdAndStepOrderByDeadlineAsc(
         projectId: number,
-        stepId: number
+        stepId: number,
+        limit: number
     ): Promise<Task[]> {
-        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
