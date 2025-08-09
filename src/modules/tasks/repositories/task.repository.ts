@@ -14,6 +14,11 @@ export class TaskRepository {
         private readonly repo: Repository<Task>
     ) {}
 
+    /* =======================
+     * Task 조회 관련 메서드
+     * =======================
+     */
+
     //task 조회
     async findById(taskId: number): Promise<Task> {
         const task = await this.repo.findOne({
@@ -37,6 +42,47 @@ export class TaskRepository {
         if (!task) throw new TaskNotFoundException();
         return task;
     }
+
+    //프로젝트 기준 Task 조회용 공통 베이스 QB
+    getProjectTasksBaseQb(projectId: number): SelectQueryBuilder<Task> {
+        return this.repo
+            .createQueryBuilder('task')
+            .leftJoinAndSelect('task.step', 'step')
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
+            .where('step.projectId = :projectId', { projectId });
+    }
+
+    /* =======================
+     * Task 생성/수정/삭제 관련 메서드
+     * =======================
+     */
+
+    // task 생성
+    async createTaskWithQueryRunner(queryRunner: QueryRunner, step: Step): Promise<Task> {
+        const task = queryRunner.manager.create(Task, {
+            step,
+            name: '빈 업무',
+            memo: null,
+            deadline: null,
+        });
+        return queryRunner.manager.save(task);
+    }
+
+    //task 저장
+    async saveWithQueryRunner(queryRunner: QueryRunner, task: Task): Promise<Task> {
+        return queryRunner.manager.save(Task, task);
+    }
+
+    // task 삭제
+    async deleteWithQueryRunner(queryRunner: QueryRunner, taskId: number): Promise<void> {
+        await queryRunner.manager.delete(Task, { id: taskId });
+    }
+
+    /* =======================
+     * Task 조회 조건 및 페이징 관련 메서드
+     * =======================
+     */
 
     //프로젝트 별 task 개수 조회
     async countByProjectId(projectId: number): Promise<number> {
@@ -85,26 +131,26 @@ export class TaskRepository {
             .getMany();
     }
 
-    // task 생성
-    async createTaskWithQueryRunner(queryRunner: QueryRunner, step: Step): Promise<Task> {
-        const task = queryRunner.manager.create(Task, {
-            step,
-            name: '빈 업무',
-            memo: null,
-            deadline: null,
-        });
-        return queryRunner.manager.save(task);
+    //  프로젝트와 날짜 범위에 따른 업무 일정 조회
+    async findCalendarByProjectAndRange(
+        projectId: number,
+        startDate: Date,
+        endDate: Date
+    ): Promise<Array<{ id: number; name: string; date: Date }>> {
+        return this.repo
+            .createQueryBuilder('task')
+            .leftJoin('task.step', 'step')
+            .select(['task.deadline AS date', 'task.id AS id', 'task.name AS name'])
+            .where('step.projectId = :projectId', { projectId })
+            .andWhere('task.deadline BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .orderBy('task.deadline', 'ASC')
+            .getRawMany();
     }
 
-    //task 저장
-    async saveWithQueryRunner(queryRunner: QueryRunner, task: Task): Promise<Task> {
-        return queryRunner.manager.save(Task, task);
-    }
-
-    // task 삭제
-    async deleteWithQueryRunner(queryRunner: QueryRunner, taskId: number): Promise<void> {
-        await queryRunner.manager.delete(Task, { id: taskId });
-    }
+    /* =======================
+     * Task 페이징 관련 메서드
+     * =======================
+     */
 
     // step별 업무 더보기
     async findByProjectAndStepPaginated(
@@ -170,44 +216,28 @@ export class TaskRepository {
         return { items, totalCount };
     }
 
-    //  프로젝트와 날짜 범위에 따른 업무 일정 조회
-    async findCalendarByProjectAndRange(
+    /* =======================
+     * Task 프로젝트 별 나의 업무 조회
+     * =======================
+     */
+
+    //조건에 맞는 task들의 ID만 반환
+    async findTaskIdsForUserAssignedOngoingTasks(
         projectId: number,
-        startDate: Date,
-        endDate: Date
-    ): Promise<Array<{ id: number; name: string; date: Date }>> {
+        userId: number,
+        statuses: Status[],
+        maxCardNum: number
+    ): Promise<{ id: number }[]> {
         return this.repo
             .createQueryBuilder('task')
             .leftJoin('task.step', 'step')
-            .select(['task.deadline AS date', 'task.id AS id', 'task.name AS name'])
             .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.deadline BETWEEN :startDate AND :endDate', { startDate, endDate })
-            .orderBy('task.deadline', 'ASC')
-            .getRawMany();
-    }
-
-    /*
-     * 진행중/시작전 업무를 마감일/생성일 기준으로 정렬하여 상위 N개 반환
-     * (N+1 방지 위해: 1) id만 선조회 → 2) id들로 상세 로딩)
-     */
-    async findUserAssignedOngoingTasksForDashboard(
-        projectId: number,
-        userId: number,
-        maxCardNum: number
-    ): Promise<Task[]> {
-        // 1) 조건에 맞는 task id만 선조회
-        const idRows = await this.repo
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 'step')
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.status IN (:...statuses)', {
-                statuses: [Status.ONGOING, Status.NOTSTART],
-            })
+            .andWhere('task.status IN (:...statuses)', { statuses })
             .andWhere((qb) => {
                 const sub = qb
                     .subQuery()
                     .select('1')
-                    .from('manager', 'm') // 매니저 조인테이블 실제 이름 확인
+                    .from('manager', 'm')
                     .where('m.taskId = task.id')
                     .andWhere('m.userId = :userId', { userId })
                     .getQuery();
@@ -218,36 +248,17 @@ export class TaskRepository {
             .addOrderBy('task.createdAt', 'ASC')
             .limit(maxCardNum)
             .select('task.id', 'id')
-            .getRawMany<{ id: number }>();
+            .getRawMany();
+    }
 
-        const ids = idRows.map((r) => r.id);
-        if (ids.length === 0) return [];
-
-        // 2) id들로 상세 로딩 (step, managers, user까지)
-        const tasks = await this.repo
+    //주어진 ID들의 task 상세 정보 배열 반환
+    async findTasksByIds(ids: number[]): Promise<Task[]> {
+        return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
             .leftJoinAndSelect('task.managers', 'managers')
             .leftJoinAndSelect('managers.user', 'user')
             .whereInIds(ids)
-            .orderBy('task.deadline IS NULL', 'ASC')
-            .addOrderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
             .getMany();
-
-        const order = new Map(ids.map((id, i) => [id, i]));
-        tasks.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-
-        return tasks;
-    }
-
-    //프로젝트 기준 Task 조회용 공통 베이스 QB
-    getProjectTasksBaseQb(projectId: number): SelectQueryBuilder<Task> {
-        return this.repo
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoinAndSelect('task.managers', 'manager')
-            .leftJoinAndSelect('manager.user', 'user')
-            .where('step.projectId = :projectId', { projectId });
     }
 }

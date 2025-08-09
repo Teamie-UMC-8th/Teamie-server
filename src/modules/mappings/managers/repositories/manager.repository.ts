@@ -15,7 +15,6 @@ export class ManagerRepository {
         queryRunner: QueryRunner,
         managers: Manager[]
     ): Promise<Manager[]> {
-        if (!managers?.length) return [];
         return queryRunner.manager.save(Manager, managers);
     }
 

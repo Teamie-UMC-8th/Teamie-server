@@ -41,18 +41,12 @@ export class StepRepository {
     }
 
     async findByProjectId(projectId: number): Promise<Step[]> {
-        const steps = await this.repo.find({
+        return this.repo.find({
             where: { project: { id: projectId } },
             relations: ['project'],
             order: {
                 createdAt: 'ASC',
             },
         });
-
-        if (!steps || steps.length === 0) {
-            throw new StepNotFoundException();
-        }
-
-        return steps;
     }
 }

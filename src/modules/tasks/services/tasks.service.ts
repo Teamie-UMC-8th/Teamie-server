@@ -328,12 +328,11 @@ export class TasksService {
     async getMoreTasksByStep(
         projectId: number,
         stepId: number,
-        offset: number,
-        limit: number = 5
+        offset: number
     ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         await this.stepRepository.findById(stepId);
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const tasks = await this.taskRepository.findByProjectAndStepPaginated(
             projectId,
@@ -350,9 +349,9 @@ export class TasksService {
     async getMoreTasksByStatus(
         projectId: number,
         status: Status,
-        offset: number,
-        limit: number = 5
+        offset: number
     ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         if (!Object.values(Status).includes(status)) {
             throw new BadRequestException(
                 `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
@@ -360,7 +359,6 @@ export class TasksService {
         }
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const tasks = await this.taskRepository.findByProjectAndStatusPaginated(
             projectId,
@@ -381,7 +379,7 @@ export class TasksService {
             throw new BadRequestException('offset은 0 이상이어야 합니다.');
         }
 
-        const limit = 10;
+        const limit = Number(this.configService.get<string>('LIMIT_COMMENTS')) || 10;
 
         // 댓글 조회 (댓글 작성자 + 대댓글 + 대댓글 작성자까지 한번에 조인)
         const comments = await this.commentRepository.findByTaskIdWithCocommentsPaginated(
@@ -442,11 +440,26 @@ export class TasksService {
         cursor?: any
     ): Promise<TaskCardDTO[]> {
         const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
-        const tasks = await this.taskRepository.findUserAssignedOngoingTasksForDashboard(
+
+        // 1. 조건에 맞는 task id만 선조회
+        const idRows = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
             projectId,
             userId,
+            [Status.ONGOING, Status.NOTSTART],
             maxCardNum
         );
+
+        const ids = idRows.map((r) => r.id);
+        if (ids.length === 0) return [];
+
+        // 2. id들로 상세 로딩 (step, managers, user까지)
+        const tasks = await this.taskRepository.findTasksByIds(ids);
+
+        // 3. id 순서대로 정렬
+        const order = new Map(ids.map((id, i) => [id, i]));
+        tasks.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+
+        // 4. 반환값을 DTO로 변환
         return tasks.map((task) => TaskCardDTO.from(task));
     }
 
@@ -456,6 +469,8 @@ export class TasksService {
         view: string,
         dto: GetSearchTaskDto
     ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         if (view !== 'step' && view !== 'status') {
             throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
         }
@@ -481,7 +496,7 @@ export class TasksService {
                         .andWhere('task.status = :status', { status })
                         .orderBy('task.deadline', 'ASC')
                         .addOrderBy('task.createdAt', 'ASC')
-                        .limit(5)
+                        .limit(limit)
                         .getMany();
 
                     return {
@@ -502,7 +517,7 @@ export class TasksService {
                         .andWhere('task.stepId = :stepId', { stepId: step.id })
                         .orderBy('task.deadline', 'ASC')
                         .addOrderBy('task.createdAt', 'ASC')
-                        .limit(5)
+                        .limit(limit)
                         .getMany();
 
                     return {
@@ -521,9 +536,10 @@ export class TasksService {
         projectId: number,
         stepId: number,
         offset: number,
-        limit: number,
         dto: GetSearchTaskDto
     ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         // 프로젝트/멤버 검증은 기존 getSearchTask와 동일
         // 1. 프로젝트 존재 검증
         await this.projectsService.assertProjectExists(projectId);
@@ -532,7 +548,6 @@ export class TasksService {
         await this.projectsService.checkProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const baseQb = this.buildSearchBaseQb(projectId, dto);
 
@@ -558,9 +573,10 @@ export class TasksService {
         projectId: number,
         status: Status,
         offset: number,
-        limit: number,
         dto: GetSearchTaskDto
     ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         if (!Object.values(Status).includes(status)) {
             throw new BadRequestException(
                 `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
@@ -574,7 +590,6 @@ export class TasksService {
         await this.projectsService.checkProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const baseQb = this.buildSearchBaseQb(projectId, dto);
 
