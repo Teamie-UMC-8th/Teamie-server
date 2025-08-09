@@ -78,9 +78,9 @@ export class PortfolioCorrectionsService {
             throw new InternalServerErrorException('프로젝트를 선택해야 합니다.');
         }
 
-        // 프로젝트 최대 선택 개수 6개로 제한
-        if (selectedProjects.length > 6) {
-            throw new InternalServerErrorException('프로젝트는 최대 6개까지 선택할 수 있습니다.');
+        // 프로젝트 최대 선택 개수 제한
+        if (selectedProjects.length > parseInt(process.env.MAX_SELECTED_PROJECTS || '6', 10)) {
+            throw new InternalServerErrorException(`프로젝트는 최대 ${process.env.MAX_SELECTED_PROJECTS || '6'}개까지 선택할 수 있습니다.`);
         }
 
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
