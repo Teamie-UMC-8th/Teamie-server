@@ -36,7 +36,7 @@ import { PlansService } from '../plans/services/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
-
+import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {

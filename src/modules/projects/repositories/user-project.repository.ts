@@ -93,6 +93,27 @@ export class UserProjectRepository {
             throw new ProjectTransactionException();
         }
     }
+
+    //멤버로 프로젝트에 추가
+    async saveLeaderToProject(
+        userId: number,
+        projectId: number,
+        role: string,
+        manager: EntityManager
+    ): Promise<void> {
+        try {
+            await manager.save(UserProject, {
+                user: { id: userId },
+                project: { id: projectId },
+                permission: projectPermission.LEAD,
+                role,
+            });
+        } catch {
+            throw new ProjectTransactionException();
+        }
+    }
+
+
     //LEAD, MEMBER 권한 변경
     async updateUserRole(
         projectId: number,

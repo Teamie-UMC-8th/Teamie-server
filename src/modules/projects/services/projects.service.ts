@@ -88,7 +88,7 @@ export class ProjectsService {
         } catch (e) {
             throw e; // 인터셉터에서 롤백됨
         }
-        await this.userProjectRepository.updateUserRole(
+        await this.userProjectRepository.saveLeaderToProject(
             userId,
             savedProject.id,
             projectPermission.LEAD,
