@@ -7,13 +7,10 @@ import {
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { QueryRunner } from 'typeorm';
 import { CocommentRepository } from '../repositories/cocoment.repository';
-import { CommentRepository } from '../../repositories/comments.repository';
 
 @Injectable()
 export class CocommentsService {
     constructor(
-        private readonly commentRepository: CommentRepository,
-
         private readonly cocommentRepository: CocommentRepository
     ) {}
 
