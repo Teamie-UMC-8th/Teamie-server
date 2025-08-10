@@ -15,8 +15,8 @@ export class ProjectRepository {
         private readonly projectRepository: Repository<Project>
     ) {}
 
-    async findProjectName(projectId: number, manager:EntityManager): Promise<Project|null> {
-        const repo = manager.getRepository(Project)
+    async findProjectName(projectId: number, manager: EntityManager): Promise<Project | null> {
+        const repo = manager.getRepository(Project);
         const project = repo.findOne({
             where: { id: projectId },
             select: ['id', 'name'],
@@ -27,7 +27,7 @@ export class ProjectRepository {
     async saveProject(project: Project, manager: EntityManager): Promise<Project> {
         try {
             return await manager.save(Project, project);
-        }catch(e) {
+        } catch (e) {
             throw new ProjectTransactionException();
         }
     }
@@ -50,15 +50,15 @@ export class ProjectRepository {
 
     async isProjectEditable(projectId: number, manager: EntityManager): Promise<Project> {
         const project = await manager
-    .getRepository(Project)
-    .createQueryBuilder('p')
-    .where('p.id = :id', { id: projectId })
-    .setLock('pessimistic_write') // 같은 트랜잭션에서만 의미 있음
-    .getOne();
+            .getRepository(Project)
+            .createQueryBuilder('p')
+            .where('p.id = :id', { id: projectId })
+            .setLock('pessimistic_write') // 같은 트랜잭션에서만 의미 있음
+            .getOne();
 
-  if (!project) throw new ProjectNotFoundException();
-  if (project.isCompleted) throw new AlreadyProjectCompletedException();
-  return project;
+        if (!project) throw new ProjectNotFoundException();
+        if (project.isCompleted) throw new AlreadyProjectCompletedException();
+        return project;
     }
 
     async isProjectExist(projectId: number, manager: EntityManager): Promise<Project> {

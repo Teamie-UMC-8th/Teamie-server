@@ -1,7 +1,7 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Plan } from '../entities/plan.entity';
-import { EntityManager,QueryRunner, Repository } from 'typeorm';
+import { EntityManager, QueryRunner, Repository } from 'typeorm';
 import { PlanDetails } from '../dtos/plan-details.dto';
 import {
     PlanDateConflictException,
@@ -168,7 +168,11 @@ export class PlansService {
     }
 
     // NOTE: 사용자의 권한 체크, Custom Guard로 추후 리팩토링 예정
-    async checkPermission(manager:EntityManager,userId: number, planId: number): Promise<Boolean> {
+    async checkPermission(
+        manager: EntityManager,
+        userId: number,
+        planId: number
+    ): Promise<Boolean> {
         const plan = await this.plansRepository.findOne({
             where: { id: planId },
             relations: { project: true },
@@ -176,7 +180,7 @@ export class PlansService {
         });
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
-        return await this.projectsService.isProjectMember(userId, projectId,manager);
+        return await this.projectsService.isProjectMember(userId, projectId, manager);
     }
 
     // 일정 생성
@@ -187,8 +191,12 @@ export class PlansService {
         date: Date
     ): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
-        const project = await this.projectsService.isProjectExists(projectId,qr.manager);
-        const checkUserIsMember = await this.projectsService.isProjectMember(userId, projectId,qr.manager);
+        const project = await this.projectsService.isProjectExists(projectId, qr.manager);
+        const checkUserIsMember = await this.projectsService.isProjectMember(
+            userId,
+            projectId,
+            qr.manager
+        );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
         }
@@ -231,7 +239,7 @@ export class PlansService {
             });
 
         // 2. 수정 권한 체크
-        await this.projectsService.isProjectMember(userId, plan.project.id,qr.manager);
+        await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
         // 3. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);

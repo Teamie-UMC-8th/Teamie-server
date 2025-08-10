@@ -71,8 +71,12 @@ export class ProjectsController {
     @ApiCommonErrorResponse('ALREDY_JOIN', '이미 프로젝트에 참여하였습니다.', 409)
     @Transactional()
     @Get('/join/validate')
-    async validateInvite( @Req() req: TransactionalRequest, @User('id') userId: number, @Query('inviteCode') inviteCode: string) {
-        return await this.projectsService.joinValidate(userId, inviteCode,req.queryRunner.manager);
+    async validateInvite(
+        @Req() req: TransactionalRequest,
+        @User('id') userId: number,
+        @Query('inviteCode') inviteCode: string
+    ) {
+        return await this.projectsService.joinValidate(userId, inviteCode, req.queryRunner.manager);
     }
 
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
@@ -106,7 +110,7 @@ export class ProjectsController {
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
-        return await this.projectsService.getProjectFullData(req.queryRunner,userId, projectId);
+        return await this.projectsService.getProjectFullData(req.queryRunner, userId, projectId);
     }
 
     @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
@@ -170,6 +174,7 @@ export class ProjectsController {
     @ApiCommonResponse(CreatePostResponseDto)
     @ApiCommonErrorResponse('PROJECT_NOT_FOUND', '프로젝트를 찾을 수 없습니다.', 404)
     @ApiCommonErrorResponse('POSTS_EXCEEDED', '포스트잇은 10개까지 생성될 수 있습니다.', 409)
+    @Transactional()
     @Post(':projectId/posts')
     async createPost(
         @Req() req: TransactionalRequest,
@@ -177,7 +182,7 @@ export class ProjectsController {
         @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: CreatePostDto
     ) {
-        return await this.projectsService.createPost(req.queryRunner,dto,userId, projectId);
+        return await this.projectsService.createPost(req.queryRunner, dto, userId, projectId);
     }
 
     @ApiOperation({
@@ -200,6 +205,7 @@ export class ProjectsController {
         'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
         500
     )
+    @Transactional()
     @Delete(':projectId/posts/:postId')
     async deletePost(
         @Req() req: TransactionalRequest,
@@ -207,7 +213,7 @@ export class ProjectsController {
         @Param('projectId', ParseIntPipe) projectId: number,
         @Param('postId', ParseIntPipe) postId: number
     ) {
-        return await this.projectsService.deletePost(req.queryRunner,postId, userId, projectId);
+        return await this.projectsService.deletePost(req.queryRunner, postId, userId, projectId);
     }
 
     @ApiOperation({
@@ -301,7 +307,10 @@ export class ProjectsController {
     @ApiOkResponse({ type: UserProfile, isArray: true })
     @Transactional()
     @Get('/:projectId/members')
-    async getProjectMemberList(@Req() req: TransactionalRequest,@Param('projectId', ParseIntPipe) projectId: number) {
-        return await this.projectsService.getProjectMemberList(projectId,req.queryRunner.manager);
+    async getProjectMemberList(
+        @Req() req: TransactionalRequest,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
+        return await this.projectsService.getProjectMemberList(projectId, req.queryRunner.manager);
     }
 }

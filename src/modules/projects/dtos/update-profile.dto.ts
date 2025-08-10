@@ -5,15 +5,15 @@ import { Type } from 'class-transformer';
 
 export class UpdateProfileDto {
     @ApiProperty({ example: 123 })
-  @Type(() => Number)   // "123" -> 123 로 변환 (transform: true일 때)
-  @IsInt()
-  id: number;
+    @Type(() => Number) // "123" -> 123 로 변환 (transform: true일 때)
+    @IsInt()
+    id: number;
 
-  @ApiProperty({ example: 'LEAD' })
-  @IsString()
-  @IsNotEmpty()
-  // 필요하면 enum으로 제한: @IsEnum(projectRole)
-  role: string;
+    @ApiProperty({ example: 'LEAD' })
+    @IsString()
+    @IsNotEmpty()
+    // 필요하면 enum으로 제한: @IsEnum(projectRole)
+    role: string;
 }
 
 export class UpdateProfileResponseDto {

@@ -17,7 +17,11 @@ export class UserProjectRepository {
         private readonly userProjectRepository: Repository<UserProject>
     ) {}
 
-    async findUserProject(projectId: number, userId: number, manager:EntityManager): Promise<UserProject|null> {
+    async findUserProject(
+        projectId: number,
+        userId: number,
+        manager: EntityManager
+    ): Promise<UserProject | null> {
         const repo = manager.getRepository(UserProject);
         const userProject = repo.findOne({
             where: { project: { id: projectId }, user: { id: userId } },
@@ -113,7 +117,6 @@ export class UserProjectRepository {
         }
     }
 
-
     //LEAD, MEMBER 권한 변경
     async updateUserRole(
         projectId: number,
@@ -132,23 +135,27 @@ export class UserProjectRepository {
     }
 
     async isProjectLeader(
-  userId: number,
-  projectId: number,
-  manager: EntityManager
-): Promise<projectPermission | null> {
-  const row = await manager
-    .getRepository(UserProject)
-    .createQueryBuilder('up')
-    .select('up.permission', 'permission') // alias 고정
-    .where('up.userId = :userId', { userId })
-    .andWhere('up.projectId = :projectId', { projectId })
-    .limit(1)
-    .getRawOne<{ permission: projectPermission }>();
+        userId: number,
+        projectId: number,
+        manager: EntityManager
+    ): Promise<projectPermission | null> {
+        const row = await manager
+            .getRepository(UserProject)
+            .createQueryBuilder('up')
+            .select('up.permission', 'permission') // alias 고정
+            .where('up.userId = :userId', { userId })
+            .andWhere('up.projectId = :projectId', { projectId })
+            .limit(1)
+            .getRawOne<{ permission: projectPermission }>();
 
-  return row?.permission ?? null;
+        return row?.permission ?? null;
     }
 
-    async isUserInProject(userId: number, projectId: number, manager:EntityManager): Promise<boolean> {
+    async isUserInProject(
+        userId: number,
+        projectId: number,
+        manager: EntityManager
+    ): Promise<boolean> {
         const repo = manager.getRepository(UserProject);
         return await repo.exists({
             where: { user: { id: userId }, project: { id: projectId } },

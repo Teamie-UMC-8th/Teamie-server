@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNumber,IsNotEmpty, IsString } from 'class-validator';
+import { IsInt, IsNumber, IsNotEmpty, IsString } from 'class-validator';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { Type } from 'class-transformer';
 export class ChangeLeaderDto {
@@ -16,7 +16,7 @@ export class ChangeLeaderResponseDto {
         example: 1,
         description: '변경된 프로젝트 리더의 사용자 ID',
     })
-    @Type(() => Number) 
+    @Type(() => Number)
     @IsNotEmpty()
     @IsInt()
     newLeaderId: number;

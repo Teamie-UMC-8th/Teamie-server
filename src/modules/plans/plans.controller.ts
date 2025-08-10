@@ -40,7 +40,11 @@ export class PlansController {
         @Param('planId', ParseIntPipe) planId: number,
         @User('id') userId: number
     ): Promise<PlanDetails> {
-        const check = await this.plansService.checkPermission(req.queryRunner.manager,userId, planId);
+        const check = await this.plansService.checkPermission(
+            req.queryRunner.manager,
+            userId,
+            planId
+        );
         if (!check) throw new ProjectForbiddenException();
         return this.plansService.getDetails(planId);
     }
