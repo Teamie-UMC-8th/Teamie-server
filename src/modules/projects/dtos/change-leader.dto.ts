@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsNumber } from 'class-validator';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 export class ChangeLeaderDto {
     @ApiProperty({
@@ -7,6 +7,7 @@ export class ChangeLeaderDto {
         description: '변경할 프로젝트 리더의 사용자 ID',
     })
     @IsNotEmpty({ message: '새로운 리더의 사용자 ID를 입력해야 합니다.' })
+    @IsNumber()
     newLeaderId: number;
 }
 export class ChangeLeaderResponseDto {

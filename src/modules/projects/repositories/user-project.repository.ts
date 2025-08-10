@@ -130,16 +130,22 @@ export class UserProjectRepository {
         }
     }
 
-    async isProjectLeader(userId: number, projectId: number): Promise<projectPermission | null> {
-        const mapping = await this.userProjectRepository
-            .createQueryBuilder('up')
-            .select(['up.permission'])
-            .where('up.userId = :userId', { userId })
-            .andWhere('up.projectId = :projectId', { projectId })
-            .getRawOne();
+    async isProjectLeader(
+  userId: number,
+  projectId: number,
+  manager: EntityManager
+): Promise<projectPermission | null> {
+  const row = await manager
+    .getRepository(UserProject)
+    .createQueryBuilder('up')
+    .select('up.permission', 'permission') // alias 고정
+    .where('up.userId = :userId', { userId })
+    .andWhere('up.projectId = :projectId', { projectId })
+    .limit(1)
+    .getRawOne<{ permission: projectPermission }>();
 
-        return mapping;
-    }
+  return row?.permission ?? null;
+}
 
     async isUserInProject(userId: number, projectId: number): Promise<boolean> {
         return await this.userProjectRepository.exists({
