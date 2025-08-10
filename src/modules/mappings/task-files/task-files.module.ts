@@ -6,9 +6,11 @@ import { TaskFile } from './task-files.entity';
 import { UploadService } from '../../../infra/upload/upload.service';
 import { TaskFilesController } from './task-files.controller';
 import { TaskFilesService } from './task-files.service';
+import { TaskFileRepository } from './repositories/task-file.repository';
 @Module({
     imports: [TypeOrmModule.forFeature([Task, TaskFile]), ConfigModule],
     controllers: [TaskFilesController],
-    providers: [TaskFilesService, UploadService],
+    providers: [TaskFilesService, UploadService, TaskFileRepository],
+    exports: [TaskFilesService, TaskFileRepository],
 })
 export class TaskFilesModule {}
