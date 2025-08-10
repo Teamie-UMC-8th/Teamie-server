@@ -6,12 +6,12 @@ import { CommentsController } from './comments.controller';
 import { CommentsService } from './services/comments.service';
 import { Cocomment } from './cocomments/entities/cocomments.entity';
 import { CommentRepository } from './repositories/comments.repository';
-import { CocommentRepository } from './cocomments/repositories/cocoment.repository';
+import { CocommentsModule } from './cocomments/cocomments.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Comment, Cocomment]), ConfigModule],
+    imports: [TypeOrmModule.forFeature([Comment, Cocomment]), ConfigModule, CocommentsModule],
     controllers: [CommentsController],
-    providers: [CommentsService, CommentRepository, CocommentRepository],
+    providers: [CommentsService, CommentRepository],
     exports: [CommentRepository, CommentsService], 
 })
 export class CommentsModule {}
