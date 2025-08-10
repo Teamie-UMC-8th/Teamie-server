@@ -16,14 +16,12 @@ export class UserProjectRepository {
         @InjectRepository(UserProject)
         private readonly userProjectRepository: Repository<UserProject>
     ) {}
-    private m(manager?: EntityManager) {
-        return manager ?? this.userProjectRepository.manager;
-    }
-    async findUserProject(projectId: number, userId: number): Promise<UserProject> {
-        const userProject = await this.userProjectRepository.findOne({
+
+    async findUserProject(projectId: number, userId: number, manager:EntityManager): Promise<UserProject|null> {
+        const repo = manager.getRepository(UserProject);
+        const userProject = repo.findOne({
             where: { project: { id: projectId }, user: { id: userId } },
         });
-        if (!userProject) throw new ProjectForbiddenException();
         return userProject;
     }
     async findUsersByProjectId(projectId: number) {
@@ -36,19 +34,21 @@ export class UserProjectRepository {
 
     async findAllUserProjectsByProjectId(
         projectId: number,
-        manager?: EntityManager
+        manager: EntityManager
     ): Promise<UserProject[]> {
-        const m = this.m(manager);
-        return await m.find(UserProject, {
+        const repo = manager.getRepository(UserProject);
+        return await repo.find({
             where: { project: { id: projectId } },
             relations: ['user', 'user.managers', 'user.managers.task'],
         });
     }
 
     async findProjectLeaderByProjectId(
-        projectId: number
+        projectId: number,
+        manager: EntityManager
     ): Promise<{ oldLeaderId: number } | undefined> {
-        return await this.userProjectRepository
+        const repo = manager.getRepository(UserProject);
+        return await repo
             .createQueryBuilder('up')
             .select('up.userId', 'oldLeaderId')
             .where('up.projectId = :projectId', { projectId })
@@ -121,7 +121,8 @@ export class UserProjectRepository {
         role: string,
         manager: EntityManager
     ): Promise<UserProject> {
-        const up = await this.findUserProject(projectId, userId);
+        const up = await this.findUserProject(projectId, userId, manager);
+        if (!up) throw new ProjectForbiddenException();
         try {
             up.role = role;
             return await manager.save(UserProject, up);
@@ -145,10 +146,11 @@ export class UserProjectRepository {
     .getRawOne<{ permission: projectPermission }>();
 
   return row?.permission ?? null;
-}
+    }
 
-    async isUserInProject(userId: number, projectId: number): Promise<boolean> {
-        return await this.userProjectRepository.exists({
+    async isUserInProject(userId: number, projectId: number, manager:EntityManager): Promise<boolean> {
+        const repo = manager.getRepository(UserProject);
+        return await repo.exists({
             where: { user: { id: userId }, project: { id: projectId } },
         });
     }

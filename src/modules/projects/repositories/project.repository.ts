@@ -15,21 +15,21 @@ export class ProjectRepository {
         private readonly projectRepository: Repository<Project>
     ) {}
 
-    private m(manager?: EntityManager) {
-        return manager ?? this.projectRepository.manager;
-    }
-
-    async findProjectName(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({
+    async findProjectName(projectId: number, manager:EntityManager): Promise<Project|null> {
+        const repo = manager.getRepository(Project)
+        const project = repo.findOne({
             where: { id: projectId },
             select: ['id', 'name'],
         });
-        if (!project) throw new ProjectNotFoundException();
         return project;
     }
     // 프로젝트 저장 (트랜잭션 컨텍스트 주입)
     async saveProject(project: Project, manager: EntityManager): Promise<Project> {
-        return await manager.save(Project, project);
+        try {
+            return await manager.save(Project, project);
+        }catch(e) {
+            throw new ProjectTransactionException();
+        }
     }
 
     async createProject(name: string, manager: EntityManager): Promise<Project> {
@@ -48,15 +48,22 @@ export class ProjectRepository {
         }
     }
 
-    async isProjectEditable(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({ where: { id: projectId } });
-        if (!project) throw new ProjectNotFoundException();
-        if (project.isCompleted) throw new AlreadyProjectCompletedException();
-        return project;
+    async isProjectEditable(projectId: number, manager: EntityManager): Promise<Project> {
+        const project = await manager
+    .getRepository(Project)
+    .createQueryBuilder('p')
+    .where('p.id = :id', { id: projectId })
+    .setLock('pessimistic_write') // 같은 트랜잭션에서만 의미 있음
+    .getOne();
+
+  if (!project) throw new ProjectNotFoundException();
+  if (project.isCompleted) throw new AlreadyProjectCompletedException();
+  return project;
     }
 
-    async isProjectExist(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({
+    async isProjectExist(projectId: number, manager: EntityManager): Promise<Project> {
+        const repo = manager.getRepository(Project);
+        const project = await repo.findOne({
             where: { id: projectId },
             relations: [
                 'userProjects',

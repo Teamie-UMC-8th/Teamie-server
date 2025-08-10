@@ -1,6 +1,6 @@
 import { describe } from 'node:test';
 import { PlansController } from './plans.controller';
-import { PlansService } from './plans.service';
+import { PlansService } from './services/plans.service';
 import { TestingModule, Test } from '@nestjs/testing';
 import { PlanDetails } from './dtos/plan-details.dto';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';

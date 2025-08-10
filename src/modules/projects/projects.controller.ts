@@ -37,6 +37,8 @@ import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
 import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
+import { QueryRunner } from 'typeorm';
+import { TracingChannel } from 'diagnostics_channel';
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
@@ -67,9 +69,10 @@ export class ProjectsController {
     @ApiCommonErrorResponse('PROJECT_ALREADY_COMPLETED', '이미 완료된 프로젝트입니다', 403)
     @ApiCommonErrorResponse('EXPIRED_INVITE_CODE', '유효기간이 지난 url입니다.', 404)
     @ApiCommonErrorResponse('ALREDY_JOIN', '이미 프로젝트에 참여하였습니다.', 409)
+    @Transactional()
     @Get('/join/validate')
-    async validateInvite(@User('id') userId: number, @Query('inviteCode') inviteCode: string) {
-        return await this.projectsService.joinValidate(userId, inviteCode);
+    async validateInvite( @Req() req: TransactionalRequest, @User('id') userId: number, @Query('inviteCode') inviteCode: string) {
+        return await this.projectsService.joinValidate(userId, inviteCode,req.queryRunner.manager);
     }
 
     @ApiOperation({ summary: '프로젝트 참여', description: '초대 코드로 프로젝트에 참여합니다.' })
@@ -96,12 +99,14 @@ export class ProjectsController {
         '해당 프로젝트에 접근 권한이 없습니다.',
         403
     )
+    @Transactional()
     @Get('/:projectId')
     async getProjectFullData(
+        @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
-        return await this.projectsService.getProjectFullData(userId, projectId);
+        return await this.projectsService.getProjectFullData(req.queryRunner,userId, projectId);
     }
 
     @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
@@ -167,11 +172,12 @@ export class ProjectsController {
     @ApiCommonErrorResponse('POSTS_EXCEEDED', '포스트잇은 10개까지 생성될 수 있습니다.', 409)
     @Post(':projectId/posts')
     async createPost(
+        @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Body() dto: CreatePostDto
     ) {
-        return await this.projectsService.createPost(dto, userId, projectId);
+        return await this.projectsService.createPost(req.queryRunner,dto,userId, projectId);
     }
 
     @ApiOperation({
@@ -196,11 +202,12 @@ export class ProjectsController {
     )
     @Delete(':projectId/posts/:postId')
     async deletePost(
+        @Req() req: TransactionalRequest,
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Param('postId', ParseIntPipe) postId: number
     ) {
-        return await this.projectsService.deletePost(postId, userId, projectId);
+        return await this.projectsService.deletePost(req.queryRunner,postId, userId, projectId);
     }
 
     @ApiOperation({
@@ -292,8 +299,9 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiOkResponse({ type: UserProfile, isArray: true })
+    @Transactional()
     @Get('/:projectId/members')
-    async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
-        return await this.projectsService.getProjectMemberList(projectId);
+    async getProjectMemberList(@Req() req: TransactionalRequest,@Param('projectId', ParseIntPipe) projectId: number) {
+        return await this.projectsService.getProjectMemberList(projectId,req.queryRunner.manager);
     }
 }

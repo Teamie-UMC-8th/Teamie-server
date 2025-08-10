@@ -36,10 +36,11 @@ export class PlansController {
     @ApiCommonResponse(PlanDetails)
     @ApiCommonErrorResponse(ErrorCode.PLAN_NOT_FOUND, 'PLAN_NOT_FOUND', 404)
     async getDetails(
+        @Req() req: TransactionalRequest,
         @Param('planId', ParseIntPipe) planId: number,
         @User('id') userId: number
     ): Promise<PlanDetails> {
-        const check = await this.plansService.checkPermission(userId, planId);
+        const check = await this.plansService.checkPermission(req.queryRunner.manager,userId, planId);
         if (!check) throw new ProjectForbiddenException();
         return this.plansService.getDetails(planId);
     }
