@@ -222,10 +222,6 @@ export class ProjectsService {
         if (dto.goal !== undefined) project.goal = dto.goal;
 
         await this.projectRepository.saveProject(project, qr.manager);
-        const after = await qr.manager
-            .getRepository(Project)
-            .findOne({ where: { id: project.id } });
-        console.log('[AFTER SAVE]', after);
 
         return this.getProjectFullDataByUpdate(qr.manager, userId, projectId);
     }
