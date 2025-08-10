@@ -26,7 +26,7 @@ import { PostsStore } from './repositories/posts.store';
         forwardRef(() => StepsModule), // Circular dependency handling
         MasterPortfoliosModule,
         forwardRef(() => PlansModule),
-        TasksModule,
+        forwardRef(() => TasksModule),
     ],
     controllers: [ProjectsController],
     providers: [

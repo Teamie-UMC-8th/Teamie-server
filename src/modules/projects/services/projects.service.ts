@@ -32,6 +32,8 @@ import { JoinProjectDto, JoinProjectResponseDto } from '../dtos/join-project.dto
 import { ValidateInviteResponseDto } from '../dtos/validate-invite.dto';
 import { PlansService } from '../../plans/services/plans.service';
 import { TasksService } from '../../tasks/services/tasks.service';
+import { UserProfile } from '../../../common/dtos/user-profile.dto';
+import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
@@ -40,7 +42,6 @@ import { InviteCodeStore } from '../repositories/invite-code.store';
 import { ProjectRepository } from '../repositories/project.repository';
 import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
-import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { UserProjectRepository } from '../repositories/user-project.repository';
 import { map } from 'rxjs';
 import { Manager } from 'src/modules/mappings/managers/managers.entity';
@@ -63,12 +64,13 @@ export class ProjectsService {
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
 
+        private readonly taskRepository: TaskRepository,
+
         private readonly inviteStore: InviteCodeStore,
         private readonly configService: ConfigService,
         private readonly postsStore: PostsStore,
         private readonly masterPortfoliosService: MasterPortfoliosService,
-        private readonly plansService: PlansService,
-        private readonly tasksService: TasksService
+        private readonly plansService: PlansService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
@@ -421,8 +423,11 @@ export class ProjectsService {
 
         //팀캘린더 조회
         //1. tasks 카드 조회
-        const tasks: Record<string, CalenderCardResponseDto[]> =
-            await this.tasksService.getTasksByDeadline(projectId, start, end);
+        const tasks: Record<string, CalenderCardResponseDto[]> = await this.getTasksByDeadline(
+            projectId,
+            start,
+            end
+        );
         //2. plans 카드 조회
         const plans: Record<string, CalenderCardResponseDto[]> =
             await this.plansService.getPlansByDate(projectId, start, end);
@@ -466,6 +471,8 @@ export class ProjectsService {
         return true;
     }
 
+    //프로젝트 멤버인지 확인 및 예외처리
+
     async isProjectExists(projectId: number, manager: EntityManager): Promise<Project> {
         return await this.projectRepository.isProjectExist(projectId, manager);
     }
@@ -486,5 +493,29 @@ export class ProjectsService {
             throw new ProjectUpdateForbiddenException('해당 부분은 팀장만 수정할 수 있습니다.');
         }
         return true;
+    }
+     // 마감일 별 업무 조회
+    async getTasksByDeadline(
+        projectId: number,
+        startDate: Date,
+        endDate: Date
+    ): Promise<Record<string, CalenderCardResponseDto[]>> {
+        const tasks = await this.taskRepository.findCalendarByProjectAndRange(
+            projectId,
+            startDate,
+            endDate
+        );
+
+        //날짜 별 그룹핑
+        const grouped = tasks.reduce(
+            (acc, curr) => {
+                const date = curr.date.toISOString().split('T')[0];
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(CalenderCardResponseDto.fromTask(curr));
+                return acc;
+            },
+            {} as Record<string, CalenderCardResponseDto[]>
+        );
+        return grouped;
     }
 }

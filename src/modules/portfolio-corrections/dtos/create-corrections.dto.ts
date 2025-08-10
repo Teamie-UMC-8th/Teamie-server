@@ -8,6 +8,7 @@ export class CreateCorrectionsDto {
         example: [1, 2, 3],
     })
     @IsArray()
+    @IsNotEmpty()
     selectedProjects: number[];
 }
 

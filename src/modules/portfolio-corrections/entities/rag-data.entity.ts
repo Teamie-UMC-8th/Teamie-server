@@ -8,7 +8,7 @@ export class RAGData extends BaseEntity {
     @Column({ nullable: true })
     keyword: string;
 
-    @Column({ nullable: true })
+    @Column({ type: 'text', nullable: true })
     link: string;
 
     @Column({ nullable: true })

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './services/tasks.service';
@@ -12,15 +12,35 @@ import { UploadService } from '../../infra/upload/upload.service';
 import { Project } from '../projects/entities/projects.entity';
 import { Comment } from '../comments/entities/comments.entity';
 import { UsersModule } from '../users/users.module';
-
+import { TaskRepository } from './repositories/task.repository';
+import { CommentRepository } from '../comments/repositories/comments.repository';
+import { StepRepository } from '../steps/repositories/step.repository';
+import { TaskFileRepository } from '../mappings/task-files/repositories/task-file.repository';
+import { ManagerRepository } from '../mappings/managers/repositories/manager.repository';
+import { ProjectsModule } from '../projects/projects.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project, Comment]),
         ConfigModule,
         UsersModule,
+        forwardRef(() => ProjectsModule),
     ],
     controllers: [TasksController],
-    providers: [TasksService, UploadService],
-    exports: [TasksService],
+    providers: [
+        TasksService,
+        UploadService,
+        ManagerRepository,
+        TaskRepository,
+        CommentRepository,
+        StepRepository,
+        TaskFileRepository,
+    ],
+    exports: [
+        TaskRepository,
+        CommentRepository,
+        StepRepository,
+        TaskFileRepository,
+        ManagerRepository,
+    ],
 })
 export class TasksModule {}
