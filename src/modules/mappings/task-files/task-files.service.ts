@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
-import { Task } from '../../tasks/entities/tasks.entity';
+import { Repository } from 'typeorm';
 import { TaskFile } from './task-files.entity';
 import { UploadService } from '../../../infra/upload/upload.service';
 import { TaskFileNotFoundException } from 'src/common/exceptions/custom.errors';

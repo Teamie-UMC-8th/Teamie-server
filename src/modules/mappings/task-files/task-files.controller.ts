@@ -2,6 +2,13 @@ import { Controller, Param, Delete } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { TaskFilesService } from './task-files.service';
+import { ErrorCode } from '../../../common/exceptions/errorcode.enum';
+import { HttpStatus } from '@nestjs/common';
+import {
+    ApiCommonResponse,
+    ApiCommonErrorResponse,
+} from 'src/common/response/swagger-response.helper';
+
 @ApiTags('Tasks')
 @ApiBearerAuth('access-token')
 @Controller('/task-files')
@@ -20,6 +27,11 @@ export class TaskFilesController {
             },
         },
     })
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_FILE_NOT_FOUND,
+        '업무파일을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
     async deleteTaskFile(
         @Param('taskFileId') fileId: number,
         @User('id') userId: number
