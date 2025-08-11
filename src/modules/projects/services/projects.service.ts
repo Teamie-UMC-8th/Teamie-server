@@ -132,11 +132,16 @@ export class ProjectsService {
         // 3) 프로젝트 이름 조회
         const project = await this.projectRepository.findProjectName(projectId);
         if (!project) throw new ProjectNotFoundException();
-        // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
+
+        // 4) 프로젝트 리더 이름 조회
+        const leaderName =
+            await this.userProjectRepository.findProjectLeaderNameByProjectId(projectId);
+        // 5) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
         return ValidateInviteResponseDto.fromEntity(
             projectId,
             project.name,
-            projectPermission.MEMBER
+            projectPermission.MEMBER,
+            leaderName
         );
     }
 
@@ -361,7 +366,7 @@ export class ProjectsService {
         await this.isProjectMember(currentUserId, projectId, qr.manager);
         const { newLeaderId } = dto;
         const newId = newLeaderId;
-        const current = await this.userProjectRepository.findProjectLeaderByProjectId(
+        const current = await this.userProjectRepository.findProjectLeaderByProjectIdUsingQR(
             projectId,
             qr.manager
         );
