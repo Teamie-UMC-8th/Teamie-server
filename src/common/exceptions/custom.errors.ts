@@ -192,6 +192,17 @@ export class ProjectNotFoundException extends CustomHttpException {
     }
 }
 
+export class ProjectLeaderNotFoundException extends CustomHttpException {
+    constructor(projectId: number) {
+        super(
+            ErrorCode.NOT_FOUND_LEADER,
+            '프로젝트 리더를 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            { projectId }
+        );
+    }
+}
+
 export class PostNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.POST_NOT_FOUND, '포스트잇을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);
@@ -423,6 +434,17 @@ export class PlanTransactionException extends CustomHttpException {
         super(
             ErrorCode.PLAN_TRANSACTION_ERROR,
             '일정 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
+export class StepTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.STEP_TRANSACTION_ERROR,
+            'STEP 관련 트랜잭션에서 에러가 발생했습니다.',
             HttpStatus.INTERNAL_SERVER_ERROR,
             data
         );

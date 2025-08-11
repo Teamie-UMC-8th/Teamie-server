@@ -28,6 +28,7 @@ import {
 import {
     ApiCommonResponse,
     ApiCommonResponseWithPagination,
+    ApiCommonErrorResponse,
 } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
@@ -49,6 +50,8 @@ import { ProjectDashBoardDTO } from './dtos/user-task.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { GetSearchTaskDto } from './dtos/get-search-task.dto';
+import { ErrorCode } from '../../common/exceptions/errorcode.enum';
+import { HttpStatus } from '@nestjs/common';
 
 @ApiTags('Tasks')
 @Controller('/tasks')
@@ -59,8 +62,17 @@ export class TasksController {
         summary: '업무 생성',
         description: '새로운 업무를 생성합니다.',
     })
-    @ApiBody({ type: CreateTaskRequestDto })
     @ApiCommonResponse(CreateTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        'STEP을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Transactional()
     @Post()
     async createTask(
@@ -89,8 +101,32 @@ export class TasksController {
         summary: '업무 수정',
         description: '기존 업무를 수정합니다.',
     })
-    @ApiBody({ type: UpdateTaskRequestDto })
     @ApiCommonResponse(UpdateTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        'STEP을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.BAD_REQUEST,
+        '유효하지 않은 사용자 ID가 포함되어 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.BAD_REQUEST,
+        '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
     @Transactional()
     @Patch('/:taskId')
     async updateTask(
@@ -107,6 +143,16 @@ export class TasksController {
         description: '업무를 삭제합니다.',
     })
     @ApiCommonResponse(DeleteTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Transactional()
     @Delete('/:taskId')
     async deleteTask(
@@ -122,6 +168,16 @@ export class TasksController {
         description: '업무를 상세히 조회합니다.',
     })
     @ApiCommonResponse(GetTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Get('/:taskId')
     async getTask(@User('id') userId: number, @Param('taskId') taskId: number) {
         return await this.tasksService.getTask(userId, taskId);
@@ -146,6 +202,11 @@ export class TasksController {
             ],
         },
     })
+    @ApiCommonErrorResponse(
+        ErrorCode.BAD_REQUEST,
+        `'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`,
+        HttpStatus.BAD_REQUEST
+    )
     @Get('/:projectId/dashboard')
     async getTaskDashboard(
         @User('id') userId: number,
