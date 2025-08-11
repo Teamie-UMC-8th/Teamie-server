@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { TransformInterceptor } from './common/interceptors/transform.interceptors';
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
-import { defaultConfig } from './config/app.config';
+import { allowedOrigins, defaultConfig } from './config/app.config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createSwaggerConfig, publicPaths } from './config/swagger.config';
 import * as cookieParser from 'cookie-parser';
@@ -13,8 +13,6 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
-    const allowedOrigins = rawOrigins.split(',').map((origin) => origin.trim());
     app.enableCors({
         origin: (
             origin: string | undefined,

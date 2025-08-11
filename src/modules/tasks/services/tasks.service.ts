@@ -1,5 +1,4 @@
 import { Injectable, forwardRef, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
@@ -190,10 +189,6 @@ export class TasksService {
 
     async getTask(userId: number, taskId: number): Promise<GetTaskResponseDto> {
         const task = await this.taskRepository.findById(taskId);
-
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
 
         // 프로젝트 참여 여부 검증
         const projectId = task.step.project.id;

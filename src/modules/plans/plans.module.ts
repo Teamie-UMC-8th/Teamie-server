@@ -1,5 +1,4 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { PlansGateway } from './gateways/plans.gateway';
 import { PlansController } from './plans.controller';
 import { PlansService } from './services/plans.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,6 +9,7 @@ import { Writer } from '../mappings/writers/writers.entity';
 import { UsersModule } from '../users/users.module';
 import { PlansListener } from './listener/plans.listener';
 import { EventBusModule } from 'src/infra/event-bus/event-bus.module';
+import { GateWayModule } from 'src/infra/gateway/gateway.module';
 
 @Module({
     imports: [
@@ -18,9 +18,10 @@ import { EventBusModule } from 'src/infra/event-bus/event-bus.module';
         AuthModule,
         UsersModule,
         EventBusModule,
+        GateWayModule,
     ],
     controllers: [PlansController],
-    providers: [PlansGateway, PlansService, PlansListener],
+    providers: [PlansService, PlansListener],
     exports: [PlansService],
 })
 export class PlansModule {}

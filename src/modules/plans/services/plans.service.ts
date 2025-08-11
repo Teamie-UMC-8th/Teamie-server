@@ -330,9 +330,10 @@ export class PlansService {
             });
 
         // 2. 사용자의 삭제 권한 검사
+        const projectId = plan.project.id;
         const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id,
+            projectId,
             qr.manager
         );
         if (!checkUserIsMember) {
@@ -343,7 +344,7 @@ export class PlansService {
         await qr.manager.delete(Plan, planId);
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
-            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId })
+            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })
         );
         return DeletePlanResponseDto.from(planId);
     }
