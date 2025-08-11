@@ -27,7 +27,7 @@ export class CocommentsController {
         @Param('cocommentId') cocommentId: number,
         @Body() dto: UpdateCocommentRequestDto
     ) {
-        return await this.cocommentsService.updateComment(
+        return await this.cocommentsService.updateCocomment(
             req.queryRunner,
             userId,
             cocommentId,
