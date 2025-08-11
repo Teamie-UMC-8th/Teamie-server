@@ -1,8 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Project } from '../entities/projects.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { EntityManager, QueryRunner, Repository } from 'typeorm';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { CreateProjectDto, CreateProjectResponseDto } from '../dtos/create-project.dto';
 import { ConfigService } from '@nestjs/config';
@@ -11,29 +9,22 @@ import { UpdateProjectDto } from '../dtos/update-project.dto';
 import { CompleteProjectResponseDto } from '../dtos/complete-project.dto';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import {
-    AlreadyProjectCompletedException,
-    ProjectNotFoundException,
     PostsExceededException,
-    RedisDataParseException,
     PostNotFoundException,
     NotPostAuthorException,
-    AlreadyLeaderException,
-    ForbiddenSelfAssignException,
-    ProjectForbiddenException,
     ProjectUpdateForbiddenException,
-    InvalidInvitecodeException,
     ProfileForbiddenException,
     ProjectTransactionException,
-    ExpiredInvitecodeException,
     AlreadyJoinException,
     InvalidDateException,
+    ProjectForbiddenException,
+    ProjectNotFoundException,
+    AlreadyProjectCompletedException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../../steps/dtos/create-step.dto';
-import { StepsService } from '../../steps/services/steps.service';
 import { CreatePostDto, CreatePostResponseDto } from '../dtos/create-post.dto';
 import { DeletePostResponseDto } from '../dtos/delete-post-response.dto';
-import { RedisClientType } from 'redis';
 import { MasterPortfoliosService } from '../../master-portfolios/services/master-portfolios.service';
 import { ChangeLeaderDto, ChangeLeaderResponseDto } from '../dtos/change-leader.dto';
 import { User } from '../../users/entities/users.entity';
@@ -48,6 +39,14 @@ import {
     CalenderCardResponseDto,
     TeamCalenderResponseDto,
 } from '../dtos/team-calender-response.dto';
+import { InviteCodeStore } from '../repositories/invite-code.store';
+import { ProjectRepository } from '../repositories/project.repository';
+import { PostsStore } from '../repositories/posts.store';
+import { Project } from '../entities/projects.entity';
+import { UserProjectRepository } from '../repositories/user-project.repository';
+import { UserProject } from '../entities/userProjects.entity';
+import { map } from 'rxjs';
+import { Manager } from 'src/modules/mappings/managers/managers.entity';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -55,11 +54,8 @@ export class ProjectsService {
     private readonly POST_TTL_SECONDS: number;
     private readonly POST_MAX: number;
     constructor(
-        @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>,
-
-        @InjectRepository(UserProject)
-        private readonly userProjectRepository: Repository<UserProject>,
+        private readonly projectRepository: ProjectRepository,
+        private readonly userProjectRepository: UserProjectRepository,
 
         @InjectRepository(PersonalRecall)
         private readonly personalRecallRepository: Repository<PersonalRecall>,
@@ -72,15 +68,14 @@ export class ProjectsService {
 
         private readonly taskRepository: TaskRepository,
 
-        @Inject('REDIS_CLIENT')
-        private readonly redis: RedisClientType,
+        private readonly inviteStore: InviteCodeStore,
         private readonly configService: ConfigService,
-        private readonly stepsService: StepsService,
+        private readonly postsStore: PostsStore,
         private readonly masterPortfoliosService: MasterPortfoliosService,
         private readonly plansService: PlansService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
-        const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${48 * 3600}`);
+        const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${7 * 24 * 3600}`);
         //숫자로 변환해서 실제 필드에 할당
         this.POST_TTL_SECONDS = parseInt(ttlStr, 10);
         this.POST_MAX = this.configService.get<number>('POST_MAX', 16);
@@ -92,73 +87,51 @@ export class ProjectsService {
         userId: number
     ): Promise<CreateProjectResponseDto> {
         const { name } = dto;
-        // 1) outer 스코프에 한 번만 선언
-        let savedProject!: Project;
 
+        let savedProject: Project;
         try {
-            // 2) Project 인스턴스 생성 (manager.create)
             const project = qr.manager.create(Project, {
                 name,
                 goal: '',
                 rule: '',
                 isCompleted: false,
-                completedAt: null, // undefined 대신 null 권장
+                completedAt: null,
             });
-
-            // 3) DB에 저장 → savedProject에 할당
-            savedProject = await qr.manager.save(Project, project);
-
-            // 4) UserProject 인스턴스 생성
-            const userProject = qr.manager.create(UserProject, {
-                user: { id: userId },
-                project: savedProject,
-                permission: projectPermission.LEAD,
-                role: '',
-            });
-
-            // 5) UserProject도 저장
-            await qr.manager.save(UserProject, userProject);
-        } catch (err) {
-            // 여기서 예외 나면 트랜잭션 인터셉터가 롤백합니다
-            throw new ProjectTransactionException();
+            savedProject = await this.projectRepository.saveProject(project, qr.manager);
+        } catch (e) {
+            throw e; // 인터셉터에서 롤백됨
         }
+        const up = qr.manager.create(UserProject, {
+            user: { id: userId },
+            project: { id: savedProject.id },
+            permission: projectPermission.LEAD,
+            role: '',
+        });
 
-        // invite:<code> -> projectId (문자열 키)
-        const code = generateRandomCode();
-        const key = `invite:${code}`;
-        const ttlSeconds = 60 * 60 * 24 * 3; //3일
-        const projectId = savedProject.id.toString();
-        await this.redis.set(key, projectId);
-        await this.redis.expire(key, ttlSeconds);
+        await this.userProjectRepository.saveUserProject(up, qr.manager);
 
-        const inviteCode = `${code}`;
+        const { code, expiresAt } = await this.inviteStore.saveActive(
+            savedProject.id,
+            this.POST_TTL_SECONDS
+        );
+        await this.inviteStore.saveMeta(code, savedProject.id);
 
-        //meta 키 추가
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + this.POST_TTL_SECONDS * 1000).toISOString();
-        await this.redis.set(`invite:meta:${code}`, `${projectId}`);
-
-        // 프로젝트 별 코드 목록 Set
-        await this.redis.sAdd(`project:${projectId}:invites`, code);
-        return CreateProjectResponseDto.fromEntity(savedProject, inviteCode, expiresAt);
+        return CreateProjectResponseDto.fromEntity(savedProject, code, expiresAt);
     }
 
     async joinValidate(userId: number, inviteCode: string): Promise<ValidateInviteResponseDto> {
         // 1) 초대 코드 유효성 검사 (Expired vs Invalid 예외 포함)
-        const projectId = await this.getProjectByInviteCode(inviteCode);
+        const projectId = await this.inviteStore.findProjectByInviteCode(inviteCode);
 
         // 2) 이미 참여한 사용자라면 예외
-        const alreadyJoined = await this.isUserInProject(userId, projectId);
+        const alreadyJoined = await this.userProjectRepository.findById(userId, projectId);
         if (alreadyJoined) {
-            throw new AlreadyJoinException();
+            throw new AlreadyJoinException(projectId);
         }
 
         // 3) 프로젝트 이름 조회
-        const project = await this.projectRepository.findOneOrFail({
-            where: { id: projectId },
-            select: ['name'],
-        });
-
+        const project = await this.projectRepository.findProjectName(projectId);
+        if (!project) throw new ProjectNotFoundException();
         // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
         return ValidateInviteResponseDto.fromEntity(
             projectId,
@@ -174,19 +147,27 @@ export class ProjectsService {
     ): Promise<JoinProjectResponseDto> {
         const projectId = dto.projectId;
         //  프로젝트 엔티티에서 이름 조회
-        const project = await this.projectRepository.findOneOrFail({
-            where: { id: projectId },
-            select: ['id', 'name'],
-        });
+        const project = await this.projectRepository.findProjectNameUsingQR(projectId, qr.manager);
+        if (!project) throw new ProjectNotFoundException();
         //  유저 엔티티에서 이름 조회
         const user = await this.userRepository.findOneOrFail({
             where: { id: userId },
             select: ['id', 'name'],
         });
         //  아직 참여하지 않았다면 member로 추가
-        const alreadyJoined = await this.isUserInProject(userId, projectId);
+        const alreadyJoined = await this.userProjectRepository.findByIdUsingQR(
+            userId,
+            projectId,
+            qr.manager
+        );
         if (!alreadyJoined) {
-            await this.addUserToProject(userId, projectId, 'member', qr);
+            const up = qr.manager.create(UserProject, {
+                user: { id: userId },
+                project: { id: project.id },
+                permission: projectPermission.MEMBER,
+                role: '',
+            });
+            await this.userProjectRepository.saveUserProject(up, qr.manager);
         }
         const message = `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`;
         const responseDto = JoinProjectResponseDto.fromEntity(message);
@@ -194,24 +175,34 @@ export class ProjectsService {
         return responseDto;
     }
 
-    async getProjectFullData(userId: number, projectId: number): Promise<AllProjectResponseDto> {
+    async getProjectFullDataByUpdate(
+        manager: EntityManager,
+        userId: number,
+        projectId: number
+    ): Promise<AllProjectResponseDto> {
         // 프로젝트 존재 검사
-        const project = await this.assertProjectExists(projectId);
+        const project = await this.projectRepository.findByIdWithTaskUsingQR(projectId, manager);
+        if (!project) throw new ProjectNotFoundException();
         // 프로젝트 멤버 권한 검사
-        await this.checkProjectMember(userId, projectId);
+        await this.assertProjectMember(userId, projectId);
 
-        const userProjects = await this.userProjectRepository.find({
-            where: { project: { id: projectId } },
-            relations: ['user', 'user.managers', 'user.managers.task'],
-        });
-
-        const users = userProjects.map(UserInProjectDto.from);
-
-        const key = `posts:${projectId}`;
-        const postsRaw = (await this.redis.get(key)) || [];
+        const postsRaw = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
         const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
 
-        return AllProjectResponseDto.fromEntity({ project, users, posts });
+        return AllProjectResponseDto.fromEntity({ project, posts });
+    }
+
+    async getProjectFullData(userId: number, projectId: number): Promise<AllProjectResponseDto> {
+        // 프로젝트 존재 검사
+        const project = await this.projectRepository.findByIdWithTask(projectId);
+        // 프로젝트 멤버 권한 검사
+        const check = await this.assertProjectMember(userId, projectId);
+        if (!check) throw new AlreadyProjectCompletedException();
+
+        const postsRaw = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
+        const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
+
+        return AllProjectResponseDto.fromEntity({ project, posts });
     }
 
     async updateProject(
@@ -221,23 +212,22 @@ export class ProjectsService {
         dto: UpdateProjectDto
     ): Promise<AllProjectResponseDto> {
         //프로젝트 존재 검사
-        const project = await this.assertProjectIsEditable(projectId);
+        const project = await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         //프로젝트 팀장 여부
-        const isLead = await this.checkProjectLeader(userId, projectId);
+        const isLead = await this.findWithPermission(userId, projectId, qr.manager);
 
         // rule, goal은 팀장만 수정 가능
         if ((!isLead && dto.rule !== undefined) || (!isLead && dto.goal !== undefined)) {
             throw new ProjectUpdateForbiddenException();
         }
-
         // 해당 필드들만 조건부로 갱신
         if (dto.name !== undefined) project.name = dto.name;
         if (dto.rule !== undefined) project.rule = dto.rule;
         if (dto.goal !== undefined) project.goal = dto.goal;
 
-        await qr.manager.save(project);
+        await this.projectRepository.saveProject(project, qr.manager);
 
-        return this.getProjectFullData(userId, projectId);
+        return this.getProjectFullDataByUpdate(qr.manager, userId, projectId);
     }
 
     async completeProject(
@@ -246,9 +236,9 @@ export class ProjectsService {
         projectId: number
     ): Promise<CompleteProjectResponseDto> {
         // 1) 프로젝트 존재 검사 & 수정 가능 확인
-        const project = await this.assertProjectIsEditable(projectId);
+        let project = await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 2) 팀장 권한 확인
-        await this.checkProjectLeader(userId, projectId);
+        await this.userProjectRepository.findWithPermission(userId, projectId, qr.manager);
 
         // 3) 프로젝트 완료 처리
         project.isCompleted = true;
@@ -256,19 +246,10 @@ export class ProjectsService {
 
         try {
             // 3-1) 프로젝트 저장
-            await qr.manager.save(Project, project);
+            project = await this.projectRepository.saveProject(project, qr.manager);
 
             // 3-2) 모든 멤버의 projectNum + 1
-            const rawMembers = await this.userProjectRepository
-                .createQueryBuilder('up')
-                .leftJoin('up.user', 'user')
-                .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
-                .where('up.projectId = :projectId', { projectId })
-                .getRawMany<{ userId: number; projectNum: number }>();
-
-            for (const { userId: memberId, projectNum } of rawMembers) {
-                await qr.manager.update(User, { id: memberId }, { projectNum: projectNum + 1 });
-            }
+            await this.userProjectRepository.updateProjectNum(projectId, qr.manager);
 
             // 3-3) PersonalRecall 생성 (create → save)
             const recall = qr.manager.create(PersonalRecall, {
@@ -277,24 +258,20 @@ export class ProjectsService {
             });
             await qr.manager.save(PersonalRecall, recall);
         } catch (err) {
+            console.error('[completeProject] tx failed:', err); // 원시 객체
             throw new ProjectTransactionException();
         }
 
         // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
         await this.masterPortfoliosService.createMasterPortfolio(qr.manager, userId, projectId);
 
-        // 5) 프로젝트 완료 시 Redis에 남아 있는 URL 캐시, 해시도 같이 삭제 삭제
-        // 1) Set 에서 이 프로젝트의 모든 inviteCode 조회
-        const setKey = `project:${projectId}:invites`;
-        const codes = await this.redis.sMembers(setKey);
-
+        // 5) 초대코드 정리 (InviteCodeStore 사용)
+        const codes = await this.inviteStore.listCodesByProject(projectId);
         if (codes.length) {
-            // 2) 남은 invite:<code> 삭제(메타는 남겨둠)
-            const delKeys = codes.flatMap((c) => [`invite:${c}`]);
-            await this.redis.del(delKeys);
-            // 3) Set 자체도 삭제
-            await this.redis.del(setKey);
+            await this.inviteStore.removeCodes(codes); // invite:<code> 삭제 (meta는 유지)
+            await this.inviteStore.clearProjectSet(projectId); // project:<id>:invites 세트 삭제
         }
+        await this.postsStore.deletePosts(projectId, this.postsKeyPrefix);
 
         // 6) 응답 반환
         return CompleteProjectResponseDto.fromEntity(project);
@@ -306,7 +283,7 @@ export class ProjectsService {
         userId: number
     ): Promise<CreateStepResponseDto> {
         // 프로젝트 멤버인지 확인
-        await this.checkProjectMember(userId, projectId);
+        await this.isProjectMember(userId, projectId, qr.manager);
         let savedStep: Step;
         try {
             // 1) 엔티티 생성
@@ -333,45 +310,22 @@ export class ProjectsService {
         projectId: number
     ): Promise<CreatePostResponseDto> {
         // 1) 프로젝트 존재 확인, 프로젝트 멤버인지 확인
-        await this.assertProjectExists(projectId);
-        await this.checkProjectMember(userId, projectId);
+        await this.projectRepository.findByIdWithTask(projectId);
+        await this.assertProjectMember(userId, projectId);
 
-        // 2) Redis에서 기존 포스트잇 로드 (string or null)
-        const key = this.POSTS_KEY(projectId);
-        const raw = await this.redis.get(key);
+        // 2) Redis에서 기존 포스트잇 로드
+        const posts = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
 
-        // 3) string → 객체 배열로 파싱
-        let posts: RedisPost[] = [];
-        if (raw) {
-            try {
-                posts = JSON.parse(raw) as CreatePostResponseDto[];
-            } catch {
-                throw new RedisDataParseException();
-            }
-        }
+        // 4) 최대 개수 제한
+        if (posts.length >= this.POST_MAX) throw new PostsExceededException();
 
-        // 4) 최대 16개 제한
-        if (posts.length >= this.POST_MAX) {
-            throw new PostsExceededException();
-        }
-
-        // 5) 새 ID 생성
-        const newId = posts.length > 0 ? Math.max(...posts.map((p) => p.id)) + 1 : 1;
-
-        // 6) 새 포스트잇 객체
-        const newPost: RedisPost = {
-            id: newId,
-            userId,
-            content: dto.content,
-            createdAt: new Date().toISOString(),
-        };
-
-        // 7) 배열에 추가
-        posts.push(newPost);
-
-        // 8) 다시 JSON.stringify 후 저장
-        await this.redis.set(key, JSON.stringify(posts));
-        await this.redis.expire(key, this.POST_TTL_SECONDS);
+        const newPost = await this.postsStore.savePost(
+            projectId,
+            this.postsKeyPrefix,
+            { userId, content: dto.content }, // ← userId 전달
+            this.POST_TTL_SECONDS,
+            this.POST_MAX
+        );
         // 10) 생성된 객체 반환
         return CreatePostResponseDto.fromEntity(newPost, projectId);
     }
@@ -381,37 +335,17 @@ export class ProjectsService {
         userId: number,
         projectId: number
     ): Promise<DeletePostResponseDto> {
-        await this.checkProjectMember(userId, projectId);
+        await this.assertProjectMember(userId, projectId);
         const key = this.POSTS_KEY(projectId);
-        const postsRaw = await this.redis.get(key);
-
-        if (!postsRaw) {
-            throw new PostNotFoundException();
-        }
-
-        let posts: any[];
-        try {
-            posts = JSON.parse(postsRaw);
-        } catch {
-            throw new RedisDataParseException();
-        }
-
-        const postIndex = posts.findIndex((post) => post.id === postId);
-
-        if (postIndex === -1) {
-            throw new PostNotFoundException();
-        }
-
-        const post = posts[postIndex];
-        if (post.userId !== userId) {
-            throw new NotPostAuthorException();
-        }
-
-        posts.splice(postIndex, 1); // 삭제
-
-        await this.redis.set(key, JSON.stringify(posts)); // 갱신
-        await this.redis.expire(key, this.POST_TTL_SECONDS); // TTL 재설정
-
+        const res = await this.postsStore.deletePost(
+            projectId,
+            this.postsKeyPrefix,
+            postId,
+            userId, // ← 작성자 검증에 사용
+            this.POST_TTL_SECONDS
+        );
+        if (res === 'NOT_FOUND') throw new PostNotFoundException();
+        if (res === 'NOT_OWNER') throw new NotPostAuthorException();
         const message = '포스트잇이 삭제되었습니다.';
 
         return DeletePostResponseDto.fromEntity(message);
@@ -423,45 +357,24 @@ export class ProjectsService {
         dto: ChangeLeaderDto,
         currentUserId: number
     ): Promise<ChangeLeaderResponseDto> {
-        await this.assertProjectIsEditable(projectId);
-        await this.checkProjectMember(currentUserId, projectId);
+        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
+        await this.isProjectMember(currentUserId, projectId, qr.manager);
         const { newLeaderId } = dto;
         const newId = newLeaderId;
-
-        // 1) 현재 팀장 ID만 조회
-        const currentLeaderRaw = await this.userProjectRepository
-            .createQueryBuilder('up')
-            .select('up.userId', 'oldLeaderId') // alias: oldLeaderId
-            .where('up.projectId = :projectId', { projectId })
-            .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
-            .getRawOne<{ oldLeaderId: number }>();
-
-        // 2) 이미 팀장인 경우 방지
-        if (currentLeaderRaw?.oldLeaderId === newId) {
-            throw new AlreadyLeaderException();
+        const current = await this.userProjectRepository.findProjectLeaderByProjectId(
+            projectId,
+            qr.manager
+        );
+        if (current?.oldLeaderId === newLeaderId) {
+            throw new ProjectUpdateForbiddenException('이미 팀장입니다.');
         }
-
-        try {
-            // 3) 기존 팀장 MEMBER로 강등
-            if (currentLeaderRaw) {
-                await qr.manager.update(
-                    UserProject,
-                    { user: { id: currentLeaderRaw.oldLeaderId }, project: { id: projectId } },
-                    { permission: projectPermission.MEMBER }
-                );
-            }
-
-            // 4) 새 팀장 LEAD로 승격
-            await qr.manager.update(
-                UserProject,
-                { user: { id: newLeaderId }, project: { id: projectId } },
-                { permission: projectPermission.LEAD }
-            );
-        } catch (err) {
-            // 트랜잭션 예외 발생 시 롤백하도록 인터셉터가 처리하고,
-            // 여기서는 도메인 예외로 래핑
-            throw new ProjectTransactionException();
-        }
+        // 지목된 사람 권한을 LEAD로 변경
+        await this.userProjectRepository.updateUserRole(
+            projectId,
+            newLeaderId,
+            projectPermission.LEAD,
+            qr.manager
+        );
 
         // 5) 응답 반환 (permission은 LEAD로 고정)
         return ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD);
@@ -474,36 +387,19 @@ export class ProjectsService {
         dto: UpdateProfileDto
     ): Promise<UpdateProfileResponseDto> {
         // 프로젝트 완료 여부 검사
-        await this.assertProjectIsEditable(projectId);
+        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 1. 본인 프로필 수정인지 확인
         if (userId !== dto.id) {
             throw new ProfileForbiddenException();
         }
 
-        // 2. 해당 UserProject 매핑 가져오기
-        const userProject = await this.userProjectRepository.findOne({
-            where: {
-                project: { id: projectId },
-                user: { id: dto.id },
-            },
-        });
-
-        if (!userProject) {
-            throw new ProjectForbiddenException();
-        }
-        try {
-            // 3. role 수정 후 저장
-            userProject.role = dto.role;
-            await qr.manager.save(userProject);
-        } catch (err) {
-            throw new ProjectTransactionException();
-        }
+        await this.userProjectRepository.updateUserRole(projectId, userId, dto.role, qr.manager);
 
         // 4. 전체 userProject 조회 (task 정보 포함)
-        const allUserProjects = await qr.manager.find(UserProject, {
-            where: { project: { id: projectId } },
-            relations: ['user', 'user.managers', 'user.managers.task'],
-        });
+        const allUserProjects = await this.userProjectRepository.findAllUsingQR(
+            projectId,
+            qr.manager
+        );
 
         // 5. DTO 변환 및 응답 반환
         const users = allUserProjects.map(UserInProjectDto.from);
@@ -558,141 +454,58 @@ export class ProjectsService {
         return mergedArray;
     }
 
-    // 프로젝트가 수정 가능한 상태인지 확인하는 메서드(이미 완료된 프로젝트는 수정할 수 없음)
-    async assertProjectIsEditable(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({ where: { id: projectId } });
-        if (!project) throw new ProjectNotFoundException();
-        if (project.isCompleted) throw new AlreadyProjectCompletedException();
-        return project;
-    }
-    // 프로젝트 존재 여부 확인
-    async assertProjectExists(projectId: number): Promise<Project> {
-        const project = await this.projectRepository.findOne({
-            where: { id: projectId },
-            relations: [
-                'userProjects',
-                'userProjects.user',
-                'userProjects.user.managers',
-                'userProjects.user.managers.task',
-            ],
-        });
-        if (!project) {
-            throw new ProjectNotFoundException();
-        }
-        return project;
-    }
-    // 프로젝트 멤버 확인 + 팀장 권한 확인
-    async checkProjectLeader(userId: number, projectId: number) {
-        const mapping = await this.userProjectRepository
-            .createQueryBuilder('up')
-            .select(['up.permission']) // permission만 조회
-            .where('up.userId = :userId', { userId })
-            .andWhere('up.projectId = :projectId', { projectId })
-            .getOne();
-
-        if (!mapping) {
-            throw new ProjectForbiddenException(); // 멤버 아님
-        }
-
-        if (mapping.permission !== projectPermission.LEAD) {
-            throw new ProjectUpdateForbiddenException('해당 부분은 팀장만 수정할 수 있습니다.');
-        }
-        return !!mapping;
+    async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
+        const userProjects = await this.userProjectRepository.findAllByProjectId(projectId);
+        return userProjects.map((up) => UserProfile.from(up.user));
     }
 
-    // 프로젝트 멤버인지만 확인
-    async checkProjectMember(userId: number, projectId: number) {
-        const mapping = await this.userProjectRepository.findOne({
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
+    // assert - GET 전용 단순 검증용
+    async assertProjectMember(userId: number, projectId: number): Promise<boolean> {
+        const mapping = this.userProjectRepository.findById(userId, projectId);
         if (!mapping) throw new ProjectForbiddenException();
-        return !!mapping;
+        return true;
+    }
+
+    async isProjectExists(projectId: number, manager: EntityManager) {
+        const project = await this.projectRepository.findByIdWithTaskUsingQR(projectId, manager);
+        if (!project) throw new ProjectNotFoundException();
+        return project;
+    }
+
+    // is - db 트랜잭션 전 검증용
+    async isProjectMember(
+        userId: number,
+        projectId: number,
+        manager: EntityManager
+    ): Promise<boolean> {
+        const mapping = this.userProjectRepository.findByIdUsingQR(userId, projectId, manager);
+        if (!mapping) throw new ProjectForbiddenException();
+        return true;
     }
 
     //프로젝트 멤버인지 확인 및 예외처리
 
-    // 사용자의 프로젝트 권한 조회
-    async getUserPermissionOfProject(userId: number, projectId: number) {
-        const userProject = await this.userProjectRepository.findOne({
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
-        if (!userProject) throw new ProjectForbiddenException();
-        return { permission: userProject.permission };
+    async findByIdWithTasks(projectId: number): Promise<Project> {
+        return await this.projectRepository.findByIdWithTask(projectId);
     }
 
-    // 참여코드로 프로젝트 id 조회
-    private async getProjectByInviteCode(inviteCode: string) {
-        const codeKey = `invite:${inviteCode}`;
-        const metaKey = `invite:meta:${inviteCode}`;
-
-        // 1) 정상: invite:<code>가 살아 있으면
-        const projectIdStr = await this.redis.get(codeKey);
-        if (!projectIdStr) {
-            // 2) 완료(만료된 링크): meta 키만 남아 있으면
-            if (await this.redis.exists(metaKey)) {
-                const metaProjectIdStr = await this.redis.get(metaKey);
-                if (metaProjectIdStr) {
-                    throw new AlreadyProjectCompletedException();
-                } else {
-                    throw new ExpiredInvitecodeException();
-                }
-            } else {
-                throw new InvalidInvitecodeException();
-            }
-        }
-
-        const projectId = Number(projectIdStr);
-        return projectId;
-    }
-    // user와 project 매핑 존재 확인
-    private async isUserInProject(userId: number, projectId: number): Promise<boolean> {
-        return await this.userProjectRepository.exists({
-            where: { user: { id: userId }, project: { id: projectId } },
-        });
-    }
-
-    // user를 project 멤버로 추가
-    private async addUserToProject(
+    async findWithPermission(
         userId: number,
         projectId: number,
-        role: string,
-        qr: QueryRunner
-    ): Promise<void> {
-        let userProject: UserProject;
-        try {
-            //  userProject 에 할당
-            userProject = qr.manager.create(UserProject, {
-                user: { id: userId },
-                project: { id: projectId },
-                permission: projectPermission.MEMBER,
-                role,
-            });
-        } catch (err) {
-            throw new ProjectTransactionException();
+        manager: EntityManager
+    ): Promise<boolean> {
+        const mapping = await this.userProjectRepository.findWithPermission(
+            userId,
+            projectId,
+            manager
+        );
+
+        if (!mapping) throw new ProjectForbiddenException();
+        if (mapping !== projectPermission.LEAD) {
+            throw new ProjectUpdateForbiddenException('해당 부분은 팀장만 수정할 수 있습니다.');
         }
-
-        // 트랜잭션 같은 컨텍스트로 저장
-        await qr.manager.save(UserProject, userProject);
+        return true;
     }
-
-    async getProjectMemberList(projectId: number): Promise<UserProfile[]> {
-        const project = await this.projectRepository.findOne({ where: { id: projectId } });
-        if (!project) throw new ProjectNotFoundException();
-
-        const userProjects = await this.userProjectRepository.find({
-            where: { project: { id: projectId } },
-            relations: ['user'],
-        });
-
-        return userProjects.map((up) => UserProfile.from(up.user));
-    }
-
     // 마감일 별 업무 조회
     async getTasksByDeadline(
         projectId: number,
@@ -717,13 +530,11 @@ export class ProjectsService {
         );
         return grouped;
     }
-}
 
-export function generateRandomCode(length = 10): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < length; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    // 사용자의 프로젝트 권한 조회
+    async getUserPermissionOfProject(userId: number, projectId: number) {
+        const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
+        if (!userProject) throw new ProjectForbiddenException();
+        return { permission: userProject.permission };
     }
-    return code;
 }

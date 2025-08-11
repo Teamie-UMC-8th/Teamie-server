@@ -25,7 +25,7 @@ export class CreatePostResponseDto {
         description: '사용자 ID',
     })
     @IsInt()
-    userId: number;
+    author: number;
 
     @ApiProperty({
         example: '이것은 포스트잇 내용입니다.',
@@ -53,7 +53,7 @@ export class CreatePostResponseDto {
         dto.id = entity.id;
         dto.content = entity.content;
         dto.projectId = projectId;
-        dto.userId = entity.userId;
+        dto.author = entity.userId;
         dto.createdAt = entity.createdAt;
         return dto;
     }

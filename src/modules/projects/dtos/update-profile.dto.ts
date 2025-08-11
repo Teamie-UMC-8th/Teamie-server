@@ -1,10 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserInProjectDto } from './all-project-response.dto';
+import { IsInt, IsString, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateProfileDto {
-    @ApiProperty({ example: '프로필 유저 아이디' })
+    @ApiProperty({ example: 123 })
+    @Type(() => Number) // "123" -> 123 로 변환 (transform: true일 때)
+    @IsInt()
     id: number;
-    @ApiProperty({ example: '역할' })
+
+    @ApiProperty({ example: 'LEAD' })
+    @IsString()
+    @IsNotEmpty()
+    // 필요하면 enum으로 제한: @IsEnum(projectRole)
     role: string;
 }
 

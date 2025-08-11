@@ -180,7 +180,7 @@ export class PlansService {
         });
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
-        return await this.projectsService.checkProjectMember(userId, projectId);
+        return await this.projectsService.assertProjectMember(userId, projectId);
     }
 
     // 일정 생성
@@ -191,8 +191,12 @@ export class PlansService {
         date: Date
     ): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
-        const project = await this.projectsService.assertProjectExists(projectId);
-        const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
+        const project = await this.projectsService.isProjectExists(projectId, qr.manager);
+        const checkUserIsMember = await this.projectsService.isProjectMember(
+            userId,
+            projectId,
+            qr.manager
+        );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
         }
@@ -235,7 +239,7 @@ export class PlansService {
             });
 
         // 2. 수정 권한 체크
-        await this.projectsService.checkProjectMember(userId, plan.project.id);
+        await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
         // 3. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);
@@ -266,9 +270,10 @@ export class PlansService {
             });
 
         // 2. 프로젝트 권한 체크: 기본 수정 권한
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            plan.project.id,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
@@ -325,9 +330,10 @@ export class PlansService {
             });
 
         // 2. 사용자의 삭제 권한 검사
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            plan.project.id,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();

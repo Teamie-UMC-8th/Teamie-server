@@ -32,7 +32,7 @@ import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Project } from '../../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
