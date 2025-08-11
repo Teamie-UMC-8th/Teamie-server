@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
-import { Comment } from '../entities/comments.entity';
 import { UpdateCommentResponseDto, UpdateCommentRequestDto } from '../dto/update-comment.dto';
 import {
     CommentUpdateForbiddenException,
-    CommentNotFoundException,
     CommentDeleteForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { CommonResponse } from 'src/common/response/common-response.dto';
@@ -15,15 +11,14 @@ import {
     CreateCocommentRequestDto,
     CreateCocommentResponseDto,
 } from '../cocomments/dto/create-cocomment.dto';
-
+import { CommentRepository } from '../repositories/comments.repository';
+import { CocommentRepository } from '../cocomments/repositories/cocoment.repository';
 @Injectable()
 export class CommentsService {
     constructor(
-        @InjectRepository(Comment)
-        private readonly commentRepository: Repository<Comment>,
+        private readonly commentRepository: CommentRepository,
 
-        @InjectRepository(Cocomment)
-        private readonly cocommentRepository: Repository<Cocomment>
+        private readonly cocommentRepository: CocommentRepository
     ) {}
 
     async updateComment(
@@ -33,17 +28,10 @@ export class CommentsService {
         dto: UpdateCommentRequestDto
     ): Promise<UpdateCommentResponseDto> {
         // 1. 댓글 존재 여부 확인 (작성자 정보까지 조회)
-        const comment = await queryRunner.manager
-            .createQueryBuilder(Comment, 'comment')
-            .leftJoin('comment.user', 'user')
-            .addSelect(['user.id'])
-            .where('comment.id = :commentId', { commentId })
-            .select(['comment.id', 'comment.content', 'user.id'])
-            .getOne();
-
-        if (!comment) {
-            throw new CommentNotFoundException('댓글을 찾을 수 없습니다.');
-        }
+        const comment = await this.commentRepository.findByIdWithUserWithQueryRunner(
+            queryRunner,
+            commentId
+        );
 
         // 2. 작성자 확인 (권한 체크)
         if (userId !== comment.user.id) {
@@ -54,7 +42,10 @@ export class CommentsService {
         comment.content = dto.content;
 
         // 4. 댓글 저장 (QueryRunner 사용)
-        const updatedComment = await queryRunner.manager.save(Comment, comment);
+        const updatedComment = await this.commentRepository.saveCommentWithQueryRunner(
+            queryRunner,
+            comment
+        );
 
         // 5. DTO 변환 후 반환
         return UpdateCommentResponseDto.from(updatedComment);
@@ -66,15 +57,10 @@ export class CommentsService {
         commentId: number
     ): Promise<CommonResponse> {
         // 댓글 존재 여부 확인
-        const comment = await queryRunner.manager
-            .createQueryBuilder(Comment, 'comment')
-            .leftJoinAndSelect('comment.user', 'user')
-            .where('comment.id = :commentId', { commentId })
-            .getOne();
-
-        if (!comment) {
-            throw new CommentNotFoundException();
-        }
+        const comment = await this.commentRepository.findByIdWithUserWithQueryRunner(
+            queryRunner,
+            commentId
+        );
 
         // 댓글 작성자와 로그인한 유저가 같은지 확인
         if (comment.user.id !== userId) {
@@ -82,7 +68,7 @@ export class CommentsService {
         }
 
         // 댓글 삭제
-        await this.commentRepository.delete({ id: commentId });
+        await this.commentRepository.deleteCommentWithQueryRunner(queryRunner, commentId);
 
         return CommonResponse.success({ message: `댓글 ID ${commentId} 삭제 완료` });
     }
@@ -94,22 +80,25 @@ export class CommentsService {
         dto: CreateCocommentRequestDto
     ): Promise<CreateCocommentResponseDto> {
         // 1. 대댓글 작성할 댓글 있는지
-        const comment = await queryRunner.manager
-            .createQueryBuilder(Comment, 'comment')
-            .where('comment.id = :commentId', { commentId })
-            .getOne();
+        const comment = await this.commentRepository.findCommentByIdWithQueryRunner(
+            queryRunner,
+            commentId
+        );
 
-        if (!comment) throw new CommentNotFoundException();
-
-        // 2. 댓글 생성 및 저장
+        // 2. 댓글 생성
         const cocomment = queryRunner.manager.create(Cocomment, {
             user: { id: userId },
             comment: { id: commentId },
             content: dto.content,
         });
-        const saved = await queryRunner.manager.save(Cocomment, cocomment);
 
-        // 3. 응답 반환
+        // 3. 댓글 저장
+        const saved = await this.cocommentRepository.saveCocommentWithQueryRunner(
+            queryRunner,
+            cocomment
+        );
+
+        // 4. 응답 반환
         return CreateCocommentResponseDto.from(saved);
     }
 }
