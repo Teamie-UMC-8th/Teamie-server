@@ -8,6 +8,8 @@ import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 import { Writer } from '../mappings/writers/writers.entity';
 import { UsersModule } from '../users/users.module';
+import { PlansListener } from './listener/plans.listener';
+import { EventBusModule } from 'src/infra/event-bus/event-bus.module';
 
 @Module({
     imports: [
@@ -15,9 +17,10 @@ import { UsersModule } from '../users/users.module';
         forwardRef(() => ProjectsModule),
         AuthModule,
         UsersModule,
+        EventBusModule,
     ],
     controllers: [PlansController],
-    providers: [PlansGateway, PlansService],
+    providers: [PlansGateway, PlansService, PlansListener],
     exports: [PlansService],
 })
 export class PlansModule {}
