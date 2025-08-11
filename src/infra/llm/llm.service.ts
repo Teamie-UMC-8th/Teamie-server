@@ -88,7 +88,6 @@ export class LLMService {
                 baseURL: this.baseURL,
             },
         });
-        console.log(process.env.LLM_QUESTION_MODEL);
 
         this.masterPortfolioLLM = new ChatOpenAI({
             model:
@@ -165,12 +164,11 @@ export class LLMService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(projectData: any) {
+    async generateMasterPortfolio(questionData: any, projectData: string) {
         // 마스터 포트폴리오 프롬프트를 로드합니다.
         let masterPortfolioPromptText: string;
         try {
             masterPortfolioPromptText = await this.promptLoader.load('master-portfolio.prompt.md');
-            projectData = await this.promptLoader.load('dummy-input.json');
         } catch (e) {
             throw new PromptLoadingException('master-portfolio.prompt.md');
         }
@@ -185,6 +183,7 @@ export class LLMService {
 
         try {
             const masterPortfolioResult = await masterPortfolioPrompt.pipe(structuredLLM).invoke({
+                questionData: questionData,
                 projectData: projectData,
             });
 

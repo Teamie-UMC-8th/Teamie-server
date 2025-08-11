@@ -13,6 +13,5 @@ export const typeORMConfig = (configService: ConfigService): TypeOrmModuleOption
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/../modules/**/*.entity.{ts,js}'],
         synchronize: true, //개발단계에서만 허용
-        logging: ['query', 'error'],
     };
 };

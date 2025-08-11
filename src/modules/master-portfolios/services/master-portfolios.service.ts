@@ -35,31 +35,7 @@ import { User } from '../../users/entities/users.entity';
 import { UserProject } from '../../projects/entities/userProjects.entity';
 import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
-
-function getPeriod(createdAt: Date, completedAt: Date): string {
-    let years = completedAt.getFullYear() - createdAt.getFullYear();
-    let months = completedAt.getMonth() - createdAt.getMonth();
-    let days = completedAt.getDate() - createdAt.getDate();
-
-    // 월 차이가 음수인 경우 보정
-    if (days < 0) {
-        months -= 1;
-        const prevMonth = new Date(completedAt.getFullYear(), completedAt.getMonth(), 0);
-        days += prevMonth.getDate();
-    }
-    // 연 차이가 음수인 경우 보정
-    if (months < 0) {
-        years -= 1;
-        months += 12;
-    }
-
-    // 0인 단위는 표시하지 않음
-    const period: string[] = [];
-    if (years > 0) period.push(`${years}년`);
-    if (months > 0) period.push(`${months}개월`);
-    if (days > 0) period.push(`${days}일`);
-    return period.join(' ');
-}
+import { getPeriod } from 'src/common/utils/get-period';
 
 type MasterPortfolioContentCheckResult = {
     [K in keyof MasterPortfolioOutput]?: boolean;
@@ -128,10 +104,14 @@ export class MasterPortfoliosService {
         }
         const masterPortfolioId = masterPortfolio.id;
         const projectId = masterPortfolio.project.id;
-        const detailInfo = masterPortfolio.detailInfo;
-        const assignedTask = masterPortfolio.assignedTask;
-        const keyAchievement = masterPortfolio.keyAchievement;
-        const insight = masterPortfolio.insight;
+
+        // 이미 생성된 질문이 있는지 확인합니다.
+        const existingQuestions = await qr.manager.findOne(Questions, {
+            where: { masterPortfolio: { id: masterPortfolioId } },
+        });
+        if (existingQuestions) {
+            throw new AIGenerationAlreadyExists();
+        }
 
         // recordId 정보 저장하기 (선택된 회의록)
         for (const recordId of recordIdList) {
@@ -143,7 +123,7 @@ export class MasterPortfoliosService {
         // 1. 선택된 회의록 내용
         const records = await qr.manager.find(Plan, {
             where: { id: In(recordIdList) },
-            select: ['meetingRecords'],
+            select: ['name', 'meetingRecords'],
         });
         // 2. 담당자로 지정된 모든 업무명
         const tasks = await qr.manager.find(Task, {
@@ -195,8 +175,8 @@ export class MasterPortfoliosService {
         const inputData: string = JSON.stringify({
             userName: userName?.name,
             role: role?.role,
-            projectName,
-            projectPeriod,
+            projectName: projectName,
+            projectPeriod: projectPeriod,
             createdAt,
             completedAt,
             category,
@@ -204,21 +184,7 @@ export class MasterPortfoliosService {
             records,
             tasks,
             personalRecalls,
-            masterPortfolio: {
-                detailInfo,
-                assignedTask,
-                keyAchievement,
-                insight,
-            },
         });
-
-        // 이미 생성된 질문이 있는지 확인합니다.
-        const existingQuestions = await qr.manager.findOne(Questions, {
-            where: { masterPortfolio: { id: masterPortfolioId } },
-        });
-        if (existingQuestions) {
-            throw new AIGenerationAlreadyExists();
-        }
 
         // LLM을 호출하여 질문을 생성합니다.
         const questions: Array<Question> = await this.llmService.generateQuestions(inputData);
@@ -281,7 +247,7 @@ export class MasterPortfoliosService {
             if (!questionExists) {
                 // questionId+portfolioId가 존재하지 않을 때
                 throw new BadRequestException(
-                    `Question with ID ${questionId} does not exist for portfolio ${portfolioId}`
+                    `Question ID ${questionId} does not exist for portfolio ${portfolioId}`
                 );
             }
 
@@ -346,6 +312,7 @@ export class MasterPortfoliosService {
 
         // 프로젝트 ID를 가져옵니다.
         const projectId = masterPortfolio.project.id;
+        const masterPortfolioId = masterPortfolio.id;
 
         // 이미 생성된 마스터 포트폴리오 AI가 있는지 확인합니다.
         const existingPortfolioAI = await this.masterPortfolioAIRepository.findOne({
@@ -355,8 +322,78 @@ export class MasterPortfoliosService {
             throw new AIGenerationAlreadyExists();
         }
 
-        // 임시로 더미 데이터 사용
+        // 입력할 데이터 가져오기
+        const questionData = await this.getQuestions(portfolioId);
         let projectData: any;
+
+        const plans = await qr.manager.find(Plan, {
+            where: { masterPortfolioId: portfolioId, project: { id: projectId } },
+            select: ['name', 'meetingRecords'],
+        });
+        // 1. 선택된 회의록 내용
+        const records = plans.map((plan) => ({
+            name: plan.name,
+            meetingRecords: plan.meetingRecords,
+        }));
+        // 2. 담당자로 지정된 모든 업무명
+        const tasks = await qr.manager.find(Task, {
+            where: { managers: { user: { id: userId } }, step: { project: { id: projectId } } },
+            select: ['name'],
+        });
+        // 3. 개인회고 내용
+        const personalRecalls = await qr.manager.findOne(PersonalRecall, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['id', 'collaborationProfile', 'memorableExperience', 'strengthsAndGrowth'],
+        });
+        // 4. 프로젝트명, 진행기간
+        const projectInfo = await qr.manager.findOne(Project, {
+            where: { id: projectId },
+            select: ['createdAt', 'completedAt', 'name'],
+        });
+        if (!projectInfo) {
+            throw new ProjectNotFoundException(`Project with ID ${projectId} not found`);
+        }
+        const projectName: string = projectInfo.name; // 프로젝트명
+        const createdAt: Date = projectInfo.createdAt; // 2025-07-26T06:05:35.998Z, Date 객체
+        const completedAt: Date = projectInfo.completedAt || new Date(); // 완료일이 없으면 현재 시간으로 설정
+        const projectPeriod: string = getPeriod(createdAt, completedAt);
+
+        // 5. 분류 태그, 기여도
+        const masterPortfolioData = await qr.manager.findOne(MasterPortfolio, {
+            where: { id: masterPortfolioId },
+            select: ['category', 'contributionRate'],
+        });
+        if (!masterPortfolioData) {
+            throw new MasterPortfolioNotFoundException(
+                `Master portfolio with ID ${masterPortfolioId} not found`
+            );
+        }
+        const category: string = masterPortfolioData.category;
+        const contributionRate: number = masterPortfolioData.contributionRate;
+
+        // 6. 이름과 역할(role)
+        const userName = await qr.manager.findOne(User, {
+            where: { id: userId },
+            select: ['name'],
+        });
+        const role = await qr.manager.findOne(UserProject, {
+            where: { user: { id: userId }, project: { id: projectId } },
+            select: ['id', 'role'],
+        });
+
+        projectData = JSON.stringify({
+            userName: userName?.name,
+            role: role?.role,
+            projectName: projectName,
+            projectPeriod: projectPeriod,
+            createdAt,
+            completedAt,
+            category,
+            contributionRate,
+            records,
+            tasks,
+            personalRecalls,
+        });
 
         // 진행 상태를 `GENERATING`으로 업데이트합니다.
         await this.masterPortfolioRepository.update(
@@ -365,7 +402,7 @@ export class MasterPortfoliosService {
         );
 
         const generatedPortfolio: MasterPortfolioOutput =
-            await this.llmService.generateMasterPortfolio(projectData);
+            await this.llmService.generateMasterPortfolio(questionData, projectData);
         if (!generatedPortfolio) {
             // 실패 시, 상태를 이전으로 돌립니다.
             await this.masterPortfolioRepository.update(
@@ -378,6 +415,7 @@ export class MasterPortfoliosService {
             );
         }
 
+        console.log('생성된 마스터 포트폴리오:', generatedPortfolio);
         // 생성된 JSON 값 구조 검사
         const checkResult = checkMasterPortfolioContentStructure(generatedPortfolio);
         const isValid = Object.values(checkResult).every((value) => value === true);
