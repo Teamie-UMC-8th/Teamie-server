@@ -1,11 +1,8 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Plan } from '../entities/plan.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { QueryRunner } from 'typeorm';
 import { PlanDetails } from '../dtos/plan-details.dto';
 import {
     PlanDateConflictException,
-    PlanNotFoundException,
     PlanTransactionException,
     ProjectForbiddenException,
     TransactionException,
@@ -15,9 +12,13 @@ import { CreatePlanResponse } from '../dtos/create-plan.dto';
 import { DeletePlanResponseDto } from '../dtos/delete-plan.dto';
 import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
 import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from '../dtos/update-plan.dto';
-import { Writer } from '../../mappings/writers/writers.entity';
-import { Attendee } from '../../mappings/attendees/attendees.entity';
+import { Writer } from '../entities/writers.entity';
+import { Attendee } from '../entities/attendees.entity';
 import { UsersService } from '../../users/services/users.service';
+import { PlanRepository } from '../repositories/plan.repository';
+import { WriterRepository } from '../repositories/writers.repository';
+import { AttendeeRepository } from '../repositories/attendees.repository';
+
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
@@ -25,10 +26,9 @@ import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 @Injectable()
 export class PlansService {
     constructor(
-        @InjectRepository(Plan)
-        private readonly plansRepository: Repository<Plan>,
-        @InjectRepository(Writer)
-        private readonly writersRepository: Repository<Writer>,
+        private readonly planRepository: PlanRepository,
+        private readonly writerRepository: WriterRepository,
+        private readonly attendeeRepository: AttendeeRepository,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
         private readonly usersService: UsersService,
@@ -48,28 +48,22 @@ export class PlansService {
         try {
             // 기존 배열에 있었으나 body에 없으면 => 삭제
             await Promise.all(
-                deleteWriters.map((id) =>
-                    qr.manager.delete(Writer, {
-                        plan: { id: planId },
-                        user: { id },
-                    })
+                deleteWriters.map(
+                    async (id) => await this.writerRepository.deleteWriter(qr, planId, id)
                 )
             );
             // 기존 배열에 없었으나 body에 있으면 => 추가
             await Promise.all(
-                addWriters.map((id) => {
-                    const newWriter = qr.manager.create(Writer, {
+                addWriters.map(async (id) => {
+                    const writer = qr.manager.create(Writer, {
                         plan: { id: planId },
                         user: { id },
                     });
-                    return qr.manager.save(newWriter);
+                    return await this.writerRepository.saveWriter(qr, writer);
                 })
             );
             // 최신 사항 조회
-            const plan = await qr.manager.findOne(Plan, {
-                where: { id: planId },
-            });
-            if (!plan) throw new PlanNotFoundException();
+            const plan = await this.planRepository.findByIdUsingQR(qr, planId);
             return plan.writers;
         } catch (e) {
             console.log(e);
@@ -90,28 +84,22 @@ export class PlansService {
         try {
             // 기존 배열에 있었으나 body에 없으면 => 삭제
             await Promise.all(
-                deleteAttendees.map((id) =>
-                    qr.manager.delete(Attendee, {
-                        plan: { id: planId },
-                        user: { id },
-                    })
+                deleteAttendees.map(
+                    async (id) => await this.attendeeRepository.deleteAttendee(qr, planId, id)
                 )
             );
             // 기존 배열에 없었으나 body에 있으면 => 추가
             await Promise.all(
                 addAttendees.map((id) => {
-                    const newAttendee = qr.manager.create(Attendee, {
+                    const attendee = qr.manager.create(Attendee, {
                         plan: { id: planId },
                         user: { id },
                     });
-                    return qr.manager.save(newAttendee);
+                    return this.attendeeRepository.saveAttendee(qr, attendee);
                 })
             );
             // 최신 사항 조회
-            const plan = await qr.manager.findOne(Plan, {
-                where: { id: planId },
-            });
-            if (!plan) throw new PlanNotFoundException();
+            const plan = await this.planRepository.findByIdUsingQR(qr, planId);
             return plan.attendees;
         } catch (e) {
             console.log(e);
@@ -125,14 +113,7 @@ export class PlansService {
         startDate: Date,
         endDate: Date
     ): Promise<Record<string, CalenderCardResponseDto[]>> {
-        const plans = await this.plansRepository
-            .createQueryBuilder('plan')
-            .select(['plan.date AS date', 'plan.id AS id', 'plan.name AS name'])
-            .where('plan.projectId = :projectId', { projectId })
-            .andWhere('plan.date BETWEEN :startDate AND :endDate', { startDate, endDate })
-            .orderBy('plan.date', 'ASC')
-            .getRawMany();
-
+        const plans = await this.planRepository.findAllByDate(projectId, startDate, endDate);
         //날짜 별 그룹핑
         const grouped = plans.reduce(
             (acc, curr) => {
@@ -148,58 +129,20 @@ export class PlansService {
 
     // 일정 상세 페이지 조회
     async getDetails(planId: number): Promise<PlanDetails> {
-        const plan = await this.plansRepository
-            .createQueryBuilder('plan')
-            .leftJoinAndSelect('plan.attendees', 'attendee')
-            .leftJoinAndSelect('plan.writers', 'writer')
-            .leftJoinAndSelect('attendee.user', 'attendeeUser')
-            .leftJoinAndSelect('writer.user', 'writerUser')
-            //TODO: @Column({ select: false }) 옵션 활용하여 쿼리 최적화
-            .where('plan.id = :planId', { planId })
-            .getOne();
-        if (!plan) throw new PlanNotFoundException(planId);
-        return PlanDetails.from(plan);
-    }
-    private async getDetailsWithQueryRunner(qr: QueryRunner, planId: number): Promise<Plan | null> {
-        return await qr.manager
-            .createQueryBuilder(Plan, 'plan')
-            .leftJoinAndSelect('plan.attendees', 'attendee')
-            .leftJoinAndSelect('plan.writers', 'writer')
-            .leftJoinAndSelect('attendee.user', 'attendeeUser')
-            .leftJoinAndSelect('writer.user', 'writerUser')
-            .where('plan.id = :planId', { planId })
-            .getOne();
+        return PlanDetails.from(await this.planRepository.findByIdWithDetail(planId));
     }
 
     // NOTE: 사용자의 권한 체크, Custom Guard로 추후 리팩토링 예정
     async checkPermission(userId: number, planId: number): Promise<Boolean> {
-        const plan = await this.plansRepository.findOne({
-            where: { id: planId },
-            relations: { project: true },
-            select: { id: true },
-        });
-        if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
-        const projectId = plan?.project.id;
+        const plan = await this.planRepository.findByIdWithProjectId(planId);
+        const projectId = plan.project.id;
         return await this.projectsService.assertProjectMember(userId, projectId);
     }
 
     // 일정 생성
-    async createPlan(
-        qr: QueryRunner,
-        userId: number,
-        projectId: number,
-        date: Date
-    ): Promise<CreatePlanResponse> {
+    async createPlan(qr: QueryRunner, projectId: number, date: Date): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
         const project = await this.projectsService.isProjectExists(projectId, qr.manager);
-        const checkUserIsMember = await this.projectsService.isProjectMember(
-            userId,
-            projectId,
-            qr.manager
-        );
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
 
         // 프로젝트 생성일자와 일정 생성일자 비교
         if (project.createdAt > date) {
@@ -210,12 +153,11 @@ export class PlansService {
         }
 
         try {
-            const newPlan = qr.manager.create(Plan, {
+            const newPlan = await this.planRepository.savePlan(qr, {
                 project: project,
                 date: date,
             });
-            const savedPlan = await qr.manager.save(Plan, newPlan);
-            return CreatePlanResponse.fromEntity(savedPlan);
+            return CreatePlanResponse.fromEntity(newPlan);
         } catch (err) {
             throw new PlanTransactionException();
         }
@@ -229,23 +171,16 @@ export class PlansService {
         body: BasicUpdatePlanReqDTO
     ): Promise<PlanDetails> {
         // 1. planId에 해당하는 plan의 존재 여부 확인
-        const plan = await qr.manager.findOne(Plan, {
-            where: { id: planId },
-            relations: ['project'],
-        });
-        if (!plan)
-            throw new PlanNotFoundException({
-                planId: planId,
-            });
+        const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
         // 2. 수정 권한 체크
         await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
         // 3. 일정 수정
         try {
-            await qr.manager.update(Plan, { id: planId }, body);
-            const planDetail = await this.getDetailsWithQueryRunner(qr, planId);
-            if (!planDetail) throw new PlanNotFoundException();
-            return PlanDetails.from(planDetail);
+            await this.planRepository.updateWithBasicDTO(qr, planId, body);
+            return PlanDetails.from(
+                await this.planRepository.findByIdWithDetailUsingQR(qr, planId)
+            );
         } catch (e) {
             console.log(e);
             throw new PlanTransactionException();
@@ -260,14 +195,7 @@ export class PlansService {
         body: UpdatePlanUserReqDTO
     ) {
         // 1. planId에 해당하는 plan의 존재 여부 확인
-        const plan = await qr.manager.findOne(Plan, {
-            where: { id: planId },
-            relations: ['project'],
-        });
-        if (!plan)
-            throw new PlanNotFoundException({
-                planId: planId,
-            });
+        const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
         // 2. 프로젝트 권한 체크: 기본 수정 권한
         const checkUserIsMember = await this.projectsService.isProjectMember(
@@ -286,8 +214,7 @@ export class PlansService {
             await this.usersService.checkIsUserExistByArray(body.attendees, plan.project.id);
 
         try {
-            const planDetail = await this.getDetailsWithQueryRunner(qr, planId);
-            if (!planDetail) throw new PlanNotFoundException();
+            const planDetail = await this.planRepository.findByIdWithDetailUsingQR(qr, planId);
             // 4. 참여자 수정
             if (Array.isArray(body.writers)) {
                 const oldSet = new Set(planDetail.writers.map((w) => w.user.id));
@@ -303,10 +230,10 @@ export class PlansService {
                 planDetail.attendees = attendees;
             }
             // 6. 일정 수정
-            await qr.manager.save(Plan, planDetail);
-            const updatedPlan = await this.getDetailsWithQueryRunner(qr, planId);
-            if (!updatedPlan) throw new PlanNotFoundException();
-            return PlanDetails.from(updatedPlan);
+            await this.planRepository.savePlan(qr, planDetail);
+            return PlanDetails.from(
+                await this.planRepository.findByIdWithDetailUsingQR(qr, planId)
+            );
         } catch (e) {
             console.log(e);
             throw new PlanTransactionException();
@@ -320,14 +247,7 @@ export class PlansService {
         planId: number
     ): Promise<DeletePlanResponseDto> {
         // 1. planId에 해당하는 plan 조회
-        const plan = await qr.manager.findOne(Plan, {
-            where: { id: planId },
-            relations: ['project'],
-        });
-        if (!plan)
-            throw new PlanNotFoundException({
-                planId: planId,
-            });
+        const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
         // 2. 사용자의 삭제 권한 검사
         const projectId = plan.project.id;
@@ -341,7 +261,7 @@ export class PlansService {
         }
 
         // 3. 일정 삭제
-        await qr.manager.delete(Plan, planId);
+        await this.planRepository.deletePlan(qr, planId);
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })

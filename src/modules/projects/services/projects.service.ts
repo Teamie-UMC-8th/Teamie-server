@@ -44,8 +44,8 @@ import { InviteCodeStore } from '../repositories/invite-code.store';
 import { ProjectRepository } from '../repositories/project.repository';
 import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
-import { UserProjectRepository } from '../repositories/user-project.repository';
-import { UserProject } from '../entities/userProjects.entity';
+import { UserProjectRepository } from '../user-projects/repositories/user-project.repository';
+import { UserProject } from '../user-projects/entities/user-projects.entity';
 import { map } from 'rxjs';
 import { Manager } from 'src/modules/mappings/managers/managers.entity';
 @Injectable()

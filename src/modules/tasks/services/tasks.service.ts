@@ -1,9 +1,5 @@
 import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { Task } from '../entities/tasks.entity';
-import { Repository, In } from 'typeorm';
-import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../projects/entities/userProjects.entity';
-import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
@@ -23,7 +19,7 @@ import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
 import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
-import { TaskNotFoundException, BadRequestException } from 'src/common/exceptions/custom.errors';
+import { BadRequestException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 import { UsersService } from '../../users/services/users.service';
 import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
@@ -37,26 +33,21 @@ import { StepRepository } from '../../steps/repositories/step.repository';
 import { ManagerRepository } from '../../mappings/managers/repositories/manager.repository';
 import { TaskFileRepository } from '../../mappings/task-files/repositories/task-file.repository';
 import { CommentRepository } from '../../comments/repositories/comments.repository';
+import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 
 @Injectable()
 export class TasksService {
     constructor(
         private readonly taskRepository: TaskRepository,
-
         private readonly stepRepository: StepRepository,
-
         private readonly managerRepository: ManagerRepository,
-
         private readonly taskFileRepository: TaskFileRepository,
+        private readonly commentRepository: CommentRepository,
+        private readonly userProjectRepository: UserProjectRepository,
 
         private readonly uploadService: UploadService,
-
-        private readonly commentRepository: CommentRepository,
-
         private readonly usersService: UsersService,
-
         private readonly configService: ConfigService,
-
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService
     ) {}
@@ -407,7 +398,7 @@ export class TasksService {
     ): Promise<PaginatedResponseDto<ProjectDashBoardDTO>> {
         const maxProjectNum: number = Number(this.configService.get('MAX_PROJECT_PAGE')) || 4;
         //1. 사용자가 참여한 프로젝트 조회
-        const projects = await this.usersService.getProjectsByUser(userId);
+        const projects = await this.userProjectRepository.findAllWithProjectByUserId(userId);
 
         //2. 커서값 및 maxProjectNum에 따라 projects 파싱
         let startIndex: number = 0;

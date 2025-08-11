@@ -10,6 +10,7 @@ import {
     ParseIntPipe,
     Req,
     ValidationPipe,
+    UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './services/projects.service';
 import { CreateProjectDto, CreateProjectResponseDto } from './dtos/create-project.dto';
@@ -38,7 +39,7 @@ import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
 import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 import { QueryRunner } from 'typeorm';
-import { UseGuards } from '@nestjs/common';
+
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
@@ -279,6 +280,7 @@ export class ProjectsController {
         description: '팀 캘린더에서 새로운 일정을 생성하는 API입니다.',
     })
     @ApiCommonResponse(CreatePlanResponse)
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Post('/:projectId/plans')
     async createPlan(
@@ -288,7 +290,7 @@ export class ProjectsController {
         @Body() body: CreatePlanReq
     ): Promise<CreatePlanResponse> {
         const date: Date = new Date(body.date);
-        return await this.plansService.createPlan(req.queryRunner, userId, projectId, date);
+        return await this.plansService.createPlan(req.queryRunner, projectId, date);
     }
 
     @ApiOperation({
@@ -306,6 +308,7 @@ export class ProjectsController {
         summary: '사용자의 프로젝트 권한 조회 API',
         description: '사용자의 프로젝트 권한을 조회합니다.',
     })
+    //TODO: 응답 명세
     @Get('/:projectId/my-permission')
     async getUserProjectPermission(
         @User('id') userId: number,

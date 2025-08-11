@@ -4,7 +4,7 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './services/tasks.service';
 import { Task } from './entities/tasks.entity';
 import { Step } from '../steps/entities/steps.entity';
-import { UserProject } from '../projects/entities/userProjects.entity';
+import { UserProject } from '../projects/user-projects/entities/user-projects.entity';
 import { ConfigModule } from '@nestjs/config';
 import { Manager } from '../mappings/managers/managers.entity';
 import { TaskFile } from '../mappings/task-files/task-files.entity';
@@ -18,12 +18,14 @@ import { StepRepository } from '../steps/repositories/step.repository';
 import { TaskFileRepository } from '../mappings/task-files/repositories/task-file.repository';
 import { ManagerRepository } from '../mappings/managers/repositories/manager.repository';
 import { ProjectsModule } from '../projects/projects.module';
+import { UserProjectModule } from '../projects/user-projects/user-project.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project, Comment]),
         ConfigModule,
         UsersModule,
         forwardRef(() => ProjectsModule),
+        UserProjectModule,
     ],
     controllers: [TasksController],
     providers: [
