@@ -3,7 +3,7 @@ import {
     ProjectTransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UserProject } from '../entities/user-projects.entity';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { EntityManager } from 'typeorm';
@@ -16,16 +16,10 @@ export class UserProjectRepository {
         private readonly userProjectRepository: Repository<UserProject>
     ) {}
 
-    async findUserProjectUsingQR(
-        projectId: number,
-        userId: number,
-        manager: EntityManager
-    ): Promise<UserProject | null> {
-        const userProject = manager.getRepository(UserProject).findOne({
-            where: { project: { id: projectId }, user: { id: userId } },
-        });
-        return userProject;
+    async saveUserProject(userProject: UserProject, manager: EntityManager) {
+        return await manager.save(userProject);
     }
+
     async findUserProject(userId: number, projectId: number): Promise<UserProject | null> {
         const userProject = await this.userProjectRepository.findOne({
             where: { project: { id: projectId }, user: { id: userId } },
@@ -40,13 +34,6 @@ export class UserProjectRepository {
         return users;
     }
 
-    async findAllUsingQR(projectId: number, manager: EntityManager): Promise<UserProject[]> {
-        return await manager.getRepository(UserProject).find({
-            where: { project: { id: projectId } },
-            relations: ['user', 'user.managers', 'user.managers.task'],
-        });
-    }
-
     async findAllByProjectId(projectId: number): Promise<UserProject[]> {
         return await this.userProjectRepository.find({
             where: { project: { id: projectId } },
@@ -54,17 +41,31 @@ export class UserProjectRepository {
         });
     }
 
-    async findProjectLeaderByProjectIdUsingQR(
-        projectId: number,
-        manager: EntityManager
-    ): Promise<{ oldLeaderId: number } | undefined> {
-        const repo = manager.getRepository(UserProject);
-        return await repo
-            .createQueryBuilder('up')
-            .select('up.userId', 'oldLeaderId')
-            .where('up.projectId = :projectId', { projectId })
-            .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
-            .getRawOne<{ oldLeaderId: number }>();
+    async findAllWithProjectByUserId(userId: number) {
+        return await this.userProjectRepository.find({
+            where: { user: { id: userId } },
+            relations: ['project'],
+            select: {
+                project: {
+                    id: true,
+                    name: true,
+                },
+                permission: true,
+                createdAt: true,
+            },
+            order: {
+                createdAt: 'ASC',
+            },
+        });
+    }
+
+    async findAllByUserIds(projectId: number, userIds: number[]) {
+        return await this.userProjectRepository.find({
+            where: {
+                user: { id: In(userIds) },
+                project: { id: projectId },
+            },
+        });
     }
 
     async findProjectLeaderNameByProjectId(projectId: number): Promise<string> {
@@ -101,6 +102,24 @@ export class UserProjectRepository {
         });
     }
 
+    async findAllUsingQR(projectId: number, manager: EntityManager): Promise<UserProject[]> {
+        return await manager.getRepository(UserProject).find({
+            where: { project: { id: projectId } },
+            relations: ['user', 'user.managers', 'user.managers.task'],
+        });
+    }
+
+    async findUserProjectUsingQR(
+        projectId: number,
+        userId: number,
+        manager: EntityManager
+    ): Promise<UserProject | null> {
+        const userProject = manager.getRepository(UserProject).findOne({
+            where: { project: { id: projectId }, user: { id: userId } },
+        });
+        return userProject;
+    }
+
     // is - db 트랜잭션 전 검증용
     async findByIdUsingQR(
         userId: number,
@@ -113,9 +132,17 @@ export class UserProjectRepository {
         });
     }
 
-    // userProject 저장
-    async saveUserProject(userProject: UserProject, manager: EntityManager) {
-        return await manager.save(userProject);
+    async findProjectLeaderByProjectIdUsingQR(
+        projectId: number,
+        manager: EntityManager
+    ): Promise<{ oldLeaderId: number } | undefined> {
+        const repo = manager.getRepository(UserProject);
+        return await repo
+            .createQueryBuilder('up')
+            .select('up.userId', 'oldLeaderId')
+            .where('up.projectId = :projectId', { projectId })
+            .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
+            .getRawOne<{ oldLeaderId: number }>();
     }
 
     // 완료 시 멤버들의 projectNum +1

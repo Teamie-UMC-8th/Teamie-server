@@ -7,11 +7,10 @@ import { UploadModule } from 'src/infra/upload/upload.module';
 import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.module';
 import { UserRepository } from './repositories/user.repository';
 import { UserProjectModule } from '../projects/user-projects/user-project.module';
-import { UserProject } from '../projects/user-projects/entities/user-projects.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([User, UserProject]),
+        TypeOrmModule.forFeature([User]),
         UploadModule,
         MasterPortfoliosModule,
         UserProjectModule,

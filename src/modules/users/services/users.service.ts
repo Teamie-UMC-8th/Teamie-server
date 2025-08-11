@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../entities/users.entity';
-import { In, QueryRunner, Repository } from 'typeorm';
+import { QueryRunner } from 'typeorm';
 import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UpdateProfileRequestDto, UserProfileResponseDto } from '../dtos/user-profile.dto';
 import {
@@ -15,17 +14,16 @@ import { UserMainTaskRequestDTO } from '../dtos/user-main-task.dto';
 import { MasterPortfoliosService } from '../../master-portfolios/services/master-portfolios.service';
 import { UserMasterPortfoliosResponseDto } from '../../master-portfolios/dtos/user-master-portfolios-response.dto';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
-import { UserProject } from '../../projects/user-projects/entities/user-projects.entity';
 import { UserProjectResponseDto } from '../dtos/user-project.dto';
 import { UserRepository } from '../repositories/user.repository';
+import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 @Injectable()
 export class UsersService {
     constructor(
         private readonly userRepository: UserRepository,
+        private readonly userProjectRepository: UserProjectRepository,
         private readonly uploadService: UploadService,
-        private readonly masterPortfoliosService: MasterPortfoliosService,
-        @InjectRepository(UserProject)
-        private readonly userProjectRepository: Repository<UserProject>
+        private readonly masterPortfoliosService: MasterPortfoliosService
     ) {}
 
     //회원가입 여부 확인
@@ -50,13 +48,10 @@ export class UsersService {
             throw new BadRequestException('유효하지 않은 사용자 ID가 포함되어 있습니다.');
         if (projectId) {
             const userIds = users.map((user) => user.id);
-            const userProjects = await this.userProjectRepository.find({
-                where: {
-                    user: { id: In(userIds) },
-                    project: { id: projectId },
-                },
-            });
-
+            const userProjects = await this.userProjectRepository.findAllByUserIds(
+                projectId,
+                userIds
+            );
             if (userProjects.length !== users.length) {
                 throw new BadRequestException(
                     '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.'
@@ -142,28 +137,8 @@ export class UsersService {
     }
 
     // 사용자가 속한 프로젝트들 조회
-    async getProjectsByUser(userId: number) {
-        const mappings = await this.userProjectRepository.find({
-            where: { user: { id: userId } },
-            relations: ['project'],
-            select: {
-                project: {
-                    id: true,
-                    name: true,
-                },
-                permission: true,
-                createdAt: true,
-            },
-            order: {
-                createdAt: 'ASC',
-            },
-        });
-        return mappings;
-    }
-
-    // 사용자가 속한 프로젝트들 조회
     async getUserProject(userId: number): Promise<UserProjectResponseDto[]> {
-        const mappings = await this.getProjectsByUser(userId);
+        const mappings = await this.userProjectRepository.findAllWithProjectByUserId(userId);
         return mappings.map(UserProjectResponseDto.fromEntity);
     }
 }

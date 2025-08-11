@@ -18,12 +18,14 @@ import { StepRepository } from '../steps/repositories/step.repository';
 import { TaskFileRepository } from '../mappings/task-files/repositories/task-file.repository';
 import { ManagerRepository } from '../mappings/managers/repositories/manager.repository';
 import { ProjectsModule } from '../projects/projects.module';
+import { UserProjectModule } from '../projects/user-projects/user-project.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Task, Step, UserProject, Manager, TaskFile, Project, Comment]),
         ConfigModule,
         UsersModule,
         forwardRef(() => ProjectsModule),
+        UserProjectModule,
     ],
     controllers: [TasksController],
     providers: [

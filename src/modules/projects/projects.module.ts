@@ -14,7 +14,6 @@ import { User } from '../users/entities/users.entity';
 import { PlansModule } from '../plans/plans.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { ProjectRepository } from './repositories/project.repository';
-import { UserProjectRepository } from './user-projects/repositories/user-project.repository';
 import { InviteCodeStore } from './repositories/invite-code.store';
 import { PostsStore } from './repositories/posts.store';
 import { UserProjectModule } from './user-projects/user-project.module';
