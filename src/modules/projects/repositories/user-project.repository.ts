@@ -1,7 +1,6 @@
 import {
     ProjectForbiddenException,
     ProjectTransactionException,
-    ProjectUpdateForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
@@ -55,7 +54,7 @@ export class UserProjectRepository {
         });
     }
 
-    async findProjectLeaderByProjectId(
+    async findProjectLeaderByProjectIdUsingQR(
         projectId: number,
         manager: EntityManager
     ): Promise<{ oldLeaderId: number } | undefined> {
@@ -66,6 +65,16 @@ export class UserProjectRepository {
             .where('up.projectId = :projectId', { projectId })
             .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
             .getRawOne<{ oldLeaderId: number }>();
+    }
+
+    async findProjectLeaderNameByProjectId(projectId: number): Promise<string> {
+        const up = await this.userProjectRepository
+            .createQueryBuilder('up')
+            .innerJoinAndSelect('up.user', 'u') // User 엔티티까지 함께 로드
+            .where('up.projectId = :projectId', { projectId })
+            .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
+            .getOneOrFail(); // 결과 없으면 예외 발생
+        return up.user.name;
     }
 
     async findWithPermission(
