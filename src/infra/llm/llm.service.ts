@@ -127,13 +127,13 @@ export class LLMService {
 
         try {
             // 실패 테스트용(옵션): 타입 과심화 방지를 위해 any 캐스팅 사용
-            const zodSchema = z.object({
-                name: z.string().describe('배우의 이름'),
-                films: z.array(z.string()).describe('출연 영화 목록'),
-            });
-            const malformedOutput = "{'name': 'Tom Hanks', 'films': ['Forrest Gump']}";
-            const parser = (StructuredOutputParser as any).fromZodSchema(zodSchema as any) as any;
-            await parser.parse(malformedOutput);
+            // const zodSchema = z.object({
+            //     name: z.string().describe('배우의 이름'),
+            //     films: z.array(z.string()).describe('출연 영화 목록'),
+            // });
+            // const malformedOutput = "{'name': 'Tom Hanks', 'films': ['Forrest Gump']}";
+            // const parser = (StructuredOutputParser as any).fromZodSchema(zodSchema as any) as any;
+            // await parser.parse(malformedOutput);
 
             const questions = await questionPrompt.pipe(structuredLLM).invoke({
                 userData: inputData,
