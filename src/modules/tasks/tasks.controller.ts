@@ -28,7 +28,7 @@ import {
 import {
     ApiCommonResponse,
     ApiCommonResponseWithPagination,
-    ApiCommonErrorResponse
+    ApiCommonErrorResponse,
 } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';

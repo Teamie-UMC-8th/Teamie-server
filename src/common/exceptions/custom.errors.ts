@@ -192,6 +192,17 @@ export class ProjectNotFoundException extends CustomHttpException {
     }
 }
 
+export class ProjectLeaderNotFoundException extends CustomHttpException {
+    constructor(projectId: number) {
+        super(
+            ErrorCode.NOT_FOUND_LEADER,
+            '프로젝트 리더를 찾을 수 없습니다.',
+            HttpStatus.NOT_FOUND,
+            { projectId }
+        );
+    }
+}
+
 export class PostNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(ErrorCode.POST_NOT_FOUND, '포스트잇을 찾을 수 없습니다.', HttpStatus.NOT_FOUND, data);

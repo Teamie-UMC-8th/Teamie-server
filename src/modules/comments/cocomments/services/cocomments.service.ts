@@ -10,9 +10,7 @@ import { CocommentRepository } from '../repositories/cocoment.repository';
 
 @Injectable()
 export class CocommentsService {
-    constructor(
-        private readonly cocommentRepository: CocommentRepository
-    ) {}
+    constructor(private readonly cocommentRepository: CocommentRepository) {}
 
     async updateCocomment(
         queryRunner: QueryRunner,

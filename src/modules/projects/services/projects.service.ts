@@ -20,6 +20,7 @@ import {
     ProjectForbiddenException,
     ProjectNotFoundException,
     AlreadyProjectCompletedException,
+    ProjectLeaderNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../../steps/dtos/create-step.dto';
@@ -136,6 +137,7 @@ export class ProjectsService {
         // 4) 프로젝트 리더 이름 조회
         const leaderName =
             await this.userProjectRepository.findProjectLeaderNameByProjectId(projectId);
+        if (!leaderName) throw new ProjectLeaderNotFoundException(projectId);
         // 5) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
         return ValidateInviteResponseDto.fromEntity(
             projectId,

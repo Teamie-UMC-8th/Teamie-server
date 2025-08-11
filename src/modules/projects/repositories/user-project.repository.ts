@@ -1,7 +1,6 @@
 import {
     ProjectForbiddenException,
     ProjectTransactionException,
-    ProjectUpdateForbiddenException,
 } from 'src/common/exceptions/custom.errors';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
@@ -75,7 +74,6 @@ export class UserProjectRepository {
             .where('up.projectId = :projectId', { projectId })
             .andWhere('up.permission = :perm', { perm: projectPermission.LEAD })
             .getOneOrFail(); // 결과 없으면 예외 발생
-
         return up.user.name;
     }
 
