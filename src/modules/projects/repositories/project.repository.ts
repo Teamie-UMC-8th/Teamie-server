@@ -15,9 +15,19 @@ export class ProjectRepository {
         private readonly projectRepository: Repository<Project>
     ) {}
 
-    async findProjectName(projectId: number, manager: EntityManager): Promise<Project | null> {
-        const repo = manager.getRepository(Project);
-        const project = repo.findOne({
+    async findProjectName(projectId: number): Promise<Project | null> {
+        const project = this.projectRepository.findOne({
+            where: { id: projectId },
+            select: ['id', 'name'],
+        });
+        return project;
+    }
+
+    async findProjectNameByManager(
+        projectId: number,
+        manager: EntityManager
+    ): Promise<Project | null> {
+        const project = this.projectRepository.findOne({
             where: { id: projectId },
             select: ['id', 'name'],
         });
@@ -47,13 +57,23 @@ export class ProjectRepository {
             throw new ProjectTransactionException();
         }
     }
+    // assert - GET 전용 단순 검증용
+    async assertProjectEditable(projectId: number): Promise<Project> {
+        const project = await this.projectRepository
+            .createQueryBuilder('p')
+            .where('p.id = :id', { id: projectId })
+            .getOne();
 
+        if (!project) throw new ProjectNotFoundException();
+        if (project.isCompleted) throw new AlreadyProjectCompletedException();
+        return project;
+    }
+    // is - db 트랜잭션 전 검증용
     async isProjectEditable(projectId: number, manager: EntityManager): Promise<Project> {
         const project = await manager
             .getRepository(Project)
             .createQueryBuilder('p')
             .where('p.id = :id', { id: projectId })
-            .setLock('pessimistic_write') // 같은 트랜잭션에서만 의미 있음
             .getOne();
 
         if (!project) throw new ProjectNotFoundException();
@@ -61,9 +81,21 @@ export class ProjectRepository {
         return project;
     }
 
-    async isProjectExist(projectId: number, manager: EntityManager): Promise<Project> {
-        const repo = manager.getRepository(Project);
-        const project = await repo.findOne({
+    async assertProjectExist(projectId: number): Promise<Project> {
+        const project = await this.projectRepository.findOne({
+            where: { id: projectId },
+            relations: [
+                'userProjects',
+                'userProjects.user',
+                'userProjects.user.managers',
+                'userProjects.user.managers.task',
+            ],
+        });
+        if (!project) throw new ProjectNotFoundException();
+        return project;
+    }
+    async isProjectExists(projectId: number, manager: EntityManager): Promise<Project | null> {
+        const project = manager.getRepository(Project).findOne({
             where: { id: projectId },
             relations: [
                 'userProjects',

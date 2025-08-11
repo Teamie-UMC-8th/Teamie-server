@@ -10,7 +10,7 @@ import { PlanNotFoundException } from 'src/common/exceptions/custom.errors';
 describe('PlansService', () => {
     let service: PlansService;
     let plansRepository: jest.Mocked<Repository<Plan>>;
-    let projectsService: { isProjectMembership: jest.Mock };
+    let projectsService: { assertProjectMembership: jest.Mock };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -26,7 +26,7 @@ describe('PlansService', () => {
                 {
                     provide: ProjectsService,
                     useValue: {
-                        isProjectMembership: jest.fn(),
+                        assertProjectMembership: jest.fn(),
                     },
                 },
             ],
@@ -79,12 +79,12 @@ describe('PlansService', () => {
         } as Plan;
 
         (plansRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-        projectsService.isProjectMembership.mockResolvedValue(true);
+        projectsService.assertProjectMembership.mockResolvedValue(true);
 
         const result = await service.checkPermission(10, 1);
 
         expect(result).toBe(true);
-        expect(projectsService.isProjectMembership).toHaveBeenCalledWith(10, 999);
+        expect(projectsService.assertProjectMembership).toHaveBeenCalledWith(10, 999);
     });
 
     // checkPermission - plan 없으면 예외
@@ -102,7 +102,7 @@ describe('PlansService', () => {
         } as Plan;
 
         (plansRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-        projectsService.isProjectMembership.mockResolvedValue(false);
+        projectsService.assertProjectMembership.mockResolvedValue(false);
 
         const result = await service.checkPermission(10, 1);
         expect(result).toBe(false);

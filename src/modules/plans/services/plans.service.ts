@@ -180,7 +180,7 @@ export class PlansService {
         });
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
-        return await this.projectsService.isProjectMember(userId, projectId, manager);
+        return await this.projectsService.assertProjectMember(userId, projectId);
     }
 
     // 일정 생성

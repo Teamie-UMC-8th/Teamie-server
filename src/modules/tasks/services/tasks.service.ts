@@ -74,7 +74,7 @@ export class TasksService {
 
         // 프로젝트 참여 여부 검증
         const projectId = targetStep.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 업무 생성
         const task = queryRunner.manager.create(Task, {
@@ -100,7 +100,7 @@ export class TasksService {
         const newStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, dto.stepId);
 
         // 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, newStep.project.id);
+        await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
 
         // 4. Task 필드 덮어쓰기
         task.step = newStep;
@@ -154,7 +154,7 @@ export class TasksService {
 
         // 2. 프로젝트 참여 여부 확인
         const projectId = task.step.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 3. TaskFile 조회
         const taskFiles = await this.taskFileRepository.findTaskFilesByIdWithQueryRunner(
@@ -195,7 +195,7 @@ export class TasksService {
         // 프로젝트 참여 여부 검증
         const projectId = task.step.project.id;
 
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // Manager[] 형태 가공
         const managers = task.managers;
@@ -218,7 +218,7 @@ export class TasksService {
         const project = await this.projectsService.assertProjectExists(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 전체 업무 수 (더보기 버튼 표시 여부 판단)
         const totalCount = await this.taskRepository.countByProjectId(projectId);
@@ -288,7 +288,7 @@ export class TasksService {
 
         // 2. 프로젝트 참여자 여부 확인
         const projectId = task.step.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 3. 댓글 생성 및 저장
         const comment = queryRunner.manager.create(CommentEntity, {
@@ -310,7 +310,7 @@ export class TasksService {
         // 1. Task 조회 (Step, Project 조인)
         const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
         // 2. 프로젝트 참여자 여부 확인
-        await this.projectsService.checkProjectMember(userId, task.step.project.id);
+        await this.projectsService.assertProjectMember(userId, task.step.project.id);
 
         const fileUrl = await this.uploadService.uploadFile(file);
 
@@ -485,7 +485,7 @@ export class TasksService {
         // ───  프로젝트 + 참여자 검증 ─────────────────────
         const project = await this.projectsService.assertProjectExists(projectId);
 
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         //2) 필터용 baseQb
         const baseQb = this.buildSearchBaseQb(projectId, dto);
@@ -552,7 +552,7 @@ export class TasksService {
         await this.projectsService.assertProjectExists(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 
@@ -594,7 +594,7 @@ export class TasksService {
         await this.projectsService.assertProjectExists(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 
