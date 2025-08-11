@@ -38,9 +38,9 @@ import { ProjectsModule } from '../projects/projects.module';
     exports: [
         TaskRepository,
         CommentRepository,
-        StepRepository,
         TaskFileRepository,
         ManagerRepository,
+        TasksService,
     ],
 })
 export class TasksModule {}

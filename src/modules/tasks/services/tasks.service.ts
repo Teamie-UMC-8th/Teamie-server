@@ -83,7 +83,7 @@ export class TasksService {
             memo: null,
             deadline: null,
         });
-        await this.taskRepository.saveWithQueryRunner(queryRunner, task);
+        await this.taskRepository.saveWithQueryRunner(queryRunner.manager, task);
         return CreateTaskResponseDto.fromEntity(task);
     }
 
@@ -109,7 +109,10 @@ export class TasksService {
         task.status = dto.status;
         task.memo = dto.memo;
 
-        const updatedTask = await this.taskRepository.saveWithQueryRunner(queryRunner, task);
+        const updatedTask = await this.taskRepository.saveWithQueryRunner(
+            queryRunner.manager,
+            task
+        );
 
         // managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
         if (dto.managerIds?.length) {

@@ -14,23 +14,27 @@ import {
 } from '../../../common/exceptions/custom.errors';
 import { Task } from '../../tasks/entities/tasks.entity';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-task-step.dto';
+import { StepRepository } from '../repositories/step.repository';
+import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 @Injectable()
 export class StepsService {
     constructor(
         private readonly stepRepository: StepRepository,
-        private readonly projectRepository: ProjectRepository,
-        @InjectRepository(Task)
-        private readonly taskRepository: Repository<Task>
+        private readonly taskRepository: TaskRepository
     ) {}
 
-    async updateStep(qr: QueryRunner,stepId: number, dto: UpdateStepDto): Promise<UpdateStepResponseDto> {
-        const step = await this.stepRepository.findByIdUsingQR(qr.manager,stepId);
+    async updateStep(
+        qr: QueryRunner,
+        stepId: number,
+        dto: UpdateStepDto
+    ): Promise<UpdateStepResponseDto> {
+        const step = await this.stepRepository.findByIdUsingQR(qr.manager, stepId);
         if (!step) {
             throw new StepNotFoundException();
         }
 
         step.name = dto.name;
-        const updatedStep = await this.stepRepository.saveStep(qr.manager,step);
+        const updatedStep = await this.stepRepository.saveStep(qr.manager, step);
 
         return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
     }
@@ -43,51 +47,43 @@ export class StepsService {
     ): Promise<UpdateTaskStepResponseDto> {
         const { newStepId } = dto;
         // 1) task 조회 + 현재 stepId 일치 여부 확인
-        const raw = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 's')
-            .select(['task.id AS task_id', 's.id AS current_step_id'])
-            .where('task.id = :taskId', { taskId })
-            .andWhere('s.id = :stepId', { stepId })
-            .getRawOne();
 
-        if (!raw) throw new TaskNotFoundException();
+        const step = await this.stepRepository.findByIdWithTask(qr.manager, stepId);
+
+        if (!step) throw new StepNotFoundException();
+
+        const hasTask = step.tasks.some((task) => task.id === taskId);
+        if (!hasTask) {
+            throw new TaskNotFoundException();
+        }
 
         // 2) 이동할 step 존재 여부 확인
-        const stepRaw = await this.stepRepository.findByIdUsingQR(qr.manager,newStepId);
+        await this.stepRepository.findByIdUsingQR(qr.manager, newStepId);
 
         // 3) 실제로 Task.step 컬럼만 업데이트
-        await this.taskRepository
-            .createQueryBuilder()
-            .update(Task)
-            .set({ step: { id: newStepId } })
-            .where('id = :taskId', { taskId })
-            .execute();
+        const partial = qr.manager.create(Task, {
+            id: taskId,
+            step: { id: newStepId } as any,
+        });
+        await this.taskRepository.saveWithQueryRunner(qr.manager, partial);
 
         // 4) DTO 생성하여 반환
         return UpdateTaskStepResponseDto.fromEntity(taskId, newStepId);
     }
 
-    async deleteStep(qr:QueryRunner,stepId: number): Promise<CommonResponse> {
+    async deleteStep(qr: QueryRunner, stepId: number): Promise<CommonResponse> {
         //step 존재 여부 확인
         const stepRaw = await this.stepRepository.findByIdUsingQR(qr.manager, stepId);
         // stepId로 연결된 task 조회
-        const raw = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 's')
-            .select(['task.id AS task_id'])
-            .where('s.id = :stepId', { stepId })
-            .getRawMany();
+        const raw = await this.stepRepository.findByIdWithTask(qr.manager, stepId);
 
         // 연결된 task가 하나라도 있으면 삭제 불가
-        if (raw.length > 0) {
+        if (raw.tasks.length > 0) {
             throw new StepDeleteForBiddenException();
         }
 
         // 실제 삭제 로직 (예: soft delete 또는 hard delete 등)
-        await this.stepRepository.deleteById(qr.manager,stepRaw);
+        await this.stepRepository.deleteById(qr.manager, stepRaw.id);
         return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });
     }
-}import { StepRepository } from '../repositories/step.repository';
-import { ProjectRepository } from 'src/modules/projects/repositories/project.repository';
-
+}

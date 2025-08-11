@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
 import { Task } from '../entities/tasks.entity';
 import { TaskNotFoundException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
@@ -58,8 +58,8 @@ export class TaskRepository {
      */
 
     //task 저장
-    async saveWithQueryRunner(queryRunner: QueryRunner, task: Task): Promise<Task> {
-        return queryRunner.manager.save(Task, task);
+    async saveWithQueryRunner(manager: EntityManager, task: Task): Promise<Task> {
+        return await manager.save(Task, task);
     }
 
     // task 삭제
