@@ -215,7 +215,7 @@ export class TasksService {
         const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
 
         // 1. 프로젝트 존재 검증
-        const project = await this.projectsService.assertProjectExists(projectId);
+        const project = await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
         await this.projectsService.assertProjectMember(userId, projectId);
@@ -483,7 +483,7 @@ export class TasksService {
         }
 
         // ───  프로젝트 + 참여자 검증 ─────────────────────
-        const project = await this.projectsService.assertProjectExists(projectId);
+        const project = await this.projectsService.findByIdWithTasks(projectId);
 
         await this.projectsService.assertProjectMember(userId, projectId);
 
@@ -549,7 +549,7 @@ export class TasksService {
 
         // 프로젝트/멤버 검증은 기존 getSearchTask와 동일
         // 1. 프로젝트 존재 검증
-        await this.projectsService.assertProjectExists(projectId);
+        await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
         await this.projectsService.assertProjectMember(userId, projectId);
@@ -591,7 +591,7 @@ export class TasksService {
         }
 
         // 1. 프로젝트 존재 검증
-        await this.projectsService.assertProjectExists(projectId);
+        await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
         await this.projectsService.assertProjectMember(userId, projectId);

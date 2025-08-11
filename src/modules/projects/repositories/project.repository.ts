@@ -22,7 +22,7 @@ export class ProjectRepository {
         return project;
     }
 
-    async findProjectNameByManager(
+    async findProjectNameUsingQR(
         projectId: number,
         manager: EntityManager
     ): Promise<Project | null> {
@@ -32,17 +32,9 @@ export class ProjectRepository {
         });
         return project;
     }
-    // 프로젝트 저장 (트랜잭션 컨텍스트 주입)
-    async saveProject(project: Project, manager: EntityManager): Promise<Project> {
-        try {
-            return await manager.save(Project, project);
-        } catch (e) {
-            throw new ProjectTransactionException();
-        }
-    }
 
     // assert - GET 전용 단순 검증용
-    async assertProjectEditable(projectId: number): Promise<Project> {
+    async findByProjectId(projectId: number): Promise<Project> {
         const project = await this.projectRepository
             .createQueryBuilder('p')
             .where('p.id = :id', { id: projectId })
@@ -52,7 +44,7 @@ export class ProjectRepository {
         return project;
     }
     // is - db 트랜잭션 전 검증용
-    async isProjectEditable(projectId: number, manager: EntityManager): Promise<Project> {
+    async findByProjectIdUsingQR(projectId: number, manager: EntityManager): Promise<Project> {
         const project = await manager
             .getRepository(Project)
             .createQueryBuilder('p')
@@ -63,7 +55,7 @@ export class ProjectRepository {
         return project;
     }
 
-    async assertProjectExist(projectId: number): Promise<Project> {
+    async findByIdWithTask(projectId: number): Promise<Project> {
         const project = await this.projectRepository.findOne({
             where: { id: projectId },
             relations: [
@@ -76,7 +68,10 @@ export class ProjectRepository {
         if (!project) throw new ProjectNotFoundException();
         return project;
     }
-    async isProjectExists(projectId: number, manager: EntityManager): Promise<Project | null> {
+    async findByIdWithTaskUsingQR(
+        projectId: number,
+        manager: EntityManager
+    ): Promise<Project | null> {
         const project = manager.getRepository(Project).findOne({
             where: { id: projectId },
             relations: [
@@ -88,5 +83,14 @@ export class ProjectRepository {
         });
         if (!project) throw new ProjectNotFoundException();
         return project;
+    }
+
+    // 프로젝트 저장 (트랜잭션 컨텍스트 주입)
+    async saveProject(project: Project, manager: EntityManager): Promise<Project> {
+        try {
+            return await manager.save(Project, project);
+        } catch (e) {
+            throw new ProjectTransactionException();
+        }
     }
 }
