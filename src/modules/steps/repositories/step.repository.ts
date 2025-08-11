@@ -4,7 +4,6 @@ import { EntityManager, Repository } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
 import {
     StepNotFoundException,
-    StepTransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 
@@ -66,11 +65,7 @@ export class StepRepository {
     }
 
     async saveStep(manager: EntityManager, step: Step): Promise<Step> {
-        try {
             return await manager.save(Step, step);
-        } catch (e) {
-            throw new StepTransactionException();
-        }
     }
 
     async deleteById(manager: EntityManager, stepId: number): Promise<void> {
