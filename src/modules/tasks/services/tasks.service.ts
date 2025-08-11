@@ -2,7 +2,7 @@ import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../projects/entities/userProjects.entity';
+import { UserProject } from '../../projects/user-projects/entities/user-projects.entity';
 import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {

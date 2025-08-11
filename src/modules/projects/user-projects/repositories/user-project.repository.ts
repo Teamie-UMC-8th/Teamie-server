@@ -4,7 +4,7 @@ import {
 } from 'src/common/exceptions/custom.errors';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { UserProject } from '../entities/userProjects.entity';
+import { UserProject } from '../entities/user-projects.entity';
 import { projectPermission } from 'src/common/enums/project-permission.enum';
 import { EntityManager } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';

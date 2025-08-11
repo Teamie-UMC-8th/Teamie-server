@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
-import { UserProject } from 'src/modules/projects/entities/userProjects.entity';
+import { UserProject } from 'src/modules/projects/user-projects/entities/user-projects.entity';
 import { ProjectSummaryResponseDto } from './project-response.dto';
 import { MaxLength, IsString } from 'class-validator';
 import { Type } from 'class-transformer';

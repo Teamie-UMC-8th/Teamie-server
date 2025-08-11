@@ -2,7 +2,7 @@ import { Entity, Column, OneToMany } from 'typeorm';
 import { Comment } from '../../comments/entities/comments.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
-import { UserProject } from '../../projects/entities/userProjects.entity';
+import { UserProject } from '../../projects/user-projects/entities/user-projects.entity';
 import { Manager } from '../../mappings/managers/managers.entity';
 import { TaskFile } from '../../mappings/task-files/task-files.entity';
 import { ProjectFile } from '../../mappings/project-files/project-files.entity';
