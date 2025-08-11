@@ -1,24 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TaskFile } from './task-files.entity';
 import { UploadService } from '../../../infra/upload/upload.service';
 import { TaskFileNotFoundException } from 'src/common/exceptions/custom.errors';
 import { InternalServerErrorException } from '@nestjs/common';
+import { TaskFileRepository } from './repositories/task-file.repository';
+import { QueryRunner } from 'typeorm';
+import { CommonResponse } from 'src/common/response/common-response.dto';
+
 @Injectable()
 export class TaskFilesService {
     constructor(
         private readonly uploadService: UploadService,
 
-        @InjectRepository(TaskFile)
-        private readonly taskFileRepository: Repository<TaskFile>
+        private readonly taskFileRepository: TaskFileRepository
     ) {}
 
-    async deleteTaskFile(fileId: number, userId: number): Promise<void> {
-        const file = await this.taskFileRepository.findOne({
-            where: { id: fileId },
-            relations: ['user'],
-        });
+    async deleteTaskFile(
+        queryRunner: QueryRunner,
+        userId: number,
+        fileId: number
+    ): Promise<CommonResponse> {
+        const file = await this.taskFileRepository.findTaskFileByIdWithQueryRunner(
+            queryRunner,
+            fileId
+        );
 
         if (!file) {
             throw new TaskFileNotFoundException('해당 파일을 찾을 수 없습니다.');
@@ -37,6 +41,7 @@ export class TaskFilesService {
             throw new InternalServerErrorException('S3 파일 삭제에 실패했습니다.');
         }
 
-        await this.taskFileRepository.delete({ id: fileId }); // DB 삭제
+        await this.taskFileRepository.deleteTaskFileWithQueryRunner(queryRunner, fileId);
+        return CommonResponse.success({ message: `업무 파일 ID ${fileId} 삭제 완료` });
     }
 }

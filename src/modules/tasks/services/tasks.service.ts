@@ -1,9 +1,8 @@
 import { Injectable, forwardRef, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
@@ -70,20 +69,20 @@ export class TasksService {
         const { stepId } = createTaskRequestDto;
 
         // Step 조회
-        const targetStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, stepId);
+        const targetStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, stepId);
 
         // 프로젝트 참여 여부 검증
         const projectId = targetStep.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 업무 생성
         const task = queryRunner.manager.create(Task, {
-            targetStep,
+            step: targetStep,
             name: '빈 업무',
             memo: null,
             deadline: null,
         });
-        await this.taskRepository.saveWithQueryRunner(queryRunner, task);
+        await this.taskRepository.saveWithQueryRunner(queryRunner.manager, task);
         return CreateTaskResponseDto.fromEntity(task);
     }
 
@@ -94,13 +93,13 @@ export class TasksService {
         dto: UpdateTaskRequestDto
     ): Promise<UpdateTaskResponseDto> {
         // 1. 수정할 Task 조회
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
         // 2. 새 Step 조회
-        const newStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, dto.stepId);
+        const newStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, dto.stepId);
 
         // 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, newStep.project.id);
+        await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
 
         // 4. Task 필드 덮어쓰기
         task.step = newStep;
@@ -109,7 +108,10 @@ export class TasksService {
         task.status = dto.status;
         task.memo = dto.memo;
 
-        const updatedTask = await this.taskRepository.saveWithQueryRunner(queryRunner, task);
+        const updatedTask = await this.taskRepository.saveWithQueryRunner(
+            queryRunner.manager,
+            task
+        );
 
         // managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
         if (dto.managerIds?.length) {
@@ -150,11 +152,11 @@ export class TasksService {
         taskId: number
     ): Promise<DeleteTaskResponseDto> {
         // 1. Task 조회
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
         // 2. 프로젝트 참여 여부 확인
         const projectId = task.step.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 3. TaskFile 조회
         const taskFiles = await this.taskFileRepository.findTaskFilesByIdWithQueryRunner(
@@ -188,14 +190,10 @@ export class TasksService {
     async getTask(userId: number, taskId: number): Promise<GetTaskResponseDto> {
         const task = await this.taskRepository.findById(taskId);
 
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
-
         // 프로젝트 참여 여부 검증
         const projectId = task.step.project.id;
 
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // Manager[] 형태 가공
         const managers = task.managers;
@@ -215,10 +213,10 @@ export class TasksService {
         const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
 
         // 1. 프로젝트 존재 검증
-        const project = await this.projectsService.assertProjectExists(projectId);
+        const project = await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 전체 업무 수 (더보기 버튼 표시 여부 판단)
         const totalCount = await this.taskRepository.countByProjectId(projectId);
@@ -288,7 +286,7 @@ export class TasksService {
 
         // 2. 프로젝트 참여자 여부 확인
         const projectId = task.step.project.id;
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 3. 댓글 생성 및 저장
         const comment = queryRunner.manager.create(CommentEntity, {
@@ -308,9 +306,9 @@ export class TasksService {
         file: Express.Multer.File
     ): Promise<CreateTaskFileResponseDto> {
         // 1. Task 조회 (Step, Project 조인)
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
         // 2. 프로젝트 참여자 여부 확인
-        await this.projectsService.checkProjectMember(userId, task.step.project.id);
+        await this.projectsService.assertProjectMember(userId, task.step.project.id);
 
         const fileUrl = await this.uploadService.uploadFile(file);
 
@@ -483,9 +481,9 @@ export class TasksService {
         }
 
         // ───  프로젝트 + 참여자 검증 ─────────────────────
-        const project = await this.projectsService.assertProjectExists(projectId);
+        const project = await this.projectsService.findByIdWithTasks(projectId);
 
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         //2) 필터용 baseQb
         const baseQb = this.buildSearchBaseQb(projectId, dto);
@@ -549,10 +547,10 @@ export class TasksService {
 
         // 프로젝트/멤버 검증은 기존 getSearchTask와 동일
         // 1. 프로젝트 존재 검증
-        await this.projectsService.assertProjectExists(projectId);
+        await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 
@@ -591,10 +589,10 @@ export class TasksService {
         }
 
         // 1. 프로젝트 존재 검증
-        await this.projectsService.assertProjectExists(projectId);
+        await this.projectsService.findByIdWithTasks(projectId);
 
         // 2. 프로젝트 참여 여부 검증
-        await this.projectsService.checkProjectMember(userId, projectId);
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 

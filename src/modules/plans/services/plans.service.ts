@@ -18,6 +18,9 @@ import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from '../dtos/update-plan
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
 import { UsersService } from '../../users/services/users.service';
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 
 @Injectable()
 export class PlansService {
@@ -28,7 +31,8 @@ export class PlansService {
         private readonly writersRepository: Repository<Writer>,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly eventBus: EventBusService
     ) {}
 
     // 기록자 수정 유틸 함수
@@ -176,7 +180,7 @@ export class PlansService {
         });
         if (!plan) throw new PlanNotFoundException({ planId: Number(planId) });
         const projectId = plan?.project.id;
-        return await this.projectsService.checkProjectMember(userId, projectId);
+        return await this.projectsService.assertProjectMember(userId, projectId);
     }
 
     // 일정 생성
@@ -187,8 +191,12 @@ export class PlansService {
         date: Date
     ): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
-        const project = await this.projectsService.assertProjectExists(projectId);
-        const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
+        const project = await this.projectsService.isProjectExists(projectId, qr.manager);
+        const checkUserIsMember = await this.projectsService.isProjectMember(
+            userId,
+            projectId,
+            qr.manager
+        );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
         }
@@ -231,7 +239,7 @@ export class PlansService {
             });
 
         // 2. 수정 권한 체크
-        await this.projectsService.checkProjectMember(userId, plan.project.id);
+        await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
         // 3. 일정 수정
         try {
             await qr.manager.update(Plan, { id: planId }, body);
@@ -262,9 +270,10 @@ export class PlansService {
             });
 
         // 2. 프로젝트 권한 체크: 기본 수정 권한
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            plan.project.id,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
@@ -321,9 +330,11 @@ export class PlansService {
             });
 
         // 2. 사용자의 삭제 권한 검사
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const projectId = plan.project.id;
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            projectId,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
@@ -331,6 +342,10 @@ export class PlansService {
 
         // 3. 일정 삭제
         await qr.manager.delete(Plan, planId);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })
+        );
         return DeletePlanResponseDto.from(planId);
     }
 }

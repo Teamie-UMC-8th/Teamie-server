@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import { StepNotFoundException } from 'src/common/exceptions/custom.errors';
+import {
+    StepNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 
 @Injectable()
@@ -26,11 +28,23 @@ export class StepRepository {
         return step;
     }
 
-    //step 조회 with queryRunner
-    async findByIdWithQueryRunner(queryRunner: QueryRunner, stepId: number): Promise<Step> {
-        const step = await queryRunner.manager.findOne(Step, {
+    async findByIdWithTask(manager: EntityManager, stepId: number): Promise<Step> {
+        const step = await manager.getRepository(Step).findOne({
             where: { id: stepId },
-            relations: ['project'],
+            relations: ['project', 'tasks'], // ⬅ task 관계도 같이 로드
+        });
+
+        if (!step) {
+            throw new StepNotFoundException();
+        }
+        return step;
+    }
+
+    //step 조회 with queryRunner
+    async findByIdUsingQR(manager: EntityManager, stepId: number): Promise<Step> {
+        const step = await manager.findOne(Step, {
+            where: { id: stepId },
+            relations: ['project'], // 필요에 따라 relations 제거 가능
         });
 
         if (!step) {
@@ -48,5 +62,13 @@ export class StepRepository {
                 createdAt: 'ASC',
             },
         });
+    }
+
+    async saveStep(manager: EntityManager, step: Step): Promise<Step> {
+            return await manager.save(Step, step);
+    }
+
+    async deleteById(manager: EntityManager, stepId: number): Promise<void> {
+        await manager.delete(Step, { id: stepId });
     }
 }

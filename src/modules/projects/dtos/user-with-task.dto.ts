@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserProject } from 'src/modules/mappings/user-projects/userProjects.entity';
+import { UserProject } from 'src/modules/projects/entities/userProjects.entity';
 
 export class UserWithTasksDto {
     @ApiProperty()

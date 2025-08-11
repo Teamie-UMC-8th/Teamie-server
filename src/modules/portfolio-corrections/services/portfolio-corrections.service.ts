@@ -20,6 +20,10 @@ import { ProjectResponseDto } from '../dtos/project-response.dto';
 import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
 import { MasterPortfolioAI } from '../../master-portfolios/entities/master-portfolio-ai.entity';
 import { RagService } from 'src/infra/llm/rag.service';
+import { PortfolioCorrectionResponseDto } from '../dtos/portfolio-correction-response.dto';
+import { RagResponseDto } from '../dtos/rag-response.dto';
+import { StatusResponseDto } from '../dtos/status-response.dto';
+import { CorrectionResultDto } from '../dtos/correction-result.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -172,11 +176,14 @@ export class PortfolioCorrectionsService {
                     correctionResult: correction,
                 });
 
-                return {
+                const result = {
                     projectId,
                     projectName,
                     correction,
                 };
+                // TODO: 수정 필요
+                // return CorrectionResultDto.from(result);
+                return result;
             });
 
             // 모든 첨삭 작업 대기
@@ -265,9 +272,11 @@ export class PortfolioCorrectionsService {
             status: PortfolioCorrectionStatus.COMPANY_INSIGHT,
         });
 
-        return await qr.manager.findOne(PortfolioCorrection, {
+        const createdCorrection = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
         });
+
+        return PortfolioCorrectionResponseDto.fromEntity(createdCorrection);
     }
 
     async getRAGData(correctionId: number) {
@@ -283,10 +292,11 @@ export class PortfolioCorrectionsService {
                 links.push(item.link);
             }
         });
-        return {
+        const result = {
             keywords,
             links,
         };
+        return RagResponseDto.fromEntity(result);
     }
 
     async getCompanyInsight(correctionId: number) {
@@ -318,6 +328,7 @@ export class PortfolioCorrectionsService {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
 
-        return { status: correction.status };
+        const result = { status: correction.status };
+        return StatusResponseDto.fromEntity(result);
     }
 }

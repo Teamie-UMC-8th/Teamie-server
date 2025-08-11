@@ -323,8 +323,10 @@ export class AssigneeNotMemberException extends CustomHttpException {
 }
 
 export class AlreadyJoinException extends CustomHttpException {
-    constructor(data?: any) {
-        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, data);
+    constructor(projectId: number) {
+        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, {
+            projectId,
+        });
     }
 }
 export class MasterPortfolioDuplicateException extends CustomHttpException {
@@ -421,6 +423,17 @@ export class PlanTransactionException extends CustomHttpException {
         super(
             ErrorCode.PLAN_TRANSACTION_ERROR,
             '일정 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
+
+export class StepTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.STEP_TRANSACTION_ERROR,
+            'STEP 관련 트랜잭션에서 에러가 발생했습니다.',
             HttpStatus.INTERNAL_SERVER_ERROR,
             data
         );

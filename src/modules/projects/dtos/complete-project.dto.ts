@@ -1,17 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
+import { IsBoolean, IsDate, IsNumber } from 'class-validator';
 
 export class CompleteProjectResponseDto {
     @ApiProperty({
         example: 1,
         description: '프로젝트 ID',
     })
+    @IsNumber()
     id: number;
 
     @ApiProperty({
         example: true,
         description: '프로젝트 완료 여부',
     })
+    @IsBoolean()
     isCompleted: boolean;
 
     @ApiProperty({
@@ -19,6 +22,7 @@ export class CompleteProjectResponseDto {
         description: '프로젝트 완료 시각',
         nullable: true,
     })
+    @IsDate()
     completedAt: Date | null;
 
     // Entity → DTO 변환 정적 메서드
