@@ -109,6 +109,26 @@ export class TasksController {
         'TASK를 찾을 수 없습니다.',
         HttpStatus.NOT_FOUND
     )
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        'STEP을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.BAD_REQUEST,
+        '유효하지 않은 사용자 ID가 포함되어 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.BAD_REQUEST,
+        '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
     @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
         {
             errorCode: 'COMMON400',
