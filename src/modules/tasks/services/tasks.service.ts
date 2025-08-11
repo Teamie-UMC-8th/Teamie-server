@@ -1,9 +1,5 @@
 import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { Task } from '../entities/tasks.entity';
-import { Repository, In } from 'typeorm';
-import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../projects/entities/userProjects.entity';
-import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
     CreateCommentResponseDto,
@@ -23,7 +19,7 @@ import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
 import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
-import { TaskNotFoundException, BadRequestException } from 'src/common/exceptions/custom.errors';
+import { BadRequestException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 import { UsersService } from '../../users/services/users.service';
 import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
