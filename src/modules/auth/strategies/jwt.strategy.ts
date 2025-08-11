@@ -10,10 +10,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
                 (req: Request) => {
-                    return (
-                        req?.cookies?.['accessToken'] || req?.headers?.authorization?.split(' ')[1]
-                        // NOTE: 추후 개발 테스트가 끝난 후에는 쿠키로 방식 통일하기
-                    );
+                    return req?.cookies?.['accessToken'];
                 },
             ]),
             ignoreExpiration: false,

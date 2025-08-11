@@ -15,7 +15,7 @@ import { UserMainTaskRequestDTO } from '../dtos/user-main-task.dto';
 import { MasterPortfoliosService } from '../../master-portfolios/services/master-portfolios.service';
 import { UserMasterPortfoliosResponseDto } from '../../master-portfolios/dtos/user-master-portfolios-response.dto';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { UserProjectResponseDto } from '../dtos/user-project.dto';
 import { UserRepository } from '../repositories/user.repository';
 @Injectable()

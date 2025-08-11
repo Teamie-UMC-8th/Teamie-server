@@ -216,6 +216,7 @@ export class MasterPortfoliosController {
         @Param('portfolioId', ParseIntPipe) portfolioId: number,
         @Body() updateDataDto: MasterPortfolioRequestDto
     ) {
+        console.log(updateDataDto);
         return this.masterPortfoliosService.updateMasterPortfolio(
             req.queryRunner,
             userId,

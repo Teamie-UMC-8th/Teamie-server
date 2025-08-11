@@ -2,20 +2,28 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { correctionSchema, Correction } from 'src/infra/llm/schemas/portfolio-correction.schema';
-import z from 'zod';
 import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
 import { QueryRunner, Repository } from 'typeorm';
 import { AICorrection } from '../entities/ai-correction.entity';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserPortfolioCorrectionResponseDto } from '../dtos/user-portfolio-correction-response.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AIGenerationAlreadyExists } from 'src/common/exceptions/custom.errors';
+import {
+    AIGenerationAlreadyExists,
+    ProjectNotFoundException,
+} from 'src/common/exceptions/custom.errors';
 import { Project } from '../../projects/entities/projects.entity';
 import { CreatePortfolioCorrectionDto } from '../dtos/create-corrections.dto';
 import { RAGData } from '../entities/rag-data.entity';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
 import { ProjectResponseDto } from '../dtos/project-response.dto';
 import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction-status.enum';
+import { MasterPortfolioAI } from '../../master-portfolios/entities/master-portfolio-ai.entity';
+import { RagService } from 'src/infra/llm/rag.service';
+import { PortfolioCorrectionResponseDto } from '../dtos/portfolio-correction-response.dto';
+import { RagResponseDto } from '../dtos/rag-response.dto';
+import { StatusResponseDto } from '../dtos/status-response.dto';
+import { CorrectionResultDto } from '../dtos/correction-result.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -31,6 +39,7 @@ async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
 export class PortfolioCorrectionsService {
     constructor(
         private readonly llmService: LLMService,
+        private readonly ragService: RagService,
         private readonly promptLoader: PromptLoader,
         @InjectRepository(PortfolioCorrection)
         private readonly correctionRepository: Repository<PortfolioCorrection>,
@@ -61,19 +70,23 @@ export class PortfolioCorrectionsService {
         return PaginatedResponseDto.of(result, nextCursor, hasNextPage);
     }
 
-    // TODO: selectedProjects에 해당하는 id들 DB에 저장하기
+    // TODO: 커스텀 에러 생성 필요
     async generateCorrection(
         qr: QueryRunner,
         userId: number,
         correctionId: number,
         selectedProjects: number[]
     ) {
-        const dummyData = await this.promptLoader.load('dummy-correction.json');
+        // selectedProjects가 비어있으면 에러 처리
+        if (selectedProjects.length === 0) {
+            throw new InternalServerErrorException('프로젝트를 선택해야 합니다.');
+        }
 
-        // 프로젝트 최대 선택 개수 6개로 제한
-        if (selectedProjects.length > 6) {
-            // TODO: 커스텀 에러 생성 필요
-            throw new InternalServerErrorException('프로젝트는 최대 6개까지 선택할 수 있습니다.');
+        // 프로젝트 최대 선택 개수 제한
+        if (selectedProjects.length > parseInt(process.env.MAX_SELECTED_PROJECTS || '6', 10)) {
+            throw new InternalServerErrorException(
+                `프로젝트는 최대 ${process.env.MAX_SELECTED_PROJECTS || '6'}개까지 선택할 수 있습니다.`
+            );
         }
 
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -84,20 +97,51 @@ export class PortfolioCorrectionsService {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
 
-        try {
-            const correctionPromises = selectedProjects.map(async (projectId) => {
-                // 각 프로젝트마다 portfolioData가 존재
-                // TODO: 실제 데이터로 교체 필요 (프로젝트명도 가져오기)
-                const portfolioData = await this.promptLoader.load('masterportfolio.json');
-                const projectName = `임시 프로젝트명 ${projectId}`;
+        await Promise.all(
+            selectedProjects.map(async (projectId) => {
+                // projectId에 해당하는 프로젝트가 있는지 확인
+                const project = await qr.manager.findOne(Project, {
+                    where: { id: projectId },
+                });
+                if (!project) {
+                    throw new ProjectNotFoundException(
+                        `프로젝트가 존재하지 않습니다. ID: ${projectId}`
+                    );
+                }
+
+                // 프로젝트에 해당하는 마스터 포트폴리오 AI 결과가 있는지 확인
+                const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
+                    where: { project: { id: projectId }, user: { id: userId } },
+                });
+                if (!portfolioData) {
+                    throw new NotFoundException(
+                        `마스터 포트폴리오 AI 결과가 존재하지 않습니다. 프로젝트 ID: ${projectId}`
+                    );
+                }
 
                 // 기존 첨삭 결과가 존재하는지 확인
                 const existingAICorrection = await qr.manager.findOne(AICorrection, {
                     where: { projectId, portfolioCorrection: { id: correctionId } },
                 });
                 if (existingAICorrection) {
-                    throw new AIGenerationAlreadyExists(`project ID: ${projectId}`);
+                    throw new AIGenerationAlreadyExists(
+                        `첨삭 ID: ${correctionId}, 프로젝트 ID: ${projectId}`
+                    );
                 }
+            })
+        );
+
+        try {
+            const correctionPromises = selectedProjects.map(async (projectId) => {
+                // 프로젝트에 해당하는 포트폴리오 데이터 조회
+                const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
+                    where: { project: { id: projectId }, user: { id: userId } },
+                });
+                const project = await qr.manager.findOne(Project, {
+                    where: { id: projectId },
+                    select: ['name'],
+                });
+                const projectName = project?.name;
 
                 // TODO: 생성 중 실패 시에 롤백 처리 필요
                 // 진행 상태 업데이트
@@ -132,11 +176,14 @@ export class PortfolioCorrectionsService {
                     correctionResult: correction,
                 });
 
-                return {
+                const result = {
                     projectId,
                     projectName,
                     correction,
                 };
+                // TODO: 수정 필요
+                // return CorrectionResultDto.from(result);
+                return result;
             });
 
             // 모든 첨삭 작업 대기
@@ -151,10 +198,6 @@ export class PortfolioCorrectionsService {
 
             return mergedCorrection;
         } catch (error) {
-            if (error instanceof AIGenerationAlreadyExists) {
-                throw error;
-            }
-
             console.error('첨삭 과정 중 실패: ', error);
             throw new Error('첨삭 과정 중 실패');
         }
@@ -219,7 +262,7 @@ export class PortfolioCorrectionsService {
         await checkCorrectionExists(qr, correctionId);
 
         // TODO: correctionId로 제출처, 직무명, JD 등을 DB에서 가져와 사용
-        const companyProfile = await this.llmService.startRAG(qr, correctionId);
+        const companyProfile = await this.ragService.startRAG(qr, correctionId);
         await qr.manager.update(PortfolioCorrection, correctionId, {
             companyInsight: companyProfile,
         });
@@ -229,9 +272,11 @@ export class PortfolioCorrectionsService {
             status: PortfolioCorrectionStatus.COMPANY_INSIGHT,
         });
 
-        return await qr.manager.findOne(PortfolioCorrection, {
+        const createdCorrection = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
         });
+
+        return PortfolioCorrectionResponseDto.fromEntity(createdCorrection);
     }
 
     async getRAGData(correctionId: number) {
@@ -247,10 +292,11 @@ export class PortfolioCorrectionsService {
                 links.push(item.link);
             }
         });
-        return {
+        const result = {
             keywords,
             links,
         };
+        return RagResponseDto.fromEntity(result);
     }
 
     async getCompanyInsight(correctionId: number) {
@@ -282,6 +328,7 @@ export class PortfolioCorrectionsService {
             throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
         }
 
-        return { status: correction.status };
+        const result = { status: correction.status };
+        return StatusResponseDto.fromEntity(result);
     }
 }

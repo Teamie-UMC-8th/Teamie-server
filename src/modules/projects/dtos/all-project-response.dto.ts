@@ -1,12 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
-import { UserProject } from 'src/modules/mappings/user-projects/userProjects.entity';
+import { UserProject } from 'src/modules/projects/entities/userProjects.entity';
 import { ProjectSummaryResponseDto } from './project-response.dto';
+import { MaxLength, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 export class PostDto {
     @ApiProperty()
-    author: string;
+    @Type(() => Number)
+    author: number;
 
     @ApiProperty()
+    @IsString()
+    @MaxLength(32)
     content: string;
 
     static from(data: any): PostDto {
@@ -72,20 +77,12 @@ export class AllProjectResponseDto {
     @ApiProperty({ type: ProjectSummaryResponseDto })
     project: ProjectSummaryResponseDto;
 
-    @ApiProperty({ type: [UserInProjectDto] })
-    users: UserInProjectDto[];
-
     @ApiProperty({ type: [PostDto] })
     posts: PostDto[];
 
-    static fromEntity(entity: {
-        project: Project;
-        users: UserInProjectDto[];
-        posts: PostDto[];
-    }): AllProjectResponseDto {
+    static fromEntity(entity: { project: Project; posts: PostDto[] }): AllProjectResponseDto {
         const dto = new AllProjectResponseDto();
         dto.project = ProjectSummaryResponseDto.fromEntity(entity.project);
-        dto.users = entity.users;
         dto.posts = entity.posts;
         return dto;
     }

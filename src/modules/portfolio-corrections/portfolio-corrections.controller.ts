@@ -24,6 +24,11 @@ import { Transactional, TransactionalRequest } from 'src/common/decorators/trans
 import { CreateCorrectionsDto, CreatePortfolioCorrectionDto } from './dtos/create-corrections.dto';
 import { UpdateCompanyInsightDto } from './dtos/company-insight.dto';
 import { ProjectResponseDto } from './dtos/project-response.dto';
+import { PortfolioCorrectionResponseDto } from './dtos/portfolio-correction-response.dto';
+import { RagResponseDto } from './dtos/rag-response.dto';
+import { CompanyInsightResponseDto } from './dtos/company-insight-response.dto';
+import { CorrectionResultDto } from './dtos/correction-result.dto';
+import { StatusResponseDto } from './dtos/status-response.dto';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -34,10 +39,11 @@ export class PortfolioCorrectionsController {
     ) {}
 
     @ApiOperation({
-        summary: '포트폴리오 첨삭 생성 API',
+        summary: '(1-1) 포트폴리오 첨삭 생성 API',
         description: '사용자가 포트폴리오 첨삭을 생성합니다.',
     })
     @ApiBody({ type: CreatePortfolioCorrectionDto })
+    @ApiCommonResponse(PortfolioCorrectionResponseDto)
     @Post()
     async createPortfolioCorrection(
         @User('id') userId: number,
@@ -71,7 +77,7 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '사용자 별 선택 가능한 프로젝트 조회 API',
+        summary: '(3-1) 사용자 별 선택 가능한 프로젝트 조회 API',
         description: '사용자가 선택할 수 있는 프로젝트 리스트를 조회하는 API입니다.',
     })
     @ApiCommonResponseArray(ProjectResponseDto)
@@ -81,10 +87,11 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: 'AI 첨삭 생성 API',
+        summary: '(3-2) AI 첨삭 생성 API',
         description: '사용자가 선택한 프로젝트들에 대해 AI 첨삭을 생성합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponseArray(CorrectionResultDto)
     @Transactional()
     @Post(':correctionId/generate')
     async generateCorrection(
@@ -106,13 +113,14 @@ export class PortfolioCorrectionsController {
         description: '특정 AI 첨삭의 상태를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(StatusResponseDto)
     @Get(':correctionId/status')
     async getCorrectionStatus(@Param('correctionId') correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrectionStatus(correctionId);
     }
 
     @ApiOperation({
-        summary: 'AI 첨삭 결과 조회 API',
+        summary: '(4-1 / 분리 예정) AI 첨삭 결과 조회 API',
         description: '특정 AI 첨삭의 결과를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
@@ -122,11 +130,12 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: 'RAG 시작 API',
+        summary: '(1-2) RAG 시작 API',
         description:
             'RAG를 진행합니다. 키워드 및 관련 데이터를 생성/수집하고, 최종적으로 기업 분석 정보를 생성합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(PortfolioCorrectionResponseDto)
     @Transactional()
     @Post(':correctionId/rag')
     async startRAG(@Req() req: TransactionalRequest, @Param('correctionId') correctionId: number) {
@@ -134,19 +143,21 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: 'RAG 데이터 조회 API',
+        summary: '(2-1) RAG 데이터 조회 API',
         description: '특정 AI 첨삭의 RAG 데이터를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(RagResponseDto)
     @Get(':correctionId/rag')
     async getRAGData(@Param('correctionId') correctionId: number) {
         return await this.portfolioCorrectionsService.getRAGData(correctionId);
     }
 
     @ApiOperation({
-        summary: '기업 분석 정보 조회 API',
+        summary: '(2-2) 기업 분석 정보 조회 API',
         description: '특정 AI 첨삭의 기업 분석 정보를 조회합니다.',
     })
+    @ApiCommonResponse(CompanyInsightResponseDto)
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @Get(':correctionId/company-insight')
     async getCompanyInsight(@Param('correctionId') correctionId: number) {
@@ -154,11 +165,12 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '기업 분석 정보 업데이트 API',
+        summary: '(2-3) 기업 분석 정보 업데이트 API',
         description: '특정 AI 첨삭의 기업 분석 정보를 업데이트합니다.',
     })
     @ApiBody({ type: UpdateCompanyInsightDto })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(PortfolioCorrectionResponseDto)
     @Transactional()
     @Patch(':correctionId/company-insight')
     async updateCompanyInsight(

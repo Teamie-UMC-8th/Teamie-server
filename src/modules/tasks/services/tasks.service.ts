@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from '../entities/tasks.entity';
 import { Repository, In } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { User } from '../../users/entities/users.entity';
 import { CreateTaskRequestDto, CreateTaskResponseDto } from '../dtos/create-task.dto';
 import {
@@ -12,7 +12,6 @@ import {
 } from '../../comments/dto/create-comment.dto';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from '../dtos/update-task.dto';
 import { Manager } from '../../mappings/managers/managers.entity';
-import { Project } from '../../projects/entities/projects.entity';
 import { DeleteTaskResponseDto } from '../dtos/delete-task.dto';
 import { TaskFile } from '../../mappings/task-files/task-files.entity';
 import { Comment as CommentEntity } from '../../comments/entities/comments.entity';
@@ -20,53 +19,47 @@ import { GetTaskResponseDto } from '../dtos/get-task.dto';
 import { UploadService } from '../../../infra/upload/upload.service';
 import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
-import { StepGroupDto, TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
-import { StatusGroupDto, TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
+import { TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
+import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
 import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
-import {
-    ProjectForbiddenException,
-    StepNotFoundException,
-    TaskNotFoundException,
-    ProjectNotFoundException,
-    BadRequestException,
-} from 'src/common/exceptions/custom.errors';
+import { TaskNotFoundException, BadRequestException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
-import { CalenderCardResponseDto } from '../../projects/dtos/team-calender-response.dto';
 import { UsersService } from '../../users/services/users.service';
 import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { GetSearchTaskDto } from '../dtos/get-search-task.dto';
 import { Brackets } from 'typeorm';
+import { TaskRepository } from '../repositories/task.repository';
+import { ProjectsService } from '../../projects/services/projects.service';
+import { StepRepository } from '../../steps/repositories/step.repository';
+import { ManagerRepository } from '../../mappings/managers/repositories/manager.repository';
+import { TaskFileRepository } from '../../mappings/task-files/repositories/task-file.repository';
+import { CommentRepository } from '../../comments/repositories/comments.repository';
+
 @Injectable()
 export class TasksService {
     constructor(
-        @InjectRepository(Task)
-        private readonly taskRepository: Repository<Task>,
+        private readonly taskRepository: TaskRepository,
 
-        @InjectRepository(Step)
-        private readonly stepRepository: Repository<Step>,
+        private readonly stepRepository: StepRepository,
 
-        @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>,
+        private readonly managerRepository: ManagerRepository,
 
-        @InjectRepository(UserProject)
-        private readonly userProjectRepository: Repository<UserProject>,
-
-        @InjectRepository(Manager)
-        private readonly managerRepository: Repository<Manager>,
+        private readonly taskFileRepository: TaskFileRepository,
 
         private readonly uploadService: UploadService,
 
-        @InjectRepository(TaskFile)
-        private readonly taskFileRepository: Repository<TaskFile>,
+        private readonly commentRepository: CommentRepository,
 
-        @InjectRepository(CommentEntity)
-        private readonly commentRepository: Repository<CommentEntity>,
         private readonly usersService: UsersService,
-        private readonly configService: ConfigService
+
+        private readonly configService: ConfigService,
+
+        @Inject(forwardRef(() => ProjectsService))
+        private readonly projectsService: ProjectsService
     ) {}
 
     async createTask(
@@ -77,28 +70,11 @@ export class TasksService {
         const { stepId } = createTaskRequestDto;
 
         // Step 조회
-        const targetStep = await queryRunner.manager.findOne(Step, {
-            where: { id: stepId },
-            relations: ['project'],
-        });
+        const targetStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, stepId);
 
-        if (!targetStep) {
-            throw new StepNotFoundException();
-        }
-
+        // 프로젝트 참여 여부 검증
         const projectId = targetStep.project.id;
-
-        // userProject 조회
-        const userProject = await queryRunner.manager.findOne(UserProject, {
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
-
-        if (!userProject) {
-            throw new ProjectForbiddenException();
-        }
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 업무 생성
         const task = queryRunner.manager.create(Task, {
@@ -107,10 +83,8 @@ export class TasksService {
             memo: null,
             deadline: null,
         });
-
-        const saved = await queryRunner.manager.save(task);
-
-        return CreateTaskResponseDto.fromEntity(saved);
+        await this.taskRepository.saveWithQueryRunner(queryRunner, task);
+        return CreateTaskResponseDto.fromEntity(task);
     }
 
     async updateTask(
@@ -120,30 +94,13 @@ export class TasksService {
         dto: UpdateTaskRequestDto
     ): Promise<UpdateTaskResponseDto> {
         // 1. 수정할 Task 조회
-        const task = await queryRunner.manager.findOne(Task, {
-            where: { id: taskId },
-            relations: ['step', 'step.project'],
-        });
-
-        if (!task) throw new TaskNotFoundException();
+        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
 
         // 2. 새 Step 조회
-        const newStep = await queryRunner.manager.findOne(Step, {
-            where: { id: dto.stepId },
-            relations: ['project'],
-        });
+        const newStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, dto.stepId);
 
-        if (!newStep) throw new StepNotFoundException();
-
-        // 3. userProject 조회 (업데이트할 유저가 프로젝트에 속해있는지)
-        const userProject = await queryRunner.manager.findOne(UserProject, {
-            where: {
-                user: { id: userId },
-                project: { id: newStep.project.id },
-            },
-        });
-
-        if (!userProject) throw new ProjectForbiddenException();
+        // 프로젝트 참여 여부 검증
+        await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
 
         // 4. Task 필드 덮어쓰기
         task.step = newStep;
@@ -152,65 +109,37 @@ export class TasksService {
         task.status = dto.status;
         task.memo = dto.memo;
 
-        const updatedTask = await queryRunner.manager.save(Task, task);
+        const updatedTask = await this.taskRepository.saveWithQueryRunner(queryRunner, task);
 
-        // 5. managerIds 유효성 검사 추가
-        if (dto.managerIds && dto.managerIds.length > 0) {
-            const participants = await queryRunner.manager.find(UserProject, {
-                where: {
-                    user: { id: In(dto.managerIds) },
-                    project: { id: newStep.project.id },
-                },
-                relations: ['user'],
-                select: {
-                    id: true,
-                    user: { id: true, name: true },
-                },
-            });
+        // managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
+        if (dto.managerIds?.length) {
+            const uniqueManagerIds = Array.from(new Set(dto.managerIds));
 
-            const validManagerIds = participants.map((up) => up.user.id);
-            const invalidManagers: string[] = [];
+            await this.usersService.checkIsUserExistByArray(uniqueManagerIds, newStep.project.id);
 
-            for (const managerId of dto.managerIds) {
-                if (!validManagerIds.includes(managerId)) {
-                    const user = await queryRunner.manager.findOne(User, {
-                        where: { id: managerId },
-                        select: ['id', 'name'],
-                    });
-                    invalidManagers.push(user?.name ?? `userId ${managerId}`);
-                }
-            }
+            // 1) 기존 전부 삭제
+            await this.managerRepository.deleteManagerWithQueryRunner(queryRunner, updatedTask.id);
 
-            if (invalidManagers.length > 0) {
-                throw new ProjectForbiddenException(
-                    `${invalidManagers.join(', ')} 은/는 프로젝트 참여자가 아닙니다.`
-                );
-            }
-
-            // 6. 기존 Manager 전부 삭제 후 유효한 Manager만 저장
-            await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
-
-            for (const managerId of validManagerIds) {
-                const manager = queryRunner.manager.create(Manager, {
-                    user: { id: managerId },
+            // 2) 새 매니저 엔티티들 생성
+            const managers = uniqueManagerIds.map((uid) =>
+                queryRunner.manager.create(Manager, {
                     task: updatedTask,
-                });
-                await queryRunner.manager.save(Manager, manager);
-            }
+                    user: { id: uid },
+                })
+            );
+
+            // 3) 배치 저장
+            await this.managerRepository.saveManagersWithQueryRunner(queryRunner, managers);
         } else {
-            // managerIds가 없으면 기존 Manager만 삭제
-            await queryRunner.manager.delete(Manager, { task: { id: updatedTask.id } });
+            // 없으면 전부 삭제
+            await this.managerRepository.deleteManagerWithQueryRunner(queryRunner, updatedTask.id);
         }
 
         // 7. 최종 managers 조회
-        const managers = await queryRunner.manager.find(Manager, {
-            where: { task: { id: updatedTask.id } },
-            relations: ['user'],
-            select: {
-                id: true,
-                user: { id: true, name: true },
-            },
-        });
+        const managers = await this.managerRepository.findManagersByTaskIdWithQueryRunner(
+            queryRunner,
+            updatedTask.id
+        );
 
         return UpdateTaskResponseDto.from(updatedTask, managers);
     }
@@ -221,32 +150,17 @@ export class TasksService {
         taskId: number
     ): Promise<DeleteTaskResponseDto> {
         // 1. Task 조회
-        const task = await queryRunner.manager.findOne(Task, {
-            where: { id: taskId },
-            relations: ['step', 'step.project'],
-        });
-
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
+        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
 
         // 2. 프로젝트 참여 여부 확인
         const projectId = task.step.project.id;
-        const userProject = await queryRunner.manager.findOne(UserProject, {
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
-
-        if (!userProject) {
-            throw new ProjectForbiddenException();
-        }
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 3. TaskFile 조회
-        const taskFiles = await queryRunner.manager.find(TaskFile, {
-            where: { task: { id: taskId } },
-        });
+        const taskFiles = await this.taskFileRepository.findTaskFilesByIdWithQueryRunner(
+            queryRunner,
+            taskId
+        );
 
         // 4. 파일 삭제 (S3 + DB)
         for (const file of taskFiles) {
@@ -255,7 +169,7 @@ export class TasksService {
                 if (key) {
                     await this.uploadService.deleteFile(key); // S3 파일 삭제
                 }
-                await queryRunner.manager.delete(TaskFile, { id: file.id }); // DB 삭제
+                await this.taskFileRepository.deleteTaskFileWithQueryRunner(queryRunner, file.id); // DB 삭제
             } catch (err) {
                 console.error(`[파일 삭제 실패] ${file.fileUrl}`);
                 console.error(err);
@@ -263,7 +177,7 @@ export class TasksService {
         }
 
         // 5. Task 삭제
-        await queryRunner.manager.delete(Task, taskId);
+        await this.taskRepository.deleteWithQueryRunner(queryRunner, task.id);
 
         return {
             message: '업무가 성공적으로 삭제되었습니다.',
@@ -272,10 +186,7 @@ export class TasksService {
     }
 
     async getTask(userId: number, taskId: number): Promise<GetTaskResponseDto> {
-        const task = await this.taskRepository.findOne({
-            where: { id: taskId },
-            relations: ['step', 'step.project', 'taskFiles', 'managers', 'managers.user'],
-        });
+        const task = await this.taskRepository.findById(taskId);
 
         if (!task) {
             throw new TaskNotFoundException();
@@ -283,16 +194,8 @@ export class TasksService {
 
         // 프로젝트 참여 여부 검증
         const projectId = task.step.project.id;
-        const userProject = await this.userProjectRepository.findOne({
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
 
-        if (!userProject) {
-            throw new ProjectForbiddenException();
-        }
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // Manager[] 형태 가공
         const managers = task.managers;
@@ -309,24 +212,16 @@ export class TasksService {
             throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
         }
 
-        // 1. 프로젝트 존재 및 참여자 검증
-        const project = await this.projectRepository.findOne({
-            where: { id: projectId },
-            relations: ['userProjects'],
-        });
-        if (!project) throw new ProjectNotFoundException();
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
 
-        const isMember = await this.userProjectRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
-        });
-        if (!isMember) throw new ProjectForbiddenException();
+        // 1. 프로젝트 존재 검증
+        const project = await this.projectsService.findByIdWithTasks(projectId);
+
+        // 2. 프로젝트 참여 여부 검증
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 전체 업무 수 (더보기 버튼 표시 여부 판단)
-        const totalCount = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 'step')
-            .where('step.projectId = :projectId', { projectId })
-            .getCount();
+        const totalCount = await this.taskRepository.countByProjectId(projectId);
 
         // 2. status / step 분기 처리
         if (view === 'status') {
@@ -334,18 +229,12 @@ export class TasksService {
             const statusGroups: { status: Status; tasks: TaskInStatusDto[] }[] = [];
 
             for (const status of statuses) {
-                const tasks = await this.taskRepository
-                    .createQueryBuilder('task')
-                    .leftJoinAndSelect('task.step', 'step')
-                    .leftJoin('task.managers', 'manager')
-                    .leftJoin('manager.user', 'user')
-                    .addSelect(['user.id', 'user.name'])
-                    .where('step.projectId = :projectId', { projectId })
-                    .andWhere('task.status = :status', { status })
-                    .orderBy('task.deadline', 'ASC')
-                    .addOrderBy('task.createdAt', 'ASC')
-                    .limit(5)
-                    .getMany();
+                const tasks =
+                    await this.taskRepository.findTop5ByProjectIdAndStatusOrderByDeadlineAsc(
+                        projectId,
+                        status,
+                        limit
+                    );
 
                 statusGroups.push({
                     status,
@@ -360,25 +249,17 @@ export class TasksService {
                 totalCount,
             };
         } else {
-            const steps = await this.stepRepository.find({
-                where: { project: { id: projectId } },
-                order: { createdAt: 'ASC' },
-            });
+            const steps = await this.stepRepository.findByProjectId(projectId);
 
             const stepGroups: { stepId: number; stepName: string; tasks: TaskInStepDto[] }[] = [];
 
             for (const step of steps) {
-                const tasks = await this.taskRepository
-                    .createQueryBuilder('task')
-                    .leftJoinAndSelect('task.step', 'step')
-                    .leftJoin('task.managers', 'manager')
-                    .leftJoin('manager.user', 'user')
-                    .addSelect(['user.id', 'user.name'])
-                    .where('task.stepId = :stepId', { stepId: step.id })
-                    .orderBy('task.deadline', 'ASC')
-                    .addOrderBy('task.createdAt', 'ASC')
-                    .limit(5)
-                    .getMany();
+                const tasks =
+                    await this.taskRepository.findTop5ByProjectIdAndStepOrderByDeadlineAsc(
+                        projectId,
+                        step.id,
+                        limit
+                    );
 
                 stepGroups.push({
                     stepId: step.id,
@@ -403,25 +284,11 @@ export class TasksService {
         createCommentRequestDto: CreateCommentRequestDto
     ): Promise<CreateCommentResponseDto> {
         // 1. 업무 존재 여부 및 프로젝트 가져오기
-        const task = await queryRunner.manager
-            .createQueryBuilder(Task, 'task')
-            .leftJoin('task.step', 'step')
-            .leftJoin('step.project', 'project')
-            .where('task.id = :taskId', { taskId })
-            .select(['step.id AS stepId', 'project.id AS projectId'])
-            .getRawOne();
-
-        if (!task) throw new TaskNotFoundException();
+        const task = await this.taskRepository.findById(taskId);
 
         // 2. 프로젝트 참여자 여부 확인
-        const { projectId } = task;
-        const isMember = await queryRunner.manager.findOne(UserProject, {
-            where: {
-                user: { id: userId },
-                project: { id: projectId },
-            },
-        });
-        if (!isMember) throw new ProjectForbiddenException();
+        const projectId = task.step.project.id;
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         // 3. 댓글 생성 및 저장
         const comment = queryRunner.manager.create(CommentEntity, {
@@ -429,8 +296,7 @@ export class TasksService {
             task: { id: taskId },
             content: createCommentRequestDto.content,
         });
-        const saved = await queryRunner.manager.save(CommentEntity, comment);
-
+        const saved = await this.commentRepository.saveCommentWithQueryRunner(queryRunner, comment);
         // 4. 응답 반환
         return CreateCommentResponseDto.from(saved);
     }
@@ -442,25 +308,9 @@ export class TasksService {
         file: Express.Multer.File
     ): Promise<CreateTaskFileResponseDto> {
         // 1. Task 조회 (Step, Project 조인)
-        const task = await queryRunner.manager
-            .createQueryBuilder(Task, 'task')
-            .leftJoin('task.step', 'step')
-            .leftJoin('step.project', 'project')
-            .select(['task.id', 'step.id', 'project.id AS project_id'])
-            .where('task.id = :taskId', { taskId })
-            .getRawOne();
-
-        if (!task) throw new TaskNotFoundException();
-
+        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
         // 2. 프로젝트 참여자 여부 확인
-        const userProject = await queryRunner.manager.findOne(UserProject, {
-            where: {
-                user: { id: userId },
-                project: { id: task.project_id },
-            },
-        });
-
-        if (!userProject) throw new ProjectForbiddenException();
+        await this.projectsService.assertProjectMember(userId, task.step.project.id);
 
         const fileUrl = await this.uploadService.uploadFile(file);
 
@@ -473,8 +323,10 @@ export class TasksService {
         });
 
         // 5. DB 저장
-        const saved = await queryRunner.manager.save(TaskFile, taskFile);
-
+        const saved = await this.taskFileRepository.saveTaskFileWithQueryRunner(
+            queryRunner,
+            taskFile
+        );
         // 6. DTO 변환 후 반환
         return CreateTaskFileResponseDto.fromEntity(saved);
     }
@@ -483,48 +335,30 @@ export class TasksService {
     async getMoreTasksByStep(
         projectId: number,
         stepId: number,
-        offset: number,
-        limit: number = 5
+        offset: number
     ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
-        const step = await this.stepRepository.findOne({
-            where: { id: stepId, project: { id: projectId } },
-        });
-        if (!step) throw new StepNotFoundException('존재하지 않는 Step입니다.');
-
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+        await this.stepRepository.findById(stepId);
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
-        const tasks = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoin('task.managers', 'manager')
-            .leftJoin('manager.user', 'user')
-            .addSelect(['user.id', 'user.name'])
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('step.id = :stepId', { stepId })
-            .orderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .skip(offset) // 이전까지 불러온 개수
-            .take(limit) // 새로 불러올 개수
-            .getMany();
+        const tasks = await this.taskRepository.findByProjectAndStepPaginated(
+            projectId,
+            stepId,
+            limit,
+            offset
+        );
+        const totalCount = tasks.totalCount;
 
-        const totalCount = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 'step')
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('step.id = :stepId', { stepId })
-            .getCount();
-
-        return { tasks: tasks.map((t) => TaskInStepDto.from(t)), totalCount };
+        return { tasks: tasks.items.map((t) => TaskInStepDto.from(t)), totalCount };
     }
 
     // STATUS별 더보기 API
     async getMoreTasksByStatus(
         projectId: number,
         status: Status,
-        offset: number,
-        limit: number = 5
+        offset: number
     ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
         if (!Object.values(Status).includes(status)) {
             throw new BadRequestException(
                 `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
@@ -532,112 +366,40 @@ export class TasksService {
         }
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
-        const tasks = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoin('task.managers', 'manager')
-            .leftJoin('manager.user', 'user')
-            .addSelect(['user.id', 'user.name'])
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.status = :status', { status })
-            .orderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .skip(offset)
-            .take(limit)
-            .getMany();
+        const tasks = await this.taskRepository.findByProjectAndStatusPaginated(
+            projectId,
+            status,
+            limit,
+            offset
+        );
+        const totalCount = tasks.totalCount;
 
-        const totalCount = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoin('task.step', 'step')
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.status = :status', { status })
-            .getCount();
-
-        return { tasks: tasks.map((t) => TaskInStatusDto.from(t)), totalCount };
+        return { tasks: tasks.items.map((t) => TaskInStatusDto.from(t)), totalCount };
     }
 
     //업무별 댓글 조회
     async getComment(taskId: number, offset: number): Promise<GetCommentResponseDto> {
-        const task = await this.taskRepository.findOne({
-            where: { id: taskId },
-        });
-
-        if (!task) {
-            throw new TaskNotFoundException();
-        }
+        await this.taskRepository.findById(taskId);
 
         if (offset < 0) {
             throw new BadRequestException('offset은 0 이상이어야 합니다.');
         }
 
-        const limit = 10;
+        const limit = Number(this.configService.get<string>('LIMIT_COMMENTS')) || 10;
 
         // 댓글 조회 (댓글 작성자 + 대댓글 + 대댓글 작성자까지 한번에 조인)
-        const comments = await this.commentRepository
-            .createQueryBuilder('comment')
-            .leftJoinAndSelect('comment.user', 'user') // 댓글 작성자
-            .leftJoinAndSelect('comment.cocomments', 'cocomment') // 대댓글
-            .leftJoinAndSelect('cocomment.user', 'cocommentUser') // 대댓글 작성자
-            .where('comment.taskId = :taskId', { taskId })
-            .orderBy('comment.createdAt', 'DESC')
-            .addOrderBy('cocomment.createdAt', 'DESC')
-            .skip(offset)
-            .take(limit)
-            .select([
-                'comment.id',
-                'comment.content',
-                'comment.createdAt',
-                'comment.updatedAt',
-                'user.id',
-                'user.name',
-                'user.imageUrl',
-                'cocomment.id',
-                'cocomment.content',
-                'cocomment.createdAt',
-                'cocomment.updatedAt',
-                'cocommentUser.id',
-                'cocommentUser.name',
-                'cocommentUser.imageUrl',
-            ])
-            .getMany();
+        const comments = await this.commentRepository.findByTaskIdWithCocommentsPaginated(
+            taskId,
+            limit,
+            offset
+        );
 
         // 댓글 총 개수 (hasMore 계산용)
-        const totalCount = await this.commentRepository.count({
-            where: { task: { id: taskId } },
-        });
+        const totalCount = await this.commentRepository.countByTaskId(taskId);
 
         // DTO 변환
         return GetCommentResponseDto.from(comments, totalCount, offset, limit);
-    }
-
-    // 마감일 별 업무 조회
-    async getTasksByDeadline(
-        projectId: number,
-        startDate: Date,
-        endDate: Date
-    ): Promise<Record<string, CalenderCardResponseDto[]>> {
-        const tasks = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .select(['task.deadline AS date', 'task.id AS id', 'task.name AS name'])
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.deadline BETWEEN :startDate AND :endDate', { startDate, endDate })
-            .orderBy('task.deadline', 'ASC')
-            .getRawMany();
-
-        //날짜 별 그룹핑
-        const grouped = tasks.reduce(
-            (acc, curr) => {
-                const date = curr.date.toISOString().split('T')[0];
-                if (!acc[date]) acc[date] = [];
-                acc[date].push(CalenderCardResponseDto.fromTask(curr));
-                return acc;
-            },
-            {} as Record<string, CalenderCardResponseDto[]>
-        );
-        return grouped;
     }
 
     // 사용자 별 업무 조회
@@ -685,44 +447,26 @@ export class TasksService {
         cursor?: any
     ): Promise<TaskCardDTO[]> {
         const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
-        // 1. 커서값과 maxCardNum에 따라 task 필터링
-        const taskIds = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .where('step.projectId = :projectId', { projectId })
-            .andWhere('(task.status = :ongoing or task.status = :notstart)', {
-                ongoing: Status.ONGOING,
-                notstart: Status.NOTSTART,
-            })
-            .andWhere((qb) => {
-                const subQuery = qb
-                    .subQuery()
-                    .select('1')
-                    .from('manager', 'm')
-                    .where('m.taskId = task.id')
-                    .andWhere('m.userId = :userId', { userId })
-                    .getQuery();
-                return `EXISTS ${subQuery}`; //SQL Injection 방지
-            })
-            //TODO: cursor 적용
-            .orderBy('task.deadline IS NULL', 'ASC')
-            .addOrderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .limit(maxCardNum)
-            .distinct(true)
-            .getMany();
 
-        // 2. task 조회
-        const tasks = await this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoinAndSelect('task.managers', 'managers')
-            .leftJoinAndSelect('managers.user', 'user')
-            .whereInIds(taskIds.map((row) => row.id))
-            .orderBy('task.deadline IS NULL', 'ASC')
-            .addOrderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .getMany();
+        // 1. 조건에 맞는 task id만 선조회
+        const idRows = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
+            projectId,
+            userId,
+            [Status.ONGOING, Status.NOTSTART],
+            maxCardNum
+        );
+
+        const ids = idRows.map((r) => r.id);
+        if (ids.length === 0) return [];
+
+        // 2. id들로 상세 로딩 (step, managers, user까지)
+        const tasks = await this.taskRepository.findTasksByIds(ids);
+
+        // 3. id 순서대로 정렬
+        const order = new Map(ids.map((id, i) => [id, i]));
+        tasks.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+
+        // 4. 반환값을 DTO로 변환
         return tasks.map((task) => TaskCardDTO.from(task));
     }
 
@@ -732,21 +476,16 @@ export class TasksService {
         view: string,
         dto: GetSearchTaskDto
     ): Promise<TaskDashboardStepViewDto | TaskDashboardStatusViewDto> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         if (view !== 'step' && view !== 'status') {
             throw new BadRequestException(`'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`);
         }
 
         // ───  프로젝트 + 참여자 검증 ─────────────────────
-        const project = await this.projectRepository.findOne({
-            where: { id: projectId },
-            relations: ['userProjects'],
-        });
-        if (!project) throw new ProjectNotFoundException();
+        const project = await this.projectsService.findByIdWithTasks(projectId);
 
-        const isMember = await this.userProjectRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
-        });
-        if (!isMember) throw new ProjectForbiddenException();
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         //2) 필터용 baseQb
         const baseQb = this.buildSearchBaseQb(projectId, dto);
@@ -764,7 +503,7 @@ export class TasksService {
                         .andWhere('task.status = :status', { status })
                         .orderBy('task.deadline', 'ASC')
                         .addOrderBy('task.createdAt', 'ASC')
-                        .limit(5)
+                        .limit(limit)
                         .getMany();
 
                     return {
@@ -776,10 +515,7 @@ export class TasksService {
 
             return { projectId, projectName: project.name, statusGroups, totalCount };
         } else {
-            const steps = await this.stepRepository.find({
-                where: { project: { id: projectId } },
-                order: { createdAt: 'ASC' },
-            });
+            const steps = await this.stepRepository.findByProjectId(projectId);
 
             const stepGroups = await Promise.all(
                 steps.map(async (step) => {
@@ -788,7 +524,7 @@ export class TasksService {
                         .andWhere('task.stepId = :stepId', { stepId: step.id })
                         .orderBy('task.deadline', 'ASC')
                         .addOrderBy('task.createdAt', 'ASC')
-                        .limit(5)
+                        .limit(limit)
                         .getMany();
 
                     return {
@@ -807,22 +543,18 @@ export class TasksService {
         projectId: number,
         stepId: number,
         offset: number,
-        limit: number,
         dto: GetSearchTaskDto
     ): Promise<{ tasks: TaskInStepDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         // 프로젝트/멤버 검증은 기존 getSearchTask와 동일
-        const project = await this.projectRepository.findOne({
-            where: { id: projectId },
-            relations: ['userProjects'],
-        });
-        if (!project) throw new ProjectNotFoundException();
-        const isMember = await this.userProjectRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
-        });
-        if (!isMember) throw new ProjectForbiddenException();
+        // 1. 프로젝트 존재 검증
+        await this.projectsService.findByIdWithTasks(projectId);
+
+        // 2. 프로젝트 참여 여부 검증
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const baseQb = this.buildSearchBaseQb(projectId, dto);
 
@@ -848,27 +580,23 @@ export class TasksService {
         projectId: number,
         status: Status,
         offset: number,
-        limit: number,
         dto: GetSearchTaskDto
     ): Promise<{ tasks: TaskInStatusDto[]; totalCount: number }> {
+        const limit = Number(this.configService.get<string>('LIMIT_TASKS')) || 5;
+
         if (!Object.values(Status).includes(status)) {
             throw new BadRequestException(
                 `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
             );
         }
 
-        const project = await this.projectRepository.findOne({
-            where: { id: projectId },
-            relations: ['userProjects'],
-        });
-        if (!project) throw new ProjectNotFoundException();
-        const isMember = await this.userProjectRepository.findOne({
-            where: { user: { id: userId }, project: { id: projectId } },
-        });
-        if (!isMember) throw new ProjectForbiddenException();
+        // 1. 프로젝트 존재 검증
+        await this.projectsService.findByIdWithTasks(projectId);
+
+        // 2. 프로젝트 참여 여부 검증
+        await this.projectsService.assertProjectMember(userId, projectId);
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
-        if (limit < 1 || limit > 50) throw new BadRequestException('limit은 1~50 사이여야 합니다.');
 
         const baseQb = this.buildSearchBaseQb(projectId, dto);
 
@@ -891,12 +619,7 @@ export class TasksService {
 
     //BaseQb  + dto 기반 필터 헬퍼 함수 (검색에서 필터링하는 함수)
     private buildSearchBaseQb(projectId: number, dto: GetSearchTaskDto) {
-        const qb = this.taskRepository
-            .createQueryBuilder('task')
-            .leftJoinAndSelect('task.step', 'step')
-            .leftJoinAndSelect('task.managers', 'manager')
-            .leftJoinAndSelect('manager.user', 'user')
-            .where('step.projectId = :projectId', { projectId });
+        const qb = this.taskRepository.getProjectTasksBaseQb(projectId);
 
         if (dto.statuses?.length) {
             qb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });

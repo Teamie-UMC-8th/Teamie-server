@@ -19,6 +19,10 @@ import { PlanRepository } from '../repositories/plan.repository';
 import { WriterRepository } from '../repositories/writers.repository';
 import { AttendeeRepository } from '../repositories/attendees.repository';
 
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+
 @Injectable()
 export class PlansService {
     constructor(
@@ -27,7 +31,8 @@ export class PlansService {
         private readonly attendeeRepository: AttendeeRepository,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly eventBus: EventBusService
     ) {}
 
     // 기록자 수정 유틸 함수
@@ -131,12 +136,26 @@ export class PlansService {
     async checkPermission(userId: number, planId: number): Promise<Boolean> {
         const plan = await this.planRepository.findByIdWithProjectId(planId);
         const projectId = plan.project.id;
-        return await this.projectsService.checkProjectMember(userId, projectId);
+        return await this.projectsService.assertProjectMember(userId, projectId);
     }
 
     // 일정 생성
-    async createPlan(qr: QueryRunner, projectId: number, date: Date): Promise<CreatePlanResponse> {
-        const project = await this.projectsService.assertProjectExists(projectId);
+    async createPlan(
+        qr: QueryRunner,
+        userId: number,
+        projectId: number,
+        date: Date
+    ): Promise<CreatePlanResponse> {
+        // 유효한 식별자인지 & 사용자 권한 check
+        const project = await this.projectsService.isProjectExists(projectId, qr.manager);
+        const checkUserIsMember = await this.projectsService.isProjectMember(
+            userId,
+            projectId,
+            qr.manager
+        );
+        if (!checkUserIsMember) {
+            throw new ProjectForbiddenException();
+        }
 
         // 프로젝트 생성일자와 일정 생성일자 비교
         if (project.createdAt > date) {
@@ -164,8 +183,12 @@ export class PlansService {
         planId: number,
         body: BasicUpdatePlanReqDTO
     ): Promise<PlanDetails> {
+        // 1. planId에 해당하는 plan의 존재 여부 확인
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
-        await this.projectsService.checkProjectMember(userId, plan.project.id);
+
+        // 2. 수정 권한 체크
+        await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
+        // 3. 일정 수정
         try {
             await this.planRepository.updateWithBasicDTO(qr, planId, body);
             return PlanDetails.from(
@@ -188,9 +211,10 @@ export class PlansService {
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
         // 2. 프로젝트 권한 체크: 기본 수정 권한
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            plan.project.id,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
@@ -239,9 +263,11 @@ export class PlansService {
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
         // 2. 사용자의 삭제 권한 검사
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
+        const projectId = plan.project.id;
+        const checkUserIsMember = await this.projectsService.isProjectMember(
             userId,
-            plan.project.id
+            projectId,
+            qr.manager
         );
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
@@ -249,6 +275,10 @@ export class PlansService {
 
         // 3. 일정 삭제
         await this.planRepository.deletePlan(qr, planId);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })
+        );
         return DeletePlanResponseDto.from(planId);
     }
 }

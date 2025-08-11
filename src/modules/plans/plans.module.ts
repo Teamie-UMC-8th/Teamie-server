@@ -1,5 +1,4 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { PlansGateway } from './gateways/plans.gateway';
 import { PlansController } from './plans.controller';
 import { PlansService } from './services/plans.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,6 +9,9 @@ import { UsersModule } from '../users/users.module';
 import { PlanRepository } from './repositories/plan.repository';
 import { WriterRepository } from './repositories/writers.repository';
 import { AttendeeRepository } from './repositories/attendees.repository';
+import { PlansListener } from './listener/plans.listener';
+import { EventBusModule } from 'src/infra/event-bus/event-bus.module';
+import { GateWayModule } from 'src/infra/gateway/gateway.module';
 
 @Module({
     imports: [
@@ -17,9 +19,11 @@ import { AttendeeRepository } from './repositories/attendees.repository';
         forwardRef(() => ProjectsModule),
         AuthModule,
         UsersModule,
+        EventBusModule,
+        GateWayModule,
     ],
     controllers: [PlansController],
-    providers: [PlansGateway, PlansService, PlanRepository, WriterRepository, AttendeeRepository],
+    providers: [PlansService, PlansListener, PlanRepository, WriterRepository, AttendeeRepository],
     exports: [PlansService],
 })
 export class PlansModule {}

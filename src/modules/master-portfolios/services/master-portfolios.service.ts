@@ -6,7 +6,10 @@ import { MasterPortfolio } from '../entities/master-portfolios.entity';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { Question } from 'src/common/types/question.type';
 import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
-import { MasterPortfolioResponseDto } from '../dtos/master-portfolio-response.dto';
+import {
+    MasterPortfolioDetailResponseDto,
+    MasterPortfolioResponseDto,
+} from '../dtos/master-portfolio-response.dto';
 import {
     AIGenerationAlreadyExists,
     ForbiddenUserForMasterPortfolioException,
@@ -29,7 +32,7 @@ import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Project } from '../../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
@@ -56,6 +59,40 @@ function getPeriod(createdAt: Date, completedAt: Date): string {
     if (months > 0) period.push(`${months}개월`);
     if (days > 0) period.push(`${days}일`);
     return period.join(' ');
+}
+
+type MasterPortfolioContentCheckResult = {
+    [K in keyof MasterPortfolioOutput]?: boolean;
+};
+
+function checkMasterPortfolioContentStructure(
+    data: MasterPortfolioOutput
+): MasterPortfolioContentCheckResult {
+    const results: MasterPortfolioContentCheckResult = {};
+
+    // 프로젝트명 검사 : 1~20자
+    // results.projectName =
+    //     typeof data.projectName === 'string' &&
+    //     data.projectName.length > 0 &&
+    //     data.projectName.length <= 20;
+    // 상세정보 검사 : 최소 4개 이상의 리스트 (-로 시작)
+    results.detailInfo =
+        typeof data.detailInfo === 'string' && (data.detailInfo.match(/^- /gm)?.length ?? 0) >= 4;
+    // 담당업무 검사 : [섹션명]으로 시작하는 구간 1개 이상, 각 섹션에 -로 시작하는 리스트 1개 이상
+    // TODO: 구조(순서)까지는 검사하지 못하는 문제가 있음. 개선해볼 것
+    results.assignedTask =
+        typeof data.assignedTask === 'string' &&
+        /\[.+\]/.test(data.assignedTask) &&
+        (data.assignedTask.match(/^- /gm)?.length ?? 0) >= 1;
+    // 주요성과 검사 : -로 시작하는 리스트 2개 이상
+    results.keyAchievement =
+        typeof data.keyAchievement === 'string' &&
+        (data.keyAchievement.match(/^- /gm)?.length ?? 0) >= 2;
+    // 배운점 검사 : -로 시작하는 문장 2개 이상
+    results.insight =
+        typeof data.insight === 'string' && (data.insight.match(/^- /gm)?.length ?? 0) >= 2;
+
+    return results;
 }
 
 @Injectable()
@@ -336,7 +373,18 @@ export class MasterPortfoliosService {
                 { status: MasterPortfolioStatus.NEED_ANSWERS }
             );
 
-            throw new InternalServerErrorException('Failed to generate master portfolio');
+            throw new InternalServerErrorException(
+                '마스터 포트폴리오 AI 생성에 실패했습니다. 다시 시도해주세요.'
+            );
+        }
+
+        // 생성된 JSON 값 구조 검사
+        const checkResult = checkMasterPortfolioContentStructure(generatedPortfolio);
+        const isValid = Object.values(checkResult).every((value) => value === true);
+        if (!isValid) {
+            throw new InternalServerErrorException(
+                '생성된 마스터 포트폴리오의 구조가 유효하지 않습니다.'
+            );
         }
 
         // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
@@ -437,7 +485,7 @@ export class MasterPortfoliosService {
         if (!masterPortfolio) {
             throw new MasterPortfolioNotFoundException();
         }
-        return MasterPortfolioResponseDto.from(masterPortfolio);
+        return MasterPortfolioDetailResponseDto.from(masterPortfolio);
     }
 
     // 마스터 포트폴리오 업데이트
@@ -447,6 +495,7 @@ export class MasterPortfoliosService {
         portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
+        console.log(updateDataDto);
         await qr.manager.update(
             MasterPortfolio,
             {

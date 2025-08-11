@@ -1,7 +1,9 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 export class UpdateTaskStepDto {
     @ApiProperty({ example: 3, description: '새롭게 할당된 Step의 ID' })
+    @IsNotEmpty()
+    @IsNumber()
     newStepId: number;
 }
 export class UpdateTaskStepResponseDto {
