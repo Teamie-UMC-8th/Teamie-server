@@ -88,7 +88,7 @@ export class LLMService {
                 baseURL: this.baseURL,
             },
         });
-        console.log(process.env.LLM_QUESTION_MODEL)
+        console.log(process.env.LLM_QUESTION_MODEL);
 
         this.masterPortfolioLLM = new ChatOpenAI({
             model:

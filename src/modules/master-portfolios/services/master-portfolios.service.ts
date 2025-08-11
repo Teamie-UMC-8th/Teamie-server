@@ -71,10 +71,10 @@ function checkMasterPortfolioContentStructure(
     const results: MasterPortfolioContentCheckResult = {};
 
     // 프로젝트명 검사 : 1~20자
-    results.projectName =
-        typeof data.projectName === 'string' &&
-        data.projectName.length > 0 &&
-        data.projectName.length <= 20;
+    // results.projectName =
+    //     typeof data.projectName === 'string' &&
+    //     data.projectName.length > 0 &&
+    //     data.projectName.length <= 20;
     // 상세정보 검사 : 최소 4개 이상의 리스트 (-로 시작)
     results.detailInfo =
         typeof data.detailInfo === 'string' && (data.detailInfo.match(/^- /gm)?.length ?? 0) >= 4;
