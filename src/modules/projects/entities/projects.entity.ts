@@ -3,7 +3,7 @@ import { BaseEntity } from 'src/common/entities/base.entity';
 import { PersonalRecall } from '../../personal-recalls/entities/personal-recalls.entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { UserProject } from '../user-projects/entities/user-projects.entity';
-import { ProjectFile } from '../../mappings/project-files/project-files.entity';
+import { ProjectFile } from './project-files.entity';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { Step } from '../../steps/entities/steps.entity';
 

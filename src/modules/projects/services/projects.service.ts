@@ -47,7 +47,7 @@ import { Project } from '../entities/projects.entity';
 import { UserProjectRepository } from '../user-projects/repositories/user-project.repository';
 import { UserProject } from '../user-projects/entities/user-projects.entity';
 import { map } from 'rxjs';
-import { Manager } from 'src/modules/mappings/managers/managers.entity';
+import { Manager } from 'src/modules/tasks/entities/managers.entity';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
