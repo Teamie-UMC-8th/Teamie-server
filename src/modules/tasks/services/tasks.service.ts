@@ -70,7 +70,7 @@ export class TasksService {
         const { stepId } = createTaskRequestDto;
 
         // Step 조회
-        const targetStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, stepId);
+        const targetStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, stepId);
 
         // 프로젝트 참여 여부 검증
         const projectId = targetStep.project.id;
@@ -94,10 +94,10 @@ export class TasksService {
         dto: UpdateTaskRequestDto
     ): Promise<UpdateTaskResponseDto> {
         // 1. 수정할 Task 조회
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
         // 2. 새 Step 조회
-        const newStep = await this.stepRepository.findByIdWithQueryRunner(queryRunner, dto.stepId);
+        const newStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, dto.stepId);
 
         // 프로젝트 참여 여부 검증
         await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
@@ -150,7 +150,7 @@ export class TasksService {
         taskId: number
     ): Promise<DeleteTaskResponseDto> {
         // 1. Task 조회
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
         // 2. 프로젝트 참여 여부 확인
         const projectId = task.step.project.id;
@@ -308,7 +308,7 @@ export class TasksService {
         file: Express.Multer.File
     ): Promise<CreateTaskFileResponseDto> {
         // 1. Task 조회 (Step, Project 조인)
-        const task = await this.taskRepository.findByIdWithQueryRunner(queryRunner, taskId);
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
         // 2. 프로젝트 참여자 여부 확인
         await this.projectsService.assertProjectMember(userId, task.step.project.id);
 

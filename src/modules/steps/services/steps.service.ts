@@ -2,10 +2,8 @@ import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Step } from '../entities/steps.entity';
 import { Project } from '../../projects/entities/projects.entity';
-import { Repository } from 'typeorm';
+import { Repository, QueryRunner } from 'typeorm';
 import { CreateStepDto, CreateStepResponseDto } from '../dtos/create-step.dto';
-import { Cache } from 'cache-manager';
-import { ConfigService } from '@nestjs/config';
 import { CommonResponse } from '../../../common/response/common-response.dto';
 import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 import { UpdateStepDto, UpdateStepResponseDto } from '../dtos/update-step.dto';
@@ -16,49 +14,29 @@ import {
 } from '../../../common/exceptions/custom.errors';
 import { Task } from '../../tasks/entities/tasks.entity';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-task-step.dto';
-
 @Injectable()
 export class StepsService {
     constructor(
-        @InjectRepository(Step)
-        private readonly stepRepository: Repository<Step>,
-        @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>,
+        private readonly stepRepository: StepRepository,
+        private readonly projectRepository: ProjectRepository,
         @InjectRepository(Task)
         private readonly taskRepository: Repository<Task>
     ) {}
 
-    async createStep(dto: CreateStepDto, projectId: number): Promise<CreateStepResponseDto> {
-        const { name } = dto;
-
-        const project = await this.projectRepository.findOne({ where: { id: projectId } });
-        if (!project) {
-            throw new ProjectNotFoundException();
-        }
-
-        const step = this.stepRepository.create({
-            name,
-            project: { id: projectId },
-        });
-
-        const savedStep = await this.stepRepository.save(step);
-
-        return CreateStepResponseDto.fromEntity(savedStep);
-    }
-
-    async updateStep(stepId: number, dto: UpdateStepDto): Promise<UpdateStepResponseDto> {
-        const step = await this.stepRepository.findOne({ where: { id: stepId } });
+    async updateStep(qr: QueryRunner,stepId: number, dto: UpdateStepDto): Promise<UpdateStepResponseDto> {
+        const step = await this.stepRepository.findByIdUsingQR(qr.manager,stepId);
         if (!step) {
             throw new StepNotFoundException();
         }
 
         step.name = dto.name;
-        const updatedStep = await this.stepRepository.save(step);
+        const updatedStep = await this.stepRepository.saveStep(qr.manager,step);
 
         return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
     }
 
     async updateTaskStep(
+        qr: QueryRunner,
         dto: UpdateTaskStepDto,
         stepId: number,
         taskId: number
@@ -76,14 +54,7 @@ export class StepsService {
         if (!raw) throw new TaskNotFoundException();
 
         // 2) 이동할 step 존재 여부 확인
-        const stepRaw = await this.stepRepository
-            .createQueryBuilder('step')
-            .leftJoin('step.project', 'p')
-            .select(['step.id AS step_id', 'p.id AS project_id'])
-            .where('step.id = :newStepId', { newStepId })
-            .getRawOne();
-
-        if (!stepRaw) throw new StepNotFoundException();
+        const stepRaw = await this.stepRepository.findByIdUsingQR(qr.manager,newStepId);
 
         // 3) 실제로 Task.step 컬럼만 업데이트
         await this.taskRepository
@@ -97,13 +68,9 @@ export class StepsService {
         return UpdateTaskStepResponseDto.fromEntity(taskId, newStepId);
     }
 
-    async deleteStep(stepId: number): Promise<CommonResponse> {
+    async deleteStep(qr:QueryRunner,stepId: number): Promise<CommonResponse> {
         //step 존재 여부 확인
-        const stepRaw = await this.stepRepository
-            .createQueryBuilder('step')
-            .where('step.id = :stepId', { stepId })
-            .getRawOne();
-        if (!stepRaw) throw new StepNotFoundException();
+        const stepRaw = await this.stepRepository.findByIdUsingQR(qr.manager, stepId);
         // stepId로 연결된 task 조회
         const raw = await this.taskRepository
             .createQueryBuilder('task')
@@ -118,7 +85,9 @@ export class StepsService {
         }
 
         // 실제 삭제 로직 (예: soft delete 또는 hard delete 등)
-        await this.stepRepository.delete({ id: stepId });
+        await this.stepRepository.deleteById(qr.manager,stepRaw);
         return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });
     }
-}
+}import { StepRepository } from '../repositories/step.repository';
+import { ProjectRepository } from 'src/modules/projects/repositories/project.repository';
+

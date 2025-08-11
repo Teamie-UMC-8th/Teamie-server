@@ -7,6 +7,7 @@ import { Project } from '../projects/entities/projects.entity';
 import { ProjectsModule } from '../projects/projects.module';
 import { RedisModule } from '../../infra/redis/redis.module';
 import { Task } from '../tasks/entities/tasks.entity';
+import { StepRepository } from './repositories/step.repository';
 
 @Module({
     imports: [

@@ -33,7 +33,7 @@ export class TaskRepository {
     }
 
     //task 조회 with queryRunner
-    async findByIdWithQueryRunner(queryRunner: QueryRunner, taskId: number): Promise<Task> {
+    async findByIdUsingQR(queryRunner: QueryRunner, taskId: number): Promise<Task> {
         const task = await queryRunner.manager.findOne(Task, {
             where: { id: taskId },
             relations: ['step', 'step.project', 'taskFiles', 'managers', 'managers.user'],

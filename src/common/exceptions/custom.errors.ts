@@ -428,3 +428,14 @@ export class PlanTransactionException extends CustomHttpException {
         );
     }
 }
+
+export class StepTransactionException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.STEP_TRANSACTION_ERROR,
+            'STEP 관련 트랜잭션에서 에러가 발생했습니다.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            data
+        );
+    }
+}
