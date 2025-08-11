@@ -17,12 +17,18 @@ export class UserProjectRepository {
         private readonly userProjectRepository: Repository<UserProject>
     ) {}
 
-    async findUserProject(
+    async findUserProjectByManager(
         projectId: number,
         userId: number,
         manager: EntityManager
     ): Promise<UserProject | null> {
         const userProject = manager.getRepository(UserProject).findOne({
+            where: { project: { id: projectId }, user: { id: userId } },
+        });
+        return userProject;
+    }
+    async findUserProject(userId: number, projectId: number): Promise<UserProject | null> {
+        const userProject = await this.userProjectRepository.findOne({
             where: { project: { id: projectId }, user: { id: userId } },
         });
         return userProject;
@@ -78,16 +84,6 @@ export class UserProjectRepository {
         for (const { userId, projectNum } of raws) {
             const base = projectNum == null ? 0 : Number(projectNum); // ← 문자열/NULL 안전
             const next = base + 1;
-
-            if (!Number.isFinite(next)) {
-                console.error('[updateProjectNum] invalid next value', {
-                    userId,
-                    projectNum,
-                    next,
-                });
-                throw new Error('Invalid projectNum increment');
-            }
-
             await manager.update(User, { id: userId }, { projectNum: next }); // PK는 id
         }
     }
@@ -97,44 +93,6 @@ export class UserProjectRepository {
         return await manager.save(userProject);
     }
 
-    //멤버로 프로젝트에 추가
-    async saveMemberToProject(
-        userId: number,
-        projectId: number,
-        role: string,
-        manager: EntityManager
-    ): Promise<void> {
-        try {
-            await manager.save(UserProject, {
-                user: { id: userId },
-                project: { id: projectId },
-                permission: projectPermission.MEMBER,
-                role,
-            });
-        } catch {
-            throw new ProjectTransactionException();
-        }
-    }
-
-    //멤버로 프로젝트에 추가
-    async saveLeaderToProject(
-        userId: number,
-        projectId: number,
-        role: string,
-        manager: EntityManager
-    ): Promise<void> {
-        try {
-            await manager.save(UserProject, {
-                user: { id: userId },
-                project: { id: projectId },
-                permission: projectPermission.LEAD,
-                role,
-            });
-        } catch {
-            throw new ProjectTransactionException();
-        }
-    }
-
     //LEAD, MEMBER 권한 변경
     async updateUserRole(
         projectId: number,
@@ -142,7 +100,7 @@ export class UserProjectRepository {
         role: string,
         manager: EntityManager
     ): Promise<UserProject> {
-        const up = await this.findUserProject(projectId, userId, manager);
+        const up = await this.findUserProjectByManager(projectId, userId, manager);
         if (!up) throw new ProjectForbiddenException();
         try {
             up.role = role;

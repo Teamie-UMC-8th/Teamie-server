@@ -45,7 +45,6 @@ export class UsersService {
             email: kakaoUser.email,
             imageUrl: kakaoUser.profileImage,
             kakaoId: kakaoUser.id,
-            projectNum: 0,
         });
         return await this.userRepostiory.save(user);
     }

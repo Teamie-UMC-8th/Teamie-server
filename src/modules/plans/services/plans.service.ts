@@ -18,6 +18,9 @@ import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from '../dtos/update-plan
 import { Writer } from '../../mappings/writers/writers.entity';
 import { Attendee } from '../../mappings/attendees/attendees.entity';
 import { UsersService } from '../../users/services/users.service';
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 
 @Injectable()
 export class PlansService {
@@ -28,7 +31,8 @@ export class PlansService {
         private readonly writersRepository: Repository<Writer>,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly eventBus: EventBusService
     ) {}
 
     // 기록자 수정 유틸 함수
@@ -168,11 +172,7 @@ export class PlansService {
     }
 
     // NOTE: 사용자의 권한 체크, Custom Guard로 추후 리팩토링 예정
-    async checkPermission(
-        manager: EntityManager,
-        userId: number,
-        planId: number
-    ): Promise<Boolean> {
+    async checkPermission(userId: number, planId: number): Promise<Boolean> {
         const plan = await this.plansRepository.findOne({
             where: { id: planId },
             relations: { project: true },
@@ -341,6 +341,10 @@ export class PlansService {
 
         // 3. 일정 삭제
         await qr.manager.delete(Plan, planId);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId })
+        );
         return DeletePlanResponseDto.from(planId);
     }
 }

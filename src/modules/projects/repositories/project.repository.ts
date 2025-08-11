@@ -5,7 +5,6 @@ import { Project } from '../entities/projects.entity';
 import {
     ProjectNotFoundException,
     ProjectTransactionException,
-    AlreadyProjectCompletedException,
 } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
@@ -27,7 +26,7 @@ export class ProjectRepository {
         projectId: number,
         manager: EntityManager
     ): Promise<Project | null> {
-        const project = this.projectRepository.findOne({
+        const project = manager.getRepository(Project).findOne({
             where: { id: projectId },
             select: ['id', 'name'],
         });
@@ -42,21 +41,6 @@ export class ProjectRepository {
         }
     }
 
-    async createProject(name: string, manager: EntityManager): Promise<Project> {
-        try {
-            const saved = await manager.save(Project, {
-                name,
-                goal: '',
-                rule: '',
-                isCompleted: false,
-                completedAt: null,
-            });
-
-            return saved;
-        } catch (e) {
-            throw new ProjectTransactionException();
-        }
-    }
     // assert - GET 전용 단순 검증용
     async assertProjectEditable(projectId: number): Promise<Project> {
         const project = await this.projectRepository
@@ -65,7 +49,6 @@ export class ProjectRepository {
             .getOne();
 
         if (!project) throw new ProjectNotFoundException();
-        if (project.isCompleted) throw new AlreadyProjectCompletedException();
         return project;
     }
     // is - db 트랜잭션 전 검증용
@@ -77,7 +60,6 @@ export class ProjectRepository {
             .getOne();
 
         if (!project) throw new ProjectNotFoundException();
-        if (project.isCompleted) throw new AlreadyProjectCompletedException();
         return project;
     }
 

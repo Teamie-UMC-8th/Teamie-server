@@ -78,7 +78,7 @@ export class TasksService {
 
         // 업무 생성
         const task = queryRunner.manager.create(Task, {
-            targetStep,
+            step: targetStep,
             name: '빈 업무',
             memo: null,
             deadline: null,

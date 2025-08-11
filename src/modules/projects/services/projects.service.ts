@@ -19,6 +19,7 @@ import {
     InvalidDateException,
     ProjectForbiddenException,
     ProjectNotFoundException,
+    AlreadyProjectCompletedException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../../steps/dtos/create-step.dto';
@@ -43,6 +44,7 @@ import { ProjectRepository } from '../repositories/project.repository';
 import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
 import { UserProjectRepository } from '../repositories/user-project.repository';
+import { UserProject } from '../entities/userProjects.entity';
 import { map } from 'rxjs';
 import { Manager } from 'src/modules/mappings/managers/managers.entity';
 @Injectable()
@@ -88,16 +90,25 @@ export class ProjectsService {
 
         let savedProject: Project;
         try {
-            savedProject = await this.projectRepository.createProject(name, qr.manager);
+            const project = qr.manager.create(Project, {
+                name,
+                goal: '',
+                rule: '',
+                isCompleted: false,
+                completedAt: null,
+            });
+            savedProject = await this.projectRepository.saveProject(project, qr.manager);
         } catch (e) {
             throw e; // 인터셉터에서 롤백됨
         }
-        await this.userProjectRepository.saveLeaderToProject(
-            userId,
-            savedProject.id,
-            projectPermission.LEAD,
-            qr.manager
-        );
+        const up = qr.manager.create(UserProject, {
+            user: { id: userId },
+            project: { id: savedProject.id },
+            permission: projectPermission.LEAD,
+            role: '',
+        });
+
+        await this.userProjectRepository.saveUserProject(up, qr.manager);
 
         const { code, expiresAt } = await this.inviteStore.saveActive(
             savedProject.id,
@@ -156,12 +167,13 @@ export class ProjectsService {
             qr.manager
         );
         if (!alreadyJoined) {
-            await this.userProjectRepository.saveMemberToProject(
-                userId,
-                projectId,
-                'member',
-                qr.manager
-            );
+            const up = qr.manager.create(UserProject, {
+                user: { id: userId },
+                project: { id: project.id },
+                permission: projectPermission.MEMBER,
+                role: '',
+            });
+            await this.userProjectRepository.saveUserProject(up, qr.manager);
         }
         const message = `${user.name}님이 "${project.name}" 프로젝트에 참여되었습니다.`;
         const responseDto = JoinProjectResponseDto.fromEntity(message);
@@ -190,7 +202,8 @@ export class ProjectsService {
         // 프로젝트 존재 검사
         const project = await this.projectRepository.assertProjectExist(projectId);
         // 프로젝트 멤버 권한 검사
-        await this.assertProjectMember(userId, projectId);
+        const check = await this.assertProjectMember(userId, projectId);
+        if (!check) throw new AlreadyProjectCompletedException();
 
         const postsRaw = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
         const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
@@ -401,7 +414,7 @@ export class ProjectsService {
         return UpdateProfileResponseDto.fromEntity(users);
     }
 
-    async getTeamCalender(userId: number, projectId: number, startDate: string, endDate: string) {
+    async getTeamCalender(projectId: number, startDate: string, endDate: string) {
         //검색 범위 제한 - 최대 31일
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -524,5 +537,12 @@ export class ProjectsService {
             {} as Record<string, CalenderCardResponseDto[]>
         );
         return grouped;
+    }
+
+    // 사용자의 프로젝트 권한 조회
+    async getUserPermissionOfProject(userId: number, projectId: number) {
+        const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
+        if (!userProject) throw new ProjectForbiddenException();
+        return { permission: userProject.permission };
     }
 }
