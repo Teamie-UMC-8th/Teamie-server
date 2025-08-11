@@ -142,21 +142,12 @@ export class PlansService {
     // 일정 생성
     async createPlan(
         qr: QueryRunner,
-        userId: number,
         projectId: number,
         date: Date
     ): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
         const project = await this.projectsService.isProjectExists(projectId, qr.manager);
-        const checkUserIsMember = await this.projectsService.isProjectMember(
-            userId,
-            projectId,
-            qr.manager
-        );
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
-
+        
         // 프로젝트 생성일자와 일정 생성일자 비교
         if (project.createdAt > date) {
             throw new PlanDateConflictException({

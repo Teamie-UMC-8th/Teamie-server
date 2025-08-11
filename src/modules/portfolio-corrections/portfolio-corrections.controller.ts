@@ -13,6 +13,7 @@ import { PortfolioCorrectionsService } from './services/portfolio-corrections.se
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import {
+    ApiCommonResponse,
     ApiCommonResponseArray,
     ApiCommonResponseWithPagination,
 } from 'src/common/response/swagger-response.helper';
