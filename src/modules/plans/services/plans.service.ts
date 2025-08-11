@@ -325,10 +325,8 @@ export class PlansService {
             });
 
         // 2. 사용자의 삭제 권한 검사
-        const checkUserIsMember = await this.projectsService.checkProjectMember(
-            userId,
-            plan.project.id
-        );
+        const projectId = plan.project.id;
+        const checkUserIsMember = await this.projectsService.checkProjectMember(userId, projectId);
         if (!checkUserIsMember) {
             throw new ProjectForbiddenException();
         }
@@ -337,7 +335,7 @@ export class PlansService {
         await qr.manager.delete(Plan, planId);
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
-            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId })
+            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })
         );
         return DeletePlanResponseDto.from(planId);
     }
