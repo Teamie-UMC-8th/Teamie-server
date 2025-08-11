@@ -24,3 +24,6 @@ export const defaultConfig = (configService: ConfigService) => ({
         path: configService.get<string>('SWAGGER_PATH') || 'docs',
     },
 });
+
+const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
+export const allowedOrigins = rawOrigins.split(',').map((origin) => origin.trim());

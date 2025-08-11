@@ -20,6 +20,8 @@ import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { CocommentsModule } from './modules/comments/cocomments/cocomments.module';
 import { PortfolioCorrectionsModule } from './modules/portfolio-corrections/portfolio-corrections.module';
+import { EventBusModule } from './infra/event-bus/event-bus.module';
+import { GateWayModule } from './infra/gateway/gateway.module';
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -53,6 +55,8 @@ import { PortfolioCorrectionsModule } from './modules/portfolio-corrections/port
         CommentsModule,
         CocommentsModule,
         PortfolioCorrectionsModule,
+        EventBusModule,
+        GateWayModule,
     ],
     providers: [
         {

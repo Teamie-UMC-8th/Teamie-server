@@ -32,7 +32,7 @@ import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 import { Project } from '../../projects/entities/projects.entity';
 import { EntityManager } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { UserProject } from '../../mappings/user-projects/userProjects.entity';
+import { UserProject } from '../../projects/entities/userProjects.entity';
 import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 
@@ -71,10 +71,10 @@ function checkMasterPortfolioContentStructure(
     const results: MasterPortfolioContentCheckResult = {};
 
     // 프로젝트명 검사 : 1~20자
-    results.projectName =
-        typeof data.projectName === 'string' &&
-        data.projectName.length > 0 &&
-        data.projectName.length <= 20;
+    // results.projectName =
+    //     typeof data.projectName === 'string' &&
+    //     data.projectName.length > 0 &&
+    //     data.projectName.length <= 20;
     // 상세정보 검사 : 최소 4개 이상의 리스트 (-로 시작)
     results.detailInfo =
         typeof data.detailInfo === 'string' && (data.detailInfo.match(/^- /gm)?.length ?? 0) >= 4;
@@ -495,6 +495,7 @@ export class MasterPortfoliosService {
         portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
+        console.log(updateDataDto);
         await qr.manager.update(
             MasterPortfolio,
             {

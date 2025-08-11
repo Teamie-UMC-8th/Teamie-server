@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Project } from '../entities/projects.entity';
+import { IsNumber } from 'class-validator';
 export class JoinProjectDto {
     @ApiProperty()
+    @IsNumber()
     projectId: number;
 }
 export class JoinProjectResponseDto {

@@ -323,8 +323,10 @@ export class AssigneeNotMemberException extends CustomHttpException {
 }
 
 export class AlreadyJoinException extends CustomHttpException {
-    constructor(data?: any) {
-        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, data);
+    constructor(projectId: number) {
+        super(ErrorCode.ALREDY_JOIN, '이미 프로젝트에 참여하였습니다.', HttpStatus.FORBIDDEN, {
+            projectId,
+        });
     }
 }
 export class MasterPortfolioDuplicateException extends CustomHttpException {
