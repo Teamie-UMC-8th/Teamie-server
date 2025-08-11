@@ -17,6 +17,6 @@ import { UserProjectModule } from '../projects/user-projects/user-project.module
     ],
     controllers: [UsersController],
     providers: [UsersService, UserRepository],
-    exports: [UsersService, TypeOrmModule],
+    exports: [UsersService],
 })
 export class UsersModule {}

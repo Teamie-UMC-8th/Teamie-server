@@ -33,7 +33,6 @@ import { UpdateProfileDto, UpdateProfileResponseDto } from '../dtos/update-profi
 import { JoinProjectDto, JoinProjectResponseDto } from '../dtos/join-project.dto';
 import { ValidateInviteResponseDto } from '../dtos/validate-invite.dto';
 import { PlansService } from '../../plans/services/plans.service';
-import { TasksService } from '../../tasks/services/tasks.service';
 import { UserProfile } from '../../../common/dtos/user-profile.dto';
 import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import {
@@ -46,8 +45,7 @@ import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
 import { UserProjectRepository } from '../user-projects/repositories/user-project.repository';
 import { UserProject } from '../user-projects/entities/user-projects.entity';
-import { map } from 'rxjs';
-import { Manager } from 'src/modules/tasks/entities/managers.entity';
+
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -57,16 +55,8 @@ export class ProjectsService {
     constructor(
         private readonly projectRepository: ProjectRepository,
         private readonly userProjectRepository: UserProjectRepository,
-
-        @InjectRepository(PersonalRecall)
-        private readonly personalRecallRepository: Repository<PersonalRecall>,
-
-        @InjectRepository(Step)
-        private readonly stepRepository: Repository<Step>,
-
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
-
         private readonly taskRepository: TaskRepository,
 
         private readonly inviteStore: InviteCodeStore,
