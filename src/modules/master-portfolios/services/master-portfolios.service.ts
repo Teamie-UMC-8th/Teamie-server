@@ -450,6 +450,7 @@ export class MasterPortfoliosService {
         portfolioId: number,
         updateDataDto: MasterPortfolioRequestDto
     ) {
+        console.log(updateDataDto);
         await qr.manager.update(
             MasterPortfolio,
             {
