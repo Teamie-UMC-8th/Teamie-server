@@ -26,6 +26,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     ],
     controllers: [AuthController],
     providers: [AuthService, KakaoStrategy, JwtStrategy, JwtAuthGuard],
-    exports: [JwtModule, AuthService],
+    exports: [AuthService],
 })
 export class AuthModule {}

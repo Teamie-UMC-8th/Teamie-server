@@ -1,9 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Question } from '../../common/types/question.type';
-import { QuestionResponseFormat } from './formats/question-response.format';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
-import { MasterPortfolioResponseFormat } from './formats/master-portfolio-response.format';
-import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
@@ -14,6 +11,7 @@ import { QueryRunner } from 'typeorm';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 import { Questions, questionSchema } from './schemas/questions.schema';
 import { MasterPortfolio, masterPortfolioSchema } from './schemas/master-portfolio.schema';
+import { ProjectData } from 'src/modules/master-portfolios/types/project-data.interface';
 
 function processLLMError(error: any) {
     // JSON 파싱 실패
@@ -88,7 +86,6 @@ export class LLMService {
                 baseURL: this.baseURL,
             },
         });
-        console.log(process.env.LLM_QUESTION_MODEL);
 
         this.masterPortfolioLLM = new ChatOpenAI({
             model:
@@ -117,10 +114,15 @@ export class LLMService {
         try {
             questionPromptText = await this.promptLoader.load('question.prompt.md');
         } catch (e) {
-            throw new PromptLoadingException('question.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (question.prompt.md)');
         }
 
-        const questionPrompt = ChatPromptTemplate.fromTemplate(questionPromptText);
+        let questionPrompt: ChatPromptTemplate;
+        try {
+            questionPrompt = ChatPromptTemplate.fromTemplate(questionPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (question.prompt.md)');
+        }
         const structuredLLM = this.questionLLM.withStructuredOutput<Questions>(questionSchema, {
             name: 'questions',
         });
@@ -165,17 +167,21 @@ export class LLMService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(projectData: any) {
+    async generateMasterPortfolio(questionData: any, projectData: ProjectData) {
         // 마스터 포트폴리오 프롬프트를 로드합니다.
         let masterPortfolioPromptText: string;
         try {
             masterPortfolioPromptText = await this.promptLoader.load('master-portfolio.prompt.md');
-            projectData = await this.promptLoader.load('dummy-input.json');
         } catch (e) {
-            throw new PromptLoadingException('master-portfolio.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (master-portfolio.prompt.md)');
         }
 
-        const masterPortfolioPrompt = ChatPromptTemplate.fromTemplate(masterPortfolioPromptText);
+        let masterPortfolioPrompt: ChatPromptTemplate;
+        try {
+            masterPortfolioPrompt = ChatPromptTemplate.fromTemplate(masterPortfolioPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (master-portfolio.prompt.md)');
+        }
         const structuredLLM = this.masterPortfolioLLM.withStructuredOutput<MasterPortfolio>(
             masterPortfolioSchema,
             {
@@ -185,6 +191,7 @@ export class LLMService {
 
         try {
             const masterPortfolioResult = await masterPortfolioPrompt.pipe(structuredLLM).invoke({
+                questionData: questionData,
                 projectData: projectData,
             });
 
@@ -228,9 +235,15 @@ export class LLMService {
         try {
             correctionPromptText = await this.promptLoader.load('portfolio-correction.prompt.md');
         } catch (e) {
-            throw new PromptLoadingException('portfolio-correction.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (portfolio-correction.prompt.md)');
         }
-        const correctionPrompt = ChatPromptTemplate.fromTemplate(correctionPromptText);
+
+        let correctionPrompt: ChatPromptTemplate;
+        try {
+            correctionPrompt = ChatPromptTemplate.fromTemplate(correctionPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (portfolio-correction.prompt.md)');
+        }
 
         const structuredLLM = this.correctionLLM.withStructuredOutput<Correction>(
             correctionSchema,

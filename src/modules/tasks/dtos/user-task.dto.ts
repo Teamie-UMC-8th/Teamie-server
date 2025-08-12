@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { Status } from 'src/common/enums/status.enum';
-import { Manager } from 'src/modules/mappings/managers/managers.entity';
+import { Manager } from 'src/modules/tasks/entities/managers.entity';
 
 export class TaskCardDTO {
     @ApiProperty({
