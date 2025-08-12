@@ -24,7 +24,7 @@ import { UploadModule } from 'src/infra/upload/upload.module';
         forwardRef(() => StepsModule),
         TaskFilesModule, 
         CommentsModule,
-        UploadModule
+        UploadModule,
         GateWayModule,
     ],
     controllers: [TasksController],
