@@ -7,7 +7,8 @@ import { Manager } from './entities/managers.entity';
 import { UsersModule } from '../users/users.module';
 import { TaskRepository } from './repositories/task.repository';
 import { ProjectsModule } from '../projects/projects.module';
-import { UserProjectimport, GateWayModule } from 'src/infra/gateway/gateway.module';
+import { UserProjectModule } from '../projects/user-projects/user-project.module';
+import { GateWayModule } from 'src/infra/gateway/gateway.module';
 import { TasksListener } from './listener/tasks.listener';
 import { ManagerRepository } from './repositories/manager.repository';
 import { StepsModule } from '../steps/steps.module';
@@ -20,31 +21,11 @@ import { UploadModule } from 'src/infra/upload/upload.module';
         UsersModule,
         forwardRef(() => ProjectsModule),
         UserProjectModule,
-        GateWayModule,
-    ],
-    controllers: [TasksController],
-    providers: [
-        TasksService,
-        UploadService,
-        ManagerRepository,
-        TaskRepository,
-        CommentRepository,
-        StepRepository,
-        TaskFileRepository,
-        TasksListener,
-    ],
-    exports: [
-        TaskRepository,
-        CommentRepository,
-        TaskFileRepository,
-        ManagerRepository,
-        TasksService,
-    ],
         forwardRef(() => StepsModule),
-        TaskFilesModule,
+        TaskFilesModule, 
         CommentsModule,
-        UserProjectModule,
-        UploadModule,
+        UploadModule
+        GateWayModule,
     ],
     controllers: [TasksController],
     providers: [TasksService, ManagerRepository, TaskRepository],
