@@ -2,12 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class CorrectionLineDto {
     @ApiProperty({ example: 'detailInfo_1' })
-    lineNumber: string;
+    line_number: string;
 
     @ApiProperty({
         example: '- 동아리 회원 간 언어 교환을 통한 실질적 관계 형성 및 학습 환경 조성',
     })
-    originalContent: string;
+    original_content: string;
 
     @ApiProperty({ example: 1 })
     type: number;
@@ -15,14 +15,14 @@ export class CorrectionLineDto {
     @ApiProperty({
         example: '글로벌 MD 직무와 직접적인 관련성이 낮은 일반적인 동아리 활동 내용입니다. ...',
     })
-    reviewComment: string;
+    review_comment: string;
 
     static from(data: any): CorrectionLineDto {
         const dto = new CorrectionLineDto();
-        dto.lineNumber = data.lineNumber;
-        dto.originalContent = data.originalContent;
+        dto.line_number = data.line_number;
+        dto.original_content = data.original_content;
         dto.type = data.type;
-        dto.reviewComment = data.reviewComment;
+        dto.review_comment = data.review_comment;
         return dto;
     }
 }
@@ -35,12 +35,12 @@ export class CorrectionFieldDto {
         example:
             '프로젝트 배경은 동아리 활동에 대한 설명으로, 글로벌 MD 직무와의 직접적인 연관성은 낮습니다. ...',
     })
-    fieldSummary: string;
+    field_summary: string;
 
     static from(data: any): CorrectionFieldDto {
         const dto = new CorrectionFieldDto();
         dto.lines = data.lines.map((line: any) => CorrectionLineDto.from(line));
-        dto.fieldSummary = data.fieldSummary;
+        dto.field_summary = data.field_summary;
         return dto;
     }
 }
@@ -76,13 +76,36 @@ export class CorrectionResultDto {
     projectName: string;
 
     @ApiProperty({ type: CorrectionDto })
-    correction: CorrectionDto;
+    correctionResult: CorrectionDto;
 
     static from(data: any): CorrectionResultDto {
         const dto = new CorrectionResultDto();
         dto.projectId = data.projectId;
         dto.projectName = data.projectName;
-        dto.correction = CorrectionDto.from(data.correction);
+        dto.correctionResult = CorrectionDto.from(data.correctionResult);
+        return dto;
+    }
+}
+
+export class GetCorrectionResultDto {
+    @ApiProperty({
+        example: [
+            { id: 1, name: '나의 테스트 프로젝트' },
+            { id: 2, name: '나의 두 번째 프로젝트' },
+        ],
+    })
+    projects: { id: number; name: string }[];
+
+    @ApiProperty({ type: CorrectionResultDto })
+    firstCorrection: CorrectionResultDto;
+
+    static from(data: any): GetCorrectionResultDto {
+        const dto = new GetCorrectionResultDto();
+        dto.projects = data.projects.map((project: any) => ({
+            id: project.id,
+            name: project.name,
+        }));
+        dto.firstCorrection = CorrectionResultDto.from(data.firstCorrection);
         return dto;
     }
 }
