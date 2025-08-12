@@ -7,7 +7,7 @@ import { Manager } from './entities/managers.entity';
 import { UsersModule } from '../users/users.module';
 import { TaskRepository } from './repositories/task.repository';
 import { ProjectsModule } from '../projects/projects.module';
-import { UserProjectimport { GateWayModule } from 'src/infra/gateway/gateway.module';
+import { UserProjectimport, GateWayModule } from 'src/infra/gateway/gateway.module';
 import { TasksListener } from './listener/tasks.listener';
 import { ManagerRepository } from './repositories/manager.repository';
 import { StepsModule } from '../steps/steps.module';
