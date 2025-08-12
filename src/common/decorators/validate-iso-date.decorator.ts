@@ -9,11 +9,7 @@ export function IsISODateString(validationOptions?: ValidationOptions) {
             options: validationOptions,
             validator: {
                 validate(value: any, _args: ValidationArguments) {
-                    return (
-                        typeof value === 'string' &&
-                        !isNaN(Date.parse(value)) &&
-                        value === new Date(value).toISOString()
-                    );
+                    return typeof value === 'string' && !isNaN(Date.parse(value));
                 },
                 defaultMessage(args: ValidationArguments) {
                     return `${args.property}는 ISO 8601 형식의 문자열이어야 합니다.`;

@@ -3,12 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './services/projects.service';
 import { Project } from './entities/projects.entity';
-import { UserProject } from './user-projects/entities/user-projects.entity';
 import { RedisModule } from '../../infra/redis/redis.module';
 import { PersonalRecallsModule } from '../personal-recalls/personal-recalls.module';
-import { PersonalRecall } from '../personal-recalls/entities/personal-recalls.entity';
 import { StepsModule } from '../steps/steps.module';
-import { Step } from '../steps/entities/steps.entity';
 import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.module';
 import { User } from '../users/entities/users.entity';
 import { PlansModule } from '../plans/plans.module';
@@ -19,7 +16,7 @@ import { PostsStore } from './repositories/posts.store';
 import { UserProjectModule } from './user-projects/user-project.module';
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Project, UserProject, PersonalRecall, Step, User]),
+        TypeOrmModule.forFeature([Project, User]),
         RedisModule,
         PersonalRecallsModule,
         forwardRef(() => StepsModule), // Circular dependency handling

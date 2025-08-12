@@ -1,11 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Step } from '../entities/steps.entity';
-import { Project } from '../../projects/entities/projects.entity';
-import { Repository, QueryRunner } from 'typeorm';
-import { CreateStepDto, CreateStepResponseDto } from '../dtos/create-step.dto';
+import { Injectable } from '@nestjs/common';
+import { QueryRunner } from 'typeorm';
 import { CommonResponse } from '../../../common/response/common-response.dto';
-import { ProjectNotFoundException } from 'src/common/exceptions/custom.errors';
 import { UpdateStepDto, UpdateStepResponseDto } from '../dtos/update-step.dto';
 import {
     StepNotFoundException,
