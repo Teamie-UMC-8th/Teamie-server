@@ -2,6 +2,7 @@ import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { Plan } from '../entities/plan.entity';
 import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from './update-plan.dto';
 import { PlanDetails } from './plan-details.dto';
+import { pickFieldsFromEntity } from 'src/common/utils/dto-transform';
 
 export class CreatedPlanDTO {
     id: number;
@@ -59,19 +60,4 @@ export class UpdatedPlanDTO {
         dto.id = entity.id;
         return dto;
     }
-}
-
-function pickFieldsFromEntity<
-    ReqType extends object,
-    EntityType extends object,
-    DtoType extends Partial<Record<string, any>>,
->(req: ReqType, entity: EntityType, fields: string[]): DtoType {
-    const dto = {} as DtoType;
-
-    for (const key of fields) {
-        if ((req as any)[key] !== undefined) {
-            dto[key as keyof DtoType] = (entity as any)[key];
-        }
-    }
-    return dto;
 }
