@@ -35,6 +35,11 @@ import { TaskFileRepository } from '../../mappings/task-files/repositories/task-
 import { CommentRepository } from '../../comments/repositories/comments.repository';
 import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 @Injectable()
 export class TasksService {
     constructor(
@@ -49,7 +54,9 @@ export class TasksService {
         private readonly usersService: UsersService,
         private readonly configService: ConfigService,
         @Inject(forwardRef(() => ProjectsService))
-        private readonly projectsService: ProjectsService
+        private readonly projectsService: ProjectsService,
+        private readonly eventBus: EventBusService,
+        private readonly eventEmitter: EventEmitter2
     ) {}
 
     async createTask(
@@ -74,6 +81,20 @@ export class TasksService {
             deadline: null,
         });
         await this.taskRepository.saveWithQueryRunner(queryRunner.manager, task);
+        await this.eventEmitter.emitAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                projectId,
+                task: {
+                    id: task.id,
+                    name: task.name,
+                    status: task.status,
+                    deadline: task.deadline, // null 또는 Date
+                    stepId: targetStep.id,
+                    managers: [], // 최소 요약
+                },
+            })
+        );
         return CreateTaskResponseDto.fromEntity(task);
     }
 
@@ -86,10 +107,22 @@ export class TasksService {
         // 1. 수정할 Task 조회
         const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
+        // before 스냅샷 (매니저 포함)
+        const beforeManagers = await this.managerRepository.findManagersByTaskIdWithQueryRunner(
+            queryRunner,
+            task.id
+        );
+        const before = {
+            name: task.name,
+            deadline: task.deadline as Date | null,
+            status: task.status,
+            stepId: task.step.id,
+            managerIds: new Set(beforeManagers.map((m) => m.user.id)),
+        };
         // 2. 새 Step 조회
         const newStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, dto.stepId);
 
-        // 프로젝트 참여 여부 검증
+        // 3, 프로젝트 참여 여부 검증
         await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
 
         // 4. Task 필드 덮어쓰기
@@ -104,7 +137,7 @@ export class TasksService {
             task
         );
 
-        // managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
+        // 5. managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
         if (dto.managerIds?.length) {
             const uniqueManagerIds = Array.from(new Set(dto.managerIds));
 
@@ -128,11 +161,52 @@ export class TasksService {
             await this.managerRepository.deleteManagerWithQueryRunner(queryRunner, updatedTask.id);
         }
 
-        // 7. 최종 managers 조회
+        // 6. 최종 managers 조회
         const managers = await this.managerRepository.findManagersByTaskIdWithQueryRunner(
             queryRunner,
             updatedTask.id
         );
+        // 7) diff 구성 — 바뀐 것만
+        const diff: Record<string, any> = { id: updatedTask.id };
+
+        if (dto.name !== undefined && dto.name !== before.name) {
+            diff.name = updatedTask.name;
+        }
+
+        if (dto.status !== undefined && dto.status !== before.status) {
+            diff.status = updatedTask.status;
+        }
+
+        if (dto.deadline !== undefined) {
+            const beforeMs = before.deadline ? before.deadline.getTime() : null;
+            const afterMs = updatedTask.deadline ? updatedTask.deadline.getTime() : null;
+            if (beforeMs !== afterMs) {
+                diff.deadline = updatedTask.deadline; // null 또는 Date
+            }
+        }
+
+        if (dto.stepId !== undefined && dto.stepId !== before.stepId) {
+            diff.stepId = updatedTask.step.id; // 위치 이동
+        }
+
+        if (dto.managerIds !== undefined) {
+            const afterManagerIds = new Set(managers.map((m) => m.user.id));
+            if (!eqSet(before.managerIds, afterManagerIds)) {
+                diff.managers = managers.map((m) => ({ id: m.user.id, name: m.user.name }));
+            }
+        }
+
+        // 변경이 있는 것만 브로드캐스트
+        if (Object.keys(diff).length > 1) {
+            await this.eventEmitter.emitAsync(
+                `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+                EventPayloadDto.from(RealTimeType.UPDATED, {
+                    projectId: updatedTask.step.project.id,
+                    taskId: updatedTask.id,
+                    diff, // ← 최소 변경 필드
+                })
+            );
+        }
 
         return UpdateTaskResponseDto.from(updatedTask, managers);
     }
@@ -172,6 +246,14 @@ export class TasksService {
         // 5. Task 삭제
         await this.taskRepository.deleteWithQueryRunner(queryRunner, task.id);
 
+        // 6. 삭제 이벤트 발행(대시보드+상세에 반영, 상세는 리스너에서 forceLeave)
+        await this.eventEmitter.emitAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                projectId,
+                taskId: task.id, // 최소 식별자만
+            })
+        );
         return {
             message: '업무가 성공적으로 삭제되었습니다.',
             taskId,
@@ -634,4 +716,11 @@ export class TasksService {
         }
         return qb;
     }
+}
+
+/** 같은 클래스 안에 헬퍼 추가 (private로 둬도 됨) */
+function eqSet(a: Set<number>, b: Set<number>) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
 }

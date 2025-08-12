@@ -18,6 +18,7 @@ export class UpdateTaskRequestDto {
         description: '마감기한',
     })
     @IsOptional()
+    @Type(() => Date)
     deadline: Date;
 
     @ApiProperty({
