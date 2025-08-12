@@ -1,9 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Question } from '../../common/types/question.type';
-import { QuestionResponseFormat } from './formats/question-response.format';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
-import { MasterPortfolioResponseFormat } from './formats/master-portfolio-response.format';
-import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
