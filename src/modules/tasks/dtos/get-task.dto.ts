@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
-import { ManagerResponseDto } from './create-manager-dto';
+import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { TaskFileResponseDto } from '../task-files/dtos/create-task-files.dto';
 import { Task } from '../entities/tasks.entity';
 import { Manager } from '../entities/managers.entity';
@@ -33,10 +33,10 @@ export class GetTaskResponseDto {
     memo: string | null;
 
     @ApiProperty({
-        type: [ManagerResponseDto],
+        type: [UserProfile],
         description: '담당자 목록',
     })
-    managers: ManagerResponseDto[];
+    managers: UserProfile[];
 
     @ApiProperty({
         type: [TaskFileResponseDto],
@@ -56,10 +56,7 @@ export class GetTaskResponseDto {
         dto.deadline = task.deadline;
         dto.status = task.status;
         dto.memo = task.memo;
-        dto.managers = managers.map((m) => ({
-            userId: m.user.id,
-            userName: m.user.name,
-        }));
+        dto.managers = managers.map((m) => UserProfile.from(m.user));
         dto.files = task.taskFiles.map((f) => ({
             id: f.id,
             fileUrl: f.fileUrl,
