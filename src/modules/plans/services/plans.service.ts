@@ -22,6 +22,7 @@ import { AttendeeRepository } from '../repositories/attendees.repository';
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { CreatedPlanDTO, DeletedPlanDTO, UpdatedPlanDTO } from '../dtos/plan-payload.dto';
 
 @Injectable()
 export class PlansService {
@@ -157,6 +158,13 @@ export class PlansService {
                 project: project,
                 date: date,
             });
+            await this.eventBus.publishAsync(
+                `${RealTimeEntity.PLAN}.${RealTimeType.CREATED}`,
+                EventPayloadDto.from(RealTimeType.CREATED, {
+                    projectId: projectId,
+                    plan: CreatedPlanDTO.from(newPlan),
+                })
+            );
             return CreatePlanResponse.fromEntity(newPlan);
         } catch (err) {
             throw new PlanTransactionException();
@@ -178,9 +186,17 @@ export class PlansService {
         // 3. 일정 수정
         try {
             await this.planRepository.updateWithBasicDTO(qr, planId, body);
-            return PlanDetails.from(
+            const updatedPlan = PlanDetails.from(
                 await this.planRepository.findByIdWithDetailUsingQR(qr, planId)
             );
+            await this.eventBus.publishAsync(
+                `${RealTimeEntity.PLAN}.${RealTimeType.UPDATED}`,
+                EventPayloadDto.from(RealTimeType.CREATED, {
+                    projectId: plan.project.id,
+                    plan: UpdatedPlanDTO.from(body, updatedPlan),
+                })
+            );
+            return updatedPlan;
         } catch (e) {
             console.log(e);
             throw new PlanTransactionException();
@@ -231,9 +247,17 @@ export class PlansService {
             }
             // 6. 일정 수정
             await this.planRepository.savePlan(qr, planDetail);
-            return PlanDetails.from(
+            const updatedPlan = PlanDetails.from(
                 await this.planRepository.findByIdWithDetailUsingQR(qr, planId)
             );
+            await this.eventBus.publishAsync(
+                `${RealTimeEntity.PLAN}.${RealTimeType.UPDATED}`,
+                EventPayloadDto.from(RealTimeType.CREATED, {
+                    projectId: plan.project.id,
+                    plan: UpdatedPlanDTO.from(body, updatedPlan),
+                })
+            );
+            return updatedPlan;
         } catch (e) {
             console.log(e);
             throw new PlanTransactionException();
@@ -264,7 +288,10 @@ export class PlansService {
         await this.planRepository.deletePlan(qr, planId);
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
-            EventPayloadDto.from(RealTimeType.DELETED, { planId: planId, projectId: projectId })
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                projectId: projectId,
+                plan: DeletedPlanDTO.from(planId),
+            })
         );
         return DeletePlanResponseDto.from(planId);
     }
