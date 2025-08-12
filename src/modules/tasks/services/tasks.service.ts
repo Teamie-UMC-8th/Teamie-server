@@ -627,6 +627,7 @@ export class TasksService {
 
         // 2. 프로젝트 참여 여부 확인
         const projectId = task.step.project.id;
+        console.log(projectId);
         await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
 
         // 3. 업무 상태 수정

@@ -8,7 +8,6 @@ export class UpdateTaskStatusRequestDto {
         enum: Status, 
         example: 'ONGOING',
         description: '변경할 상태' })
-    @IsEnum(Status, { message: 'status는 NOTSTART, ONGOING, COMPLETED 중 하나여야 합니다.' })
     @IsNotEmpty()
     status: Status;
 }
