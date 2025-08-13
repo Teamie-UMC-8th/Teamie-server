@@ -414,14 +414,14 @@ export class TasksService {
             taskFile
         );
 
-        /*await this.eventBus.publishAsync(
+        await this.eventBus.publishAsync(
             `${RealTimeEntity.TASK_FILE}.${RealTimeType.CREATED}`,
             EventPayloadDto.from(RealTimeType.CREATED, {
                 projectId: task.step.project.id,
                 taskId,
                 file: { id: saved.id, fileUrl: saved.fileUrl },
             })
-        );*/
+        );
 
         // 6. DTO 변환 후 반환
         return CreateTaskFileResponseDto.fromEntity(saved);

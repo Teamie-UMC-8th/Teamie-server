@@ -28,6 +28,8 @@ export class TaskFileRepository {
     ): Promise<TaskFile> {
         const taskFile = await queryRunner.manager.findOne(TaskFile, {
             where: { id: taskFileId },
+            relations: ['task'], 
+        select: { id: true, fileUrl: true, task: { id: true } },
         });
 
         if (!taskFile) {

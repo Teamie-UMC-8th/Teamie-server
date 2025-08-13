@@ -8,6 +8,7 @@ export enum RealTimeType {
 export enum RealTimeEntity {
     TASK = 'task',
     PLAN = 'plan',
+    TASK_FILE = 'task_file',
     STEP = 'step',
 }
 
