@@ -1,7 +1,7 @@
 import { TavilySearchAPIRetriever } from '@langchain/community/retrievers/tavily_search_api';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
 import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
@@ -9,6 +9,7 @@ import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.ent
 import { QueryRunner } from 'typeorm';
 import { SearchQuery, searchQuerySchema } from './schemas/portfolio-correction.schema';
 import { StringOutputParser } from '@langchain/core/output_parsers';
+import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 
 @Injectable()
 export class RagService {
@@ -50,6 +51,16 @@ export class RagService {
 
     // TODO: 추후 SSE 방식 도입 필요
     async startRAG(qr: QueryRunner, correctionId: number) {
+        // 이미 진행되었는지 여부 확인
+        const status = await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+            select: ['status'],
+        });
+        // 이미 진행된 상태인 경우, RAG 프로세스 중단
+        if (status && (status.status === 'DONE' || status.status === 'COMPANY_INSIGHT')) {
+            throw new InternalServerErrorException('이미 RAG가 진행되었습니다.');
+        }
+
         // step1. 검색어 추출
         const keywords = await this.extractSearchQuery(qr, correctionId);
 
@@ -74,13 +85,20 @@ export class RagService {
             name: 'searchQuery',
         });
 
-        // TODO: 개수 제한 작동 안함. 프롬프트 개선하기
+        const inputData = await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+        });
+        if (!inputData) {
+            throw new NotFoundException('포트폴리오 첨삭 데이터를 찾을 수 없습니다.');
+        }
+
+        // TODO: 키워드 개수 제한이 프롬프트에서 적용되지 않고 있음.
+        // 최종적으로 k개의 키워드 추출
         const extractedQuery = await queryExtractionPrompt.pipe(queryExtractor).invoke({
-            companyName: '레진코믹스',
-            jobTitle: '글로벌 MD',
-            jobDescription:
-                '담당업무\n- 국내외 MD 유통 업체 관리\n- MD 수출 과정 핸들링\n-> 오더 주문, 수금, 발주, 출고 등 관리\n-> 서류 통관 인허가, 면장 등\n- 공급 매출 정산 업무 (ERP 시스템 판매 정보 및 결산)\n\n자격요건\n- 영어 비즈니스 커뮤니케이션이 가능하신 분\n- K-POP, 웹툰IP의 이해도를 가지고 계신 분\n- 문서 프로그램 엑셀 활용 능력이 높으신 분\n- 대내/외 원활한 소통 능력을 갖추신 분\n\n우대요건\n- 주도적인 목표 수립과 실행력을 보유하신 분\n- 여성향 장르 웹툰에 대한 이해도가 높으신 분\n- 대중적인 트렌드에 민감하고 시장 트렌드 분석이 가능하신 분\n- 팀워크를 중시하며 긍정적인 커뮤니케이션 마인드를 보유하신 분\n- 팬덤 비즈니스에 대한 높은 이해도를 보유하신 분\n- ERP, 상급 수준의 MS Office 활용, 도구 툴 활용이 가능하신 분 (Excel, Power Point 등)\n- 해외 출장 업무에 거부감이 없으신 분',
-            k: 2,
+            companyName: inputData.submissionTarget,
+            jobTitle: inputData.jobTitle,
+            jobDescription: inputData.jd,
+            k: parseInt(process.env.REQUIRED_KEYWORD_COUNT || '2', 10),
         });
 
         const queryList = extractedQuery.query.split(',').map((q) => q.trim());
@@ -112,18 +130,20 @@ export class RagService {
 
         // TODO: metadata의 score 활용해서 점수 기반 정렬 등의 작업
         const searchResults: string[] = [];
-        combinedResults.forEach(async (result) => {
-            const title = result.metadata.title;
-            const link = result.metadata.source;
-            await qr.manager.save(RAGData, {
-                portfolioCorrection: { id: correctionId },
-                type: RAGDataType.LINK,
-                link,
-                title,
-            });
+        await Promise.all(
+            combinedResults.map(async (result) => {
+                const title = result.metadata.title;
+                const link = result.metadata.source;
+                await qr.manager.save(RAGData, {
+                    portfolioCorrection: { id: correctionId },
+                    type: RAGDataType.LINK,
+                    link,
+                    title,
+                });
 
-            searchResults.push(result.pageContent);
-        });
+                searchResults.push(result.pageContent);
+            })
+        );
         return searchResults;
     }
 

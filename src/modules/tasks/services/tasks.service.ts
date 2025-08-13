@@ -6,9 +6,9 @@ import {
     CreateCommentRequestDto,
 } from '../../comments/dto/create-comment.dto';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from '../dtos/update-task.dto';
-import { Manager } from '../../mappings/managers/managers.entity';
+import { Manager } from '../entities/managers.entity';
 import { DeleteTaskResponseDto } from '../dtos/delete-task.dto';
-import { TaskFile } from '../../mappings/task-files/task-files.entity';
+import { TaskFile } from '../task-files/task-files.entity';
 import { Comment as CommentEntity } from '../../comments/entities/comments.entity';
 import { GetTaskResponseDto } from '../dtos/get-task.dto';
 import { UploadService } from '../../../infra/upload/upload.service';
@@ -16,7 +16,7 @@ import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
 import { TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
-import { CreateTaskFileResponseDto } from '../../mappings/task-files/dtos/create-task-files.dto';
+import { CreateTaskFileResponseDto } from '../task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
 import { BadRequestException } from 'src/common/exceptions/custom.errors';
@@ -30,14 +30,14 @@ import { Brackets } from 'typeorm';
 import { TaskRepository } from '../repositories/task.repository';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { StepRepository } from '../../steps/repositories/step.repository';
-import { ManagerRepository } from '../../mappings/managers/repositories/manager.repository';
-import { TaskFileRepository } from '../../mappings/task-files/repositories/task-file.repository';
+import { TaskFileRepository } from '../task-files/repositories/task-file.repository';
 import { CommentRepository } from '../../comments/repositories/comments.repository';
 import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 import {
     UpdateTaskStatusResponseDto,
     UpdateTaskStatusRequestDto,
 } from '../dtos/update-task-status.dto';
+import { ManagerRepository } from '../repositories/manager.repository';
 
 @Injectable()
 export class TasksService {
