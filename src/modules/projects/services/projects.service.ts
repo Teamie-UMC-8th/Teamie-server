@@ -45,7 +45,10 @@ import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
 import { UserProjectRepository } from '../user-projects/repositories/user-project.repository';
 import { UserProject } from '../user-projects/entities/user-projects.entity';
-
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -63,7 +66,8 @@ export class ProjectsService {
         private readonly configService: ConfigService,
         private readonly postsStore: PostsStore,
         private readonly masterPortfoliosService: MasterPortfoliosService,
-        private readonly plansService: PlansService
+        private readonly plansService: PlansService,
+        private readonly eventBus: EventBusService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${7 * 24 * 3600}`);
@@ -292,6 +296,14 @@ export class ProjectsService {
 
             // 2) 실제로 DB에 저장
             savedStep = await qr.manager.save(Step, step);
+
+            await this.eventBus.publishAsync(
+                `${RealTimeEntity.STEP}.${RealTimeType.CREATED}`,
+                EventPayloadDto.from(RealTimeType.CREATED, {
+                    projectId: projectId,
+                    step: CreatedStepDTO.from(savedStep),
+                })
+            );
         } catch (err) {
             // 트랜잭션 중 오류 시 예외 던지기
             throw new ProjectTransactionException();
