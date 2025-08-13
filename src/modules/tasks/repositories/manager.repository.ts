@@ -28,7 +28,7 @@ export class ManagerRepository {
             relations: ['user'],
             select: {
                 id: true,
-                user: { id: true, name: true },
+                user: { id: true, name: true, imageUrl:true },
             },
         });
     }
