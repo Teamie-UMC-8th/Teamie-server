@@ -31,7 +31,7 @@ import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-respons
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { CreateQuestions } from './dtos/create-questions.dto';
 import { SelectablePlanResponseDto } from './dtos/selectable-plan.dto';
-import { HttpStatus } from '@nestjs/common';
+
 @ApiTags('MasterPortfolios')
 @Controller('master-portfolios')
 export class MasterPortfoliosController {
