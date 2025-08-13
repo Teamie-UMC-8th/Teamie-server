@@ -24,6 +24,7 @@ import {
     getSchemaPath,
     ApiExtraModels,
     ApiConsumes,
+    ApiBadRequestResponse,
 } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
@@ -32,6 +33,7 @@ import {
 } from '../../common/response/swagger-response.helper';
 import { UpdateTaskRequestDto, UpdateTaskResponseDto } from './dtos/update-task.dto';
 import { User } from 'src/common/decorators/user.decorator';
+import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GetTaskResponseDto } from './dtos/get-task.dto';
 import { TaskDashboardStepViewDto } from './dtos/task-dashboard-step-view-dto';
@@ -52,6 +54,7 @@ import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { GetSearchTaskDto } from './dtos/get-search-task.dto';
 import { ErrorCode } from '../../common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
+import { UpdateTaskStatusResponseDto, UpdateTaskStatusRequestDto } from './dtos/update-task-status.dto';
 
 @ApiTags('Tasks')
 @Controller('/tasks')
@@ -127,6 +130,16 @@ export class TasksController {
         '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
         HttpStatus.BAD_REQUEST
     )
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
+        {
+            errorCode: 'COMMON400',
+            reason: '유효하지 않은 사용자 ID가 포함되어 있습니다.',
+        },
+        {
+            errorCode: 'COMMON400',
+            reason: '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
+        },
+    ])
     @Transactional()
     @Patch('/:taskId')
     async updateTask(
@@ -203,10 +216,19 @@ export class TasksController {
         },
     })
     @ApiCommonErrorResponse(
-        ErrorCode.BAD_REQUEST,
-        `'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`,
-        HttpStatus.BAD_REQUEST
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
     )
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, {
+        errorCode: 'COMMON400',
+        reason: `'view' 파라미터는 'step' 또는 'status'만 허용됩니다.`,
+    })
     @Get('/:projectId/dashboard')
     async getTaskDashboard(
         @User('id') userId: number,
@@ -220,8 +242,17 @@ export class TasksController {
         summary: '댓글 추가',
         description: '업무 상세페이지에서 댓글을 추가합니다.',
     })
-    @ApiBody({ type: CreateCommentRequestDto })
     @ApiCommonResponse(CreateCommentResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Transactional()
     @Post('/:taskId/comments')
     async createComment(
@@ -250,6 +281,16 @@ export class TasksController {
             },
         },
     })
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @ApiCommonResponse(CreateTaskFileResponseDto)
     @UseInterceptors(FileInterceptor('file'))
     @Transactional()
@@ -268,6 +309,10 @@ export class TasksController {
         description: 'step별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
     })
     @ApiCommonResponse(GetTaskResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, {
+        errorCode: 'COMMON400',
+        reason: 'offset은 0 이상이어야 합니다.',
+    })
     @Get('/:projectId/dashboard/step/:stepId/more')
     async getStepMore(
         @Param('projectId') projectId: number,
@@ -282,6 +327,16 @@ export class TasksController {
         description: '진행상황별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
     })
     @ApiCommonResponse(GetTaskResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
+        {
+            errorCode: 'COMMON400',
+            reason: 'offset은 0 이상이어야 합니다.',
+        },
+        {
+            errorCode: 'COMMON400',
+            reason: 'status는 NOTSTART, ONGOING, COMPLETED 중 하나여야 합니다.',
+        },
+    ])
     @Get('/:projectId/dashboard/status/:status/more')
     async getStatusMore(
         @Param('projectId') projectId: number,
@@ -296,6 +351,10 @@ export class TasksController {
         description: '업무별로 댓글과 대댓글을 조회합니다',
     })
     @ApiCommonResponse(GetCommentResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, {
+        errorCode: 'COMMON400',
+        reason: 'offset은 0 이상이어야 합니다.',
+    })
     @Get('/:taskId/comments')
     async getComment(@Param('taskId') taskId: number, @Query('offset') offset: number) {
         return this.tasksService.getComment(taskId, offset);
@@ -320,6 +379,11 @@ export class TasksController {
             ],
         },
     })
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Get('/:projectId/search')
     async getSearchTask(
         @User('id') userId: number,
@@ -335,6 +399,11 @@ export class TasksController {
         description: 'step별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
     })
     @ApiCommonResponse(GetTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Get('/:projectId/search/step/:stepId/more')
     async getSearchStepMore(
         @User('id') userId: number,
@@ -351,6 +420,11 @@ export class TasksController {
         description: '진행상황별로 더보기 버튼을 누르면 5개씩 추가로 보여줍니다.',
     })
     @ApiCommonResponse(GetTaskResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Get('/:projectId/search/status/:status/more')
     async getSearchStatusMore(
         @User('id') userId: number,
@@ -360,5 +434,35 @@ export class TasksController {
         @Query(new ValidationPipe({ transform: true })) dto: GetSearchTaskDto
     ) {
         return this.tasksService.getSearchMoreTasksByStatus(userId, projectId, status, offset, dto);
+    }
+
+    @ApiOperation({
+        summary: '업무 상태 변경',
+        description: '업무의 상태 변경하기',
+    })
+    @ApiCommonResponse(UpdateTaskStatusResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, {
+        errorCode: 'COMMON400',
+        reason: 'status는 NOTSTART, ONGOING, COMPLETED 중 하나여야 합니다.',
+    })
+    @Transactional()
+    @Patch('/:taskId/status')
+    async updateTaskStatus(
+        @Req() req: TransactionalRequest,
+        @User('id') userId: number,
+        @Param('taskId') taskId: number,
+        @Body() dto: UpdateTaskStatusRequestDto
+    ) {
+        return this.tasksService.updateTaskStatus(req.queryRunner, userId, taskId, dto);
     }
 }

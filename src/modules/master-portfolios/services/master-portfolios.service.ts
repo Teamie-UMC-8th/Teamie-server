@@ -35,42 +35,8 @@ import { UserProject } from '../../projects/user-projects/entities/user-projects
 import { SelectablePlanResponseDto } from '../dtos/selectable-plan.dto';
 import { MasterPortfolioStatus } from 'src/common/enums/master-portfolio-status.enum';
 import { getPeriod } from 'src/common/utils/get-period';
-import { MasterPortfolioContentCheckResult } from '../types/content-check.type';
 import { ProjectData } from '../types/project-data.interface';
-
-function checkMasterPortfolioContentStructure(
-    data: MasterPortfolioOutput
-): MasterPortfolioContentCheckResult {
-    const results: MasterPortfolioContentCheckResult = {};
-
-    // 프로젝트명 검사 : 1~20자
-    // results.projectName =
-    //     typeof data.projectName === 'string' &&
-    //     data.projectName.length > 0 &&
-    //     data.projectName.length <= 20;
-
-    // 상세정보 검사 : 최소 4개 이상의 리스트 (-로 시작)
-    results.detailInfo =
-        typeof data.detailInfo === 'string' && (data.detailInfo.match(/^- /gm)?.length ?? 0) >= 4;
-
-    // 담당업무 검사 : [섹션명]으로 시작하는 구간 1개 이상, 각 섹션에 -로 시작하는 리스트 1개 이상
-    // TODO: 구조(순서)까지는 검사하지 못하는 문제가 있음. 개선해볼 것
-    results.assignedTask =
-        typeof data.assignedTask === 'string' &&
-        /\[.+\]/.test(data.assignedTask) &&
-        (data.assignedTask.match(/^- /gm)?.length ?? 0) >= 1;
-
-    // 주요성과 검사 : -로 시작하는 리스트 2개 이상
-    results.keyAchievement =
-        typeof data.keyAchievement === 'string' &&
-        (data.keyAchievement.match(/^- /gm)?.length ?? 0) >= 2;
-
-    // 배운점 검사 : -로 시작하는 문장 2개 이상
-    results.insight =
-        typeof data.insight === 'string' && (data.insight.match(/^- /gm)?.length ?? 0) >= 2;
-
-    return results;
-}
+import { checkMasterPortfolioContentStructure } from 'src/common/utils/check-masterportfolio-structure.util';
 
 async function getProjectData(
     qr: QueryRunner,
@@ -386,14 +352,6 @@ export class MasterPortfoliosService {
             }
 
             console.log('생성된 마스터 포트폴리오:', generatedPortfolio);
-            // 생성된 JSON 값 구조 검사
-            const checkResult = checkMasterPortfolioContentStructure(generatedPortfolio);
-            const isValid = Object.values(checkResult).every((value) => value === true);
-            if (!isValid) {
-                throw new InternalServerErrorException(
-                    '생성된 마스터 포트폴리오의 구조가 유효하지 않습니다.'
-                );
-            }
 
             // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
             const createdPortfolio = qr.manager.create(MasterPortfolioAI, {
@@ -407,7 +365,7 @@ export class MasterPortfoliosService {
 
             // TODO: 직접작성 기능을 도입하는 시점에는 해당 코드 삭제
             // 생성된 결과를 마스터 포트폴리오 엔티티에도 저장합니다.
-            qr.manager.update(
+            await qr.manager.update(
                 MasterPortfolio,
                 { id: portfolioId },
                 {
