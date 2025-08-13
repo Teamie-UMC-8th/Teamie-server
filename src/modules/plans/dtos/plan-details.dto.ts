@@ -4,6 +4,12 @@ import { UserProfile } from 'src/common/dtos/user-profile.dto';
 
 export class PlanDetails {
     @ApiProperty({
+        example: 123,
+        description: '일정의 식별자',
+    })
+    id: number;
+
+    @ApiProperty({
         example: '일정 C',
         description: '일정 이름',
     })
@@ -53,6 +59,7 @@ export class PlanDetails {
 
     static from(entity: Plan): PlanDetails {
         const dto = new PlanDetails();
+        dto.id = entity.id;
         dto.name = entity.name;
         dto.date = entity.date.toISOString();
         dto.startHour = entity.startHour;
