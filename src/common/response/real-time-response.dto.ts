@@ -8,6 +8,7 @@ export enum RealTimeType {
 export enum RealTimeEntity {
     TASK = 'task',
     PLAN = 'plan',
+    STEP = 'step',
 }
 
 export class RealTimeMessage<T = any> {
