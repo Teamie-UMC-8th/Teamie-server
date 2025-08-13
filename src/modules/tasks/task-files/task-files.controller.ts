@@ -4,9 +4,7 @@ import { User } from 'src/common/decorators/user.decorator';
 import { TaskFilesService } from './task-files.service';
 import { ErrorCode } from '../../../common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
-import {
-    ApiCommonErrorResponse,
-} from 'src/common/response/swagger-response.helper';
+import { ApiCommonErrorResponse } from 'src/common/response/swagger-response.helper';
 
 import { Transactional } from 'src/common/decorators/transaction.decorator';
 import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
@@ -32,9 +30,8 @@ export class TaskFilesController {
     @Delete('/:taskFileId')
     async deleteTaskFile(
         @Req() req: TransactionalRequest,
-        @User('id') userId: number,
         @Param('taskFileId') fileId: number
     ): Promise<CommonResponse> {
-        return this.taskFilesService.deleteTaskFile(req.queryRunner, userId, fileId);
+        return this.taskFilesService.deleteTaskFile(req.queryRunner, fileId);
     }
 }

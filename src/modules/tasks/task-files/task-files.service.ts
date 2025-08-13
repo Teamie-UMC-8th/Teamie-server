@@ -14,11 +14,7 @@ export class TaskFilesService {
         private readonly taskFileRepository: TaskFileRepository
     ) {}
 
-    async deleteTaskFile(
-        queryRunner: QueryRunner,
-        userId: number,
-        fileId: number
-    ): Promise<CommonResponse> {
+    async deleteTaskFile(queryRunner: QueryRunner, fileId: number): Promise<CommonResponse> {
         const file = await this.taskFileRepository.findTaskFileByIdWithQueryRunner(
             queryRunner,
             fileId

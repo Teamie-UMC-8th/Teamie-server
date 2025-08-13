@@ -31,6 +31,17 @@ export class InvalidDateException extends CustomHttpException {
     }
 }
 
+export class TaskFileLimitExceededException extends CustomHttpException {
+    constructor(data?: any) {
+        super(
+            ErrorCode.TASK_FILE_LIMIT_EXCEEDED,
+            '업무에는 최대 3개의 파일만 업로드할 수 있습니다.',
+            HttpStatus.BAD_REQUEST,
+            data
+        );
+    }
+}
+
 //401
 export class UnAuthorizedException extends CustomHttpException {
     constructor(data?: any) {
