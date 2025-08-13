@@ -251,11 +251,6 @@ export class ProjectsController {
         '해당 프로젝트에 접근 권한이 없습니다.',
         HttpStatus.FORBIDDEN
     )
-    @ApiCommonErrorResponse(
-        ErrorCode.REDIS_DATA_PARSE_ERROR,
-        'Redis에서 데이터를 파싱하는 중 오류가 발생했습니다.',
-        HttpStatus.INTERNAL_SERVER_ERROR
-    )
     @Delete(':projectId/posts/:postId')
     async deletePost(
         @User('id') userId: number,
