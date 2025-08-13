@@ -13,6 +13,7 @@ describe('PlansListener', () => {
 
     const mockGateway = {
         handlePublish: jest.fn(),
+        handleBanUser: jest.fn(),
     };
 
     beforeEach(async () => {
@@ -39,6 +40,7 @@ describe('PlansListener', () => {
         await module.init();
 
         mockGateway.handlePublish.mockClear();
+        mockGateway.handleBanUser.mockClear();
     });
 
     afterEach(() => {
@@ -78,6 +80,8 @@ describe('PlansListener', () => {
                     payload: result,
                 })
             );
+            // AppGateway.handleBanUser의 호출 확인
+            expect(mockGateway.handleBanUser).toHaveBeenCalledTimes(1);
             // 호출 인자 검증 - 팀 캘린더
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.PROJECT_CALENDER}:${projectId}`,
