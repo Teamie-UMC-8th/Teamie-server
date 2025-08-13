@@ -289,6 +289,7 @@ export class PlansService {
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, {
+                userId: userId,
                 projectId: projectId,
                 plan: DeletedPlanDTO.from(planId),
             })
