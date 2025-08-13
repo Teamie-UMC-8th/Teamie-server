@@ -10,6 +10,7 @@ import { QueryRunner } from 'typeorm';
 import { SearchQuery, searchQuerySchema } from './schemas/portfolio-correction.schema';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
+import { PromptManager } from 'src/common/utils/prompt.util';
 
 @Injectable()
 export class RagService {
@@ -73,13 +74,7 @@ export class RagService {
 
     // 키워드 추출
     private async extractSearchQuery(qr: QueryRunner, correctionId: number) {
-        let queryExtractionText: string;
-        try {
-            queryExtractionText = await this.promptLoader.load('keyword-extract.prompt.md');
-        } catch (e) {
-            throw new PromptLoadingException('keyword-extract.prompt.md');
-        }
-        const queryExtractionPrompt = ChatPromptTemplate.fromTemplate(queryExtractionText);
+        const queryExtractionPrompt = await PromptManager.getPrompt(this.promptLoader, "keyword-extract.prompt.md");
 
         const queryExtractor = this.queryLLM.withStructuredOutput<SearchQuery>(searchQuerySchema, {
             name: 'searchQuery',
@@ -150,13 +145,7 @@ export class RagService {
     // 기업 분석 정보 생성
     private async generateCompanyInsights(searchResults: string[]) {
         // RAG 답변 생성을 위한 로직 구현
-        let companyProfilePromptText: string;
-        try {
-            companyProfilePromptText = await this.promptLoader.load('company-profile.prompt.md');
-        } catch (e) {
-            throw new PromptLoadingException('company-profile.prompt.md');
-        }
-        const companyProfilePrompt = ChatPromptTemplate.fromTemplate(companyProfilePromptText);
+        const companyProfilePrompt = await PromptManager.getPrompt(this.promptLoader, "company-profile.prompt.md");
 
         const companyProfile = await companyProfilePrompt
             .pipe(this.ragLLM)
