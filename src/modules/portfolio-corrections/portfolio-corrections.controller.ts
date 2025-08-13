@@ -28,7 +28,7 @@ import { ProjectResponseDto } from './dtos/project-response.dto';
 import { PortfolioCorrectionResponseDto } from './dtos/portfolio-correction-response.dto';
 import { RagResponseDto } from './dtos/rag-response.dto';
 import { CompanyInsightResponseDto } from './dtos/company-insight-response.dto';
-import { CorrectionResultDto } from './dtos/correction-result.dto';
+import { CorrectionResultDto, GetCorrectionResultDto } from './dtos/correction-result.dto';
 import { StatusResponseDto } from './dtos/status-response.dto';
 
 @ApiTags('PortfolioCorrections')
@@ -121,16 +121,6 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '(4-1 / 분리 예정) AI 첨삭 결과 조회 API',
-        description: '특정 AI 첨삭의 결과를 조회합니다.',
-    })
-    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
-    @Get(':correctionId')
-    async getCorrection(@Param('correctionId') correctionId: number) {
-        return await this.portfolioCorrectionsService.getCorrection(correctionId);
-    }
-
-    @ApiOperation({
         summary: '(1-2) RAG 시작 API',
         description:
             'RAG를 진행합니다. 키워드 및 관련 데이터를 생성/수집하고, 최종적으로 기업 분석 정보를 생성합니다.',
@@ -184,5 +174,33 @@ export class PortfolioCorrectionsController {
             correctionId,
             updateCompanyInsightDto.companyInsight
         );
+    }
+
+    // 결과 첫 조회 API
+    @ApiOperation({
+        summary: '(4-1) AI 첨삭 결과 조회 API',
+        description: '전체 프로젝트 목록과 첫 프로젝트에 대한 첨삭 결과를 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(GetCorrectionResultDto)
+    @Get(':correctionId')
+    async getCorrection(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCorrection(correctionId);
+    }
+
+    // 결과 개별 조회 API
+    @ApiOperation({
+        summary: '(4-2) AI 첨삭 결과 개별 조회 API',
+        description: '특정 AI 첨삭의 결과를 개별적으로 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(CorrectionResultDto)
+    @Get(':correctionId/:projectId')
+    async getCorrectionById(
+        @Param('correctionId') correctionId: number,
+        @Param('projectId') projectId: number
+    ) {
+        return await this.portfolioCorrectionsService.getCorrectionById(correctionId, projectId);
     }
 }

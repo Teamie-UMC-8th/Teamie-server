@@ -2,6 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TaskFile } from '../task-files.entity';
 export class TaskFileResponseDto {
     @ApiProperty({
+        example: 1,
+        description: '파일 ID',
+    })
+    id: number;
+
+    @ApiProperty({
         example: 'https://s3.amazonaws.com/bucket/file.jpg',
         description: '파일 URL',
     })

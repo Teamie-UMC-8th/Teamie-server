@@ -67,11 +67,8 @@ export class MasterPortfoliosController {
     })
     @ApiParam({ name: 'portfolioId', type: Number, description: '포트폴리오 ID' })
     @Get(':portfolioId/status')
-    async getStatus(
-        @User('id') userId: number,
-        @Param('portfolioId', ParseIntPipe) portfolioId: number
-    ) {
-        return this.masterPortfoliosService.getStatus(userId, portfolioId);
+    async getStatus(@Param('portfolioId', ParseIntPipe) portfolioId: number) {
+        return this.masterPortfoliosService.getStatus(portfolioId);
     }
 
     @Post(':portfolioId/questions')

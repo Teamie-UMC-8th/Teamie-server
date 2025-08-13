@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryRunner, Repository } from 'typeorm';
-import { Manager } from '../managers.entity';
+import { Manager } from '../entities/managers.entity';
 
 export class ManagerRepository {
     constructor(@InjectRepository(Manager) private readonly repo: Repository<Manager>) {}
@@ -28,7 +28,7 @@ export class ManagerRepository {
             relations: ['user'],
             select: {
                 id: true,
-                user: { id: true, name: true },
+                user: { id: true, name: true, imageUrl: true },
             },
         });
     }

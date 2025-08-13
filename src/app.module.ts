@@ -15,7 +15,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { StepsModule } from './modules/steps/steps.module';
 import { MasterPortfoliosModule } from './modules/master-portfolios/master-portfolios.module';
-import { TaskFilesModule } from './modules/mappings/task-files/task-files.module';
+import { TaskFilesModule } from './modules/tasks/task-files/task-files.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { CocommentsModule } from './modules/comments/cocomments/cocomments.module';

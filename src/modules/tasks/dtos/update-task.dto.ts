@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
 import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber } from 'class-validator';
-import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
+import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { Type } from 'class-transformer';
 import { Task } from '../entities/tasks.entity';
-import { Manager } from '../../mappings/managers/managers.entity';
+import { Manager } from '../entities/managers.entity';
 export class UpdateTaskRequestDto {
     @ApiProperty({
         example: 'api명세서 작성',
@@ -84,10 +84,10 @@ export class UpdateTaskResponseDto {
     memo: string | null;
 
     @ApiProperty({
-        type: [ManagerResponseDto],
+        type: [UserProfile],
         description: '담당자 목록',
     })
-    managers: ManagerResponseDto[];
+    managers: UserProfile[];
 
     @IsNotEmpty()
     @ApiProperty({
@@ -102,10 +102,7 @@ export class UpdateTaskResponseDto {
         dto.deadline = task.deadline;
         dto.status = task.status;
         dto.memo = task.memo;
-        dto.managers = managers.map((m) => ({
-            userId: m.user.id,
-            userName: m.user.name,
-        }));
+        dto.managers = managers.map((m) => UserProfile.from(m.user));
         dto.stepId = task.step.id;
         return dto;
     }

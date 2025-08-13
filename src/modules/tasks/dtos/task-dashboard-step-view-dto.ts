@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
-import { ManagerResponseDto } from '../../mappings/managers/dtos/create-manager-dto';
 import { Task } from '../entities/tasks.entity';
+import { UserProfile } from 'src/common/dtos/user-profile.dto';
 
 export class TaskInStepDto {
     @ApiProperty({
@@ -24,10 +24,10 @@ export class TaskInStepDto {
     status: Status;
 
     @ApiProperty({
-        type: [ManagerResponseDto],
+        type: [UserProfile],
         description: '담당자 목록',
     })
-    managers: ManagerResponseDto[];
+    managers: UserProfile[];
 
     @ApiProperty({
         example: '2025-08-31T15:00:00.000Z',
@@ -42,10 +42,7 @@ export class TaskInStepDto {
         dto.taskName = task.name;
         dto.status = task.status;
         dto.deadline = task.deadline;
-        dto.managers = (task.managers ?? []).map((m) => ({
-            userId: m.user.id,
-            userName: m.user.name,
-        }));
+        dto.managers = (task.managers ?? []).map((m) => UserProfile.from(m.user));
 
         return dto;
     }

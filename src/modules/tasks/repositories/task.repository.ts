@@ -90,13 +90,13 @@ export class TaskRepository {
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
-            .leftJoin('task.managers', 'manager')
-            .leftJoin('manager.user', 'user')
-            .addSelect(['user.id', 'user.name'])
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
             .where('step.projectId = :projectId', { projectId })
             .andWhere('task.status = :status', { status })
             .orderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
+            .distinct(true)
             .limit(limit)
             .getMany();
     }
@@ -110,13 +110,13 @@ export class TaskRepository {
         return this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
-            .leftJoin('task.managers', 'manager')
-            .leftJoin('manager.user', 'user')
-            .addSelect(['user.id', 'user.name'])
+            .leftJoinAndSelect('task.managers', 'manager')
+            .leftJoinAndSelect('manager.user', 'user')
             .where('step.projectId = :projectId', { projectId })
-            .andWhere('task.stepId = :stepId', { stepId })
+            .andWhere('step.id = :stepId', { stepId })
             .orderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
+            .distinct(true)
             .limit(limit)
             .getMany();
     }
