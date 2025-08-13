@@ -11,13 +11,17 @@ import { Task } from '../../tasks/entities/tasks.entity';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-task-step.dto';
 import { StepRepository } from '../repositories/step.repository';
 import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { UpdatedStepDTO, DeletedStepDTO } from '../dtos/step-payload.dto';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 @Injectable()
 export class StepsService {
     constructor(
         private readonly stepRepository: StepRepository,
-        private readonly taskRepository: TaskRepository
+        private readonly taskRepository: TaskRepository,
+        private readonly eventBus: EventBusService
     ) {}
-
     async updateStep(
         qr: QueryRunner,
         stepId: number,
@@ -27,10 +31,16 @@ export class StepsService {
         if (!step) {
             throw new StepNotFoundException();
         }
-
         step.name = dto.name;
         const updatedStep = await this.stepRepository.saveStep(qr.manager, step);
-
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.STEP}.${RealTimeType.UPDATED}`,
+            EventPayloadDto.from(RealTimeType.UPDATED, {
+                projectId: step.project.id,
+                stepId: updatedStep.id,
+                name: updatedStep.name,
+            })
+        );
         return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
     }
 
@@ -79,6 +89,13 @@ export class StepsService {
 
         // 실제 삭제 로직 (예: soft delete 또는 hard delete 등)
         await this.stepRepository.deleteById(qr.manager, stepRaw.id);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.STEP}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                projectId: stepRaw.project.id,
+                stepId,
+            })
+        );
         return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });
     }
 }

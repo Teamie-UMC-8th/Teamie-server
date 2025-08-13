@@ -4,10 +4,11 @@ import { Task } from '../entities/tasks.entity';
 import { IsNotEmpty, IsEnum } from 'class-validator';
 
 export class UpdateTaskStatusRequestDto {
-    @ApiProperty({ 
-        enum: Status, 
+    @ApiProperty({
+        enum: Status,
         example: 'ONGOING',
-        description: '변경할 상태' })
+        description: '변경할 상태',
+    })
     @IsNotEmpty()
     status: Status;
 }

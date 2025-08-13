@@ -54,7 +54,10 @@ import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { GetSearchTaskDto } from './dtos/get-search-task.dto';
 import { ErrorCode } from '../../common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
-import { UpdateTaskStatusResponseDto, UpdateTaskStatusRequestDto } from './dtos/update-task-status.dto';
+import {
+    UpdateTaskStatusResponseDto,
+    UpdateTaskStatusRequestDto,
+} from './dtos/update-task-status.dto';
 
 @ApiTags('Tasks')
 @Controller('/tasks')
