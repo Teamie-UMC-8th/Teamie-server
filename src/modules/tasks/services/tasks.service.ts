@@ -42,7 +42,7 @@ import { ManagerRepository } from '../repositories/manager.repository';
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { CreatedTaskDTO, UpdatedTaskDTO, DeletedTaskDTO } from '../dtos/task-payload.dto';
 
 @Injectable()
 export class TasksService {
@@ -59,8 +59,7 @@ export class TasksService {
         private readonly configService: ConfigService,
         @Inject(forwardRef(() => ProjectsService))
         private readonly projectsService: ProjectsService,
-        private readonly eventBus: EventBusService,
-        private readonly eventEmitter: EventEmitter2
+        private readonly eventBus: EventBusService
     ) {}
 
     async createTask(
@@ -85,18 +84,11 @@ export class TasksService {
             deadline: null,
         });
         await this.taskRepository.saveWithQueryRunner(queryRunner.manager, task);
-        await this.eventEmitter.emitAsync(
+        await this.eventBus.publishAsync(
             `${RealTimeEntity.TASK}.${RealTimeType.CREATED}`,
             EventPayloadDto.from(RealTimeType.CREATED, {
                 projectId,
-                task: {
-                    id: task.id,
-                    name: task.name,
-                    status: task.status,
-                    deadline: task.deadline, // null 또는 Date
-                    stepId: targetStep.id,
-                    managers: [], // 최소 요약
-                },
+                task: CreatedTaskDTO.from(task, targetStep.id),
             })
         );
         return CreateTaskResponseDto.fromEntity(task);
@@ -132,7 +124,7 @@ export class TasksService {
         // 4. Task 필드 덮어쓰기
         task.step = newStep;
         task.name = dto.name;
-        task.deadline = dto.deadline;
+        task.deadline = dto.deadline ? new Date(dto.deadline) : null;
         task.status = dto.status;
         task.memo = dto.memo;
 
@@ -202,16 +194,16 @@ export class TasksService {
 
         // 변경이 있는 것만 브로드캐스트
         if (Object.keys(diff).length > 1) {
-            await this.eventEmitter.emitAsync(
+            const diffDto = UpdatedTaskDTO.from(diff, updatedTask, managers); // managers는 Manager[]
+            await this.eventBus.publishAsync(
                 `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
                 EventPayloadDto.from(RealTimeType.UPDATED, {
                     projectId: updatedTask.step.project.id,
                     taskId: updatedTask.id,
-                    diff, // ← 최소 변경 필드
+                    diff: diffDto, // 리스너에서 { id: taskId, ...diffDto }로 병합
                 })
             );
         }
-
         return UpdateTaskResponseDto.from(updatedTask, managers);
     }
 
@@ -251,11 +243,12 @@ export class TasksService {
         await this.taskRepository.deleteWithQueryRunner(queryRunner, task.id);
 
         // 6. 삭제 이벤트 발행(대시보드+상세에 반영, 상세는 리스너에서 forceLeave)
-        await this.eventEmitter.emitAsync(
+        await this.eventBus.publishAsync(
             `${RealTimeEntity.TASK}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, {
                 projectId,
-                taskId: task.id, // 최소 식별자만
+                taskId: task.id,
+                deleted: DeletedTaskDTO.from(task.id),
             })
         );
         return {

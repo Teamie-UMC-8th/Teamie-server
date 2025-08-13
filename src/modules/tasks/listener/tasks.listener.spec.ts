@@ -64,7 +64,7 @@ describe('TasksListener', () => {
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(1);
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.PROJECT_DASHBOARD}:${projectId}`,
-                expect.anything()
+                expect.objectContaining(payload.data.task)
             );
         });
 
@@ -86,11 +86,21 @@ describe('TasksListener', () => {
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(2);
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.PROJECT_DASHBOARD}:${projectId}`,
-                expect.anything()
+                expect.objectContaining({
+                    payload: expect.objectContaining({
+                        id: taskId,
+                        ...payload.data.diff,
+                    }),
+                })
             );
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.TASK_DETAIL}:${taskId}`,
-                expect.anything()
+                expect.objectContaining({
+                    payload: expect.objectContaining({
+                        id: taskId,
+                        ...payload.data.diff,
+                    }),
+                })
             );
         });
 
@@ -111,11 +121,15 @@ describe('TasksListener', () => {
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(2);
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.PROJECT_DASHBOARD}:${projectId}`,
-                expect.anything()
+                expect.objectContaining({
+                    payload: payload.data.taskId,
+                })
             );
             expect(mockGateway.handlePublish).toHaveBeenCalledWith(
                 `${SubEventType.TASK_DETAIL}:${taskId}`,
-                expect.anything()
+                expect.objectContaining({
+                    payload: payload.data.projectId,
+                })
             );
 
             // Assert: forceLeave 호출
