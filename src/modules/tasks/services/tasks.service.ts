@@ -16,7 +16,10 @@ import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
 import { TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
-import { CreateTaskFileResponseDto } from '../task-files/dtos/create-task-files.dto';
+import {
+    CreateTaskFileResponseDto,
+    TaskFileResponseDto,
+} from '../task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
 import { BadRequestException } from 'src/common/exceptions/custom.errors';
@@ -38,6 +41,12 @@ import {
     UpdateTaskStatusRequestDto,
 } from '../dtos/update-task-status.dto';
 import { ManagerRepository } from '../repositories/manager.repository';
+import { TaskFileLimitExceededException } from 'src/common/exceptions/custom.errors';
+
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { CreatedTaskDTO, UpdatedTaskDTO, DeletedTaskDTO } from '../dtos/task-payload.dto';
 
 @Injectable()
 export class TasksService {
@@ -53,7 +62,8 @@ export class TasksService {
         private readonly usersService: UsersService,
         private readonly configService: ConfigService,
         @Inject(forwardRef(() => ProjectsService))
-        private readonly projectsService: ProjectsService
+        private readonly projectsService: ProjectsService,
+        private readonly eventBus: EventBusService
     ) {}
 
     async createTask(
@@ -78,6 +88,13 @@ export class TasksService {
             deadline: null,
         });
         await this.taskRepository.saveWithQueryRunner(queryRunner.manager, task);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                projectId,
+                task: CreatedTaskDTO.from(task, targetStep.id),
+            })
+        );
         return CreateTaskResponseDto.fromEntity(task);
     }
 
@@ -90,16 +107,28 @@ export class TasksService {
         // 1. 수정할 Task 조회
         const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
 
+        // before 스냅샷 (매니저 포함)
+        const beforeManagers = await this.managerRepository.findManagersByTaskIdWithQueryRunner(
+            queryRunner,
+            task.id
+        );
+        const before = {
+            name: task.name,
+            deadline: task.deadline as Date | null,
+            status: task.status,
+            stepId: task.step.id,
+            managerIds: new Set(beforeManagers.map((m) => m.user.id)),
+        };
         // 2. 새 Step 조회
         const newStep = await this.stepRepository.findByIdUsingQR(queryRunner.manager, dto.stepId);
 
-        // 프로젝트 참여 여부 검증
+        // 3, 프로젝트 참여 여부 검증
         await this.projectsService.isProjectMember(userId, newStep.project.id, queryRunner.manager);
 
         // 4. Task 필드 덮어쓰기
         task.step = newStep;
         task.name = dto.name;
-        task.deadline = dto.deadline;
+        task.deadline = dto.deadline ? new Date(dto.deadline) : null;
         task.status = dto.status;
         task.memo = dto.memo;
 
@@ -108,7 +137,7 @@ export class TasksService {
             task
         );
 
-        // managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
+        // 5. managerIds가 있으면: 존재 + 프로젝트 멤버십 배치 검증 (기존 함수 그대로)
         if (dto.managerIds?.length) {
             const uniqueManagerIds = Array.from(new Set(dto.managerIds));
 
@@ -132,12 +161,53 @@ export class TasksService {
             await this.managerRepository.deleteManagerWithQueryRunner(queryRunner, updatedTask.id);
         }
 
-        // 7. 최종 managers 조회
+        // 6. 최종 managers 조회
         const managers = await this.managerRepository.findManagersByTaskIdWithQueryRunner(
             queryRunner,
             updatedTask.id
         );
+        // 7) diff 구성 — 바뀐 것만
+        const diff: Record<string, any> = { id: updatedTask.id };
 
+        if (dto.name !== undefined && dto.name !== before.name) {
+            diff.name = updatedTask.name;
+        }
+
+        if (dto.status !== undefined && dto.status !== before.status) {
+            diff.status = updatedTask.status;
+        }
+
+        if (dto.deadline !== undefined) {
+            const beforeMs = before.deadline ? before.deadline.getTime() : null;
+            const afterMs = updatedTask.deadline ? updatedTask.deadline.getTime() : null;
+            if (beforeMs !== afterMs) {
+                diff.deadline = updatedTask.deadline; // null 또는 Date
+            }
+        }
+
+        if (dto.stepId !== undefined && dto.stepId !== before.stepId) {
+            diff.stepId = updatedTask.step.id; // 위치 이동
+        }
+
+        if (dto.managerIds !== undefined) {
+            const afterManagerIds = new Set(managers.map((m) => m.user.id));
+            if (!eqSet(before.managerIds, afterManagerIds)) {
+                diff.managers = managers.map((m) => ({ id: m.user.id, name: m.user.name }));
+            }
+        }
+
+        // 변경이 있는 것만 브로드캐스트
+        if (Object.keys(diff).length > 1) {
+            const diffDto = UpdatedTaskDTO.from(diff, updatedTask, managers); // managers는 Manager[]
+            await this.eventBus.publishAsync(
+                `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+                EventPayloadDto.from(RealTimeType.UPDATED, {
+                    projectId: updatedTask.step.project.id,
+                    taskId: updatedTask.id,
+                    diff: diffDto, // 리스너에서 { id: taskId, ...diffDto }로 병합
+                })
+            );
+        }
         return UpdateTaskResponseDto.from(updatedTask, managers);
     }
 
@@ -176,6 +246,16 @@ export class TasksService {
         // 5. Task 삭제
         await this.taskRepository.deleteWithQueryRunner(queryRunner, task.id);
 
+        // 6. 삭제 이벤트 발행(대시보드+상세에 반영, 상세는 리스너에서 forceLeave)
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                projectId: projectId,
+                taskId: task.id,
+                deleted: DeletedTaskDTO.from(task.id),
+                userId: userId,
+            })
+        );
         return {
             message: '업무가 성공적으로 삭제되었습니다.',
             taskId,
@@ -305,7 +385,19 @@ export class TasksService {
         // 2. 프로젝트 참여자 여부 확인
         await this.projectsService.assertProjectMember(userId, task.step.project.id);
 
+        const currentCount = await queryRunner.manager.count(TaskFile, {
+            where: { task: { id: taskId } },
+        });
+
+        const MAX_FILES_PER_TASK =
+            Number(this.configService.get<string>('MAX_FILES_PER_TASK')) || 3;
+        if (currentCount >= MAX_FILES_PER_TASK) {
+            throw new TaskFileLimitExceededException();
+        }
         const fileUrl = await this.uploadService.uploadFile(file);
+
+        // 3. 파일명 인코딩 복원 (latin1 -> utf8)
+        const name = Buffer.from(file.originalname, 'latin1').toString('utf8');
 
         // 4. TaskFile 생성
         const taskFile = queryRunner.manager.create(TaskFile);
@@ -313,6 +405,7 @@ export class TasksService {
             fileUrl,
             task: { id: taskId },
             user: { id: userId },
+            name,
         });
 
         // 5. DB 저장
@@ -320,6 +413,16 @@ export class TasksService {
             queryRunner,
             taskFile
         );
+
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK_FILE}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                projectId: task.step.project.id,
+                taskId,
+                file: { id: saved.id, fileUrl: saved.fileUrl },
+            })
+        );
+
         // 6. DTO 변환 후 반환
         return CreateTaskFileResponseDto.fromEntity(saved);
     }
@@ -671,4 +774,11 @@ export class TasksService {
         }
         return qb;
     }
+}
+
+/** 같은 클래스 안에 헬퍼 추가 (private로 둬도 됨) */
+function eqSet(a: Set<number>, b: Set<number>) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
 }

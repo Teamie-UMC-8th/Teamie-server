@@ -29,6 +29,8 @@ export enum ErrorCode {
     //업무
     TASK_NOT_FOUND = 'TASK4041',
     TASK_FILE_NOT_FOUND = 'TASKFILE4042',
+    //업무파일
+    TASK_FILE_LIMIT_EXCEEDED = 'TASK_FILE_LIMIT_EXCEEDED',
     //개인회고
     PERSONAL_RECALL_NOT_FOUND = 'PERSONALRECALL4041',
     //스텝
