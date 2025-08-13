@@ -66,7 +66,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async handleDisconnect(client: Socket) {
         const userId = client.data?.user;
         this.subscriptions.delete(client.id);
-        if(userId !== undefined) {
+        if (userId !== undefined) {
             this.userSockets.get(userId)?.delete(client.id);
             if (this.userSockets.get(userId)?.size === 0) {
                 this.userSockets.delete(userId);

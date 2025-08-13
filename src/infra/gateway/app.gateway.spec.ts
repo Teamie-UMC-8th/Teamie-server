@@ -60,7 +60,7 @@ describe('AppGateway', () => {
         consoleLogSpy.mockRestore();
     });
 
-    afterAll(async() => {
+    afterAll(async () => {
         await moduleRef.close();
     });
 
