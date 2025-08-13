@@ -38,7 +38,7 @@ export class UnAuthorizedException extends CustomHttpException {
     }
 }
 
-//HttpStatus.FORBIDDEN
+//403
 export class ProjectForbiddenException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -180,7 +180,7 @@ export class ForbiddenUserForMasterPortfolioException extends CustomHttpExceptio
     }
 }
 
-//HttpStatus.FORBIDDEN
+//404
 export class ProjectNotFoundException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -298,7 +298,7 @@ export class CocommentNotFoundException extends CustomHttpException {
     }
 }
 
-//HttpStatus.FORBIDDEN
+//409
 export class PostsExceededException extends CustomHttpException {
     constructor(data?: any) {
         super(
@@ -373,7 +373,7 @@ export class AIGenerationAlreadyExists extends CustomHttpException {
     }
 }
 
-//HttpStatus.INTERNAL_SERVER_ERROR
+//500
 export class InternalServerError extends CustomHttpException {
     constructor(data?: any) {
         super(

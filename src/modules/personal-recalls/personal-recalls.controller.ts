@@ -18,7 +18,7 @@ export class PersonalRecallsController {
     @ApiCommonErrorResponse(
         'PERSONAL_RECALL_NOT_FOUND',
         '개인 회고를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
+        404
     )
     @ApiOperation({
         summary: '개인 회고 조회',
@@ -37,7 +37,7 @@ export class PersonalRecallsController {
     @ApiCommonErrorResponse(
         'PERSONAL_RECALL_NOT_FOUND',
         '개인 회고를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
+        404
     )
     @ApiOperation({
         summary: '개인 회고 수정',
