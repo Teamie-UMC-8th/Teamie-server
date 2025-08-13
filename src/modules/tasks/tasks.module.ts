@@ -18,7 +18,7 @@ import { GateWayModule } from 'src/infra/gateway/gateway.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Task, Manager]),
-        UsersModule,
+        forwardRef(() => UsersModule),
         forwardRef(() => ProjectsModule),
         UserProjectModule,
         forwardRef(() => StepsModule),
