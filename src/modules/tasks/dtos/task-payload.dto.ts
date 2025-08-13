@@ -1,6 +1,6 @@
 import { Status } from '../../../common/enums/status.enum';
 import { Task } from '../entities/tasks.entity';
-import { Manager } from '../../mappings/managers/managers.entity';
+import { Manager } from '../entities/managers.entity';
 import { UserProfile } from 'src/common/dtos/user-profile.dto';
 import { User } from 'src/modules/users/entities/users.entity';
 
