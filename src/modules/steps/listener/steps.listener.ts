@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { plainToClass } from 'class-transformer';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
 import {
@@ -31,7 +32,7 @@ export class StepsListener {
         console.log('스텝 이름 수정 동기화 이벤트');
         const msg = RealTimeMessage.of(RealTimeType.UPDATED, RealTimeEntity.STEP, {
             id: payload.data.stepId,
-            ...payload.data.diff,
+            name: payload.data.name,
         });
         const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${payload.data.projectId}`;
         this.gateway.handlePublish(dashboardRoom, msg);

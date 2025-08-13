@@ -31,8 +31,6 @@ export class StepsService {
         if (!step) {
             throw new StepNotFoundException();
         }
-        const oldName = step.name;
-
         step.name = dto.name;
         const updatedStep = await this.stepRepository.saveStep(qr.manager, step);
         await this.eventBus.publishAsync(
@@ -40,7 +38,7 @@ export class StepsService {
             EventPayloadDto.from(RealTimeType.UPDATED, {
                 projectId: step.project.id,
                 stepId: updatedStep.id,
-                diff: { name: [oldName, updatedStep.name] },
+                name: updatedStep.name,
             })
         );
         return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
@@ -94,7 +92,8 @@ export class StepsService {
         await this.eventBus.publishAsync(
             `${RealTimeEntity.STEP}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, {
-                stepId: DeletedStepDTO.from(stepRaw.project.id, stepId),
+                projectId: stepRaw.project.id,
+                stepId,
             })
         );
         return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });
