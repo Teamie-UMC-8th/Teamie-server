@@ -17,7 +17,7 @@ export class GetTaskResponseDto {
         example: '2024-07-10 00:00:00 ',
         description: '마감기한',
     })
-    deadline: Date | null;
+    deadline: string | null;
 
     @ApiProperty({
         example: Status.ONGOING,
@@ -53,7 +53,9 @@ export class GetTaskResponseDto {
     static from(task: Task & { taskFiles: TaskFile[] }, managers: Manager[]): GetTaskResponseDto {
         const dto = new GetTaskResponseDto();
         dto.name = task.name;
-        dto.deadline = task.deadline;
+        if (task.deadline) {
+            dto.deadline = task.deadline?.toISOString();
+        }
         dto.status = task.status;
         dto.memo = task.memo;
         dto.managers = managers.map((m) => UserProfile.from(m.user));

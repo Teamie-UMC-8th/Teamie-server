@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '../../../common/enums/status.enum';
-import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber } from 'class-validator';
-import { UserProfile } from 'src/common/dtos/user-profile.dto';
+import { IsOptional, IsNotEmpty, IsEnum, IsArray, IsNumber, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Task } from '../entities/tasks.entity';
+import { UserProfile } from 'src/common/dtos/user-profile.dto';
+import { IsISODateString } from 'src/common/decorators/validate-iso-date.decorator';
 import { Manager } from '../entities/managers.entity';
 export class UpdateTaskRequestDto {
     @ApiProperty({
@@ -18,7 +19,9 @@ export class UpdateTaskRequestDto {
         description: '마감기한',
     })
     @IsOptional()
-    deadline: Date;
+    @IsISODateString()
+    @IsString()
+    deadline: string;
 
     @ApiProperty({
         example: Status.ONGOING,
@@ -67,7 +70,7 @@ export class UpdateTaskResponseDto {
         example: '2024-07-10 00:00:00 ',
         description: '마감기한',
     })
-    deadline: Date | null;
+    deadline: string | null;
 
     @ApiProperty({
         example: Status.ONGOING,
@@ -98,7 +101,9 @@ export class UpdateTaskResponseDto {
     static from(task: Task, managers: Manager[]): UpdateTaskResponseDto {
         const dto = new UpdateTaskResponseDto();
         dto.name = task.name;
-        dto.deadline = task.deadline;
+        if (task.deadline) {
+            dto.deadline = task.deadline?.toISOString();
+        }
         dto.status = task.status;
         dto.memo = task.memo;
         dto.managers = managers.map((m) => UserProfile.from(m.user));

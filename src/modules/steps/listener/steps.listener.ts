@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { plainToClass } from 'class-transformer';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
 import {
