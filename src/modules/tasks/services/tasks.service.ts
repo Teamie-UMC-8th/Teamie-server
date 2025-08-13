@@ -41,6 +41,7 @@ import {
     UpdateTaskStatusRequestDto,
 } from '../dtos/update-task-status.dto';
 import { ManagerRepository } from '../repositories/manager.repository';
+import { TaskFileLimitExceededException } from 'src/common/exceptions/custom.errors';
 
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
@@ -384,7 +385,19 @@ export class TasksService {
         // 2. 프로젝트 참여자 여부 확인
         await this.projectsService.assertProjectMember(userId, task.step.project.id);
 
+        const currentCount = await queryRunner.manager.count(TaskFile, {
+            where: { task: { id: taskId } },
+        });
+
+        const MAX_FILES_PER_TASK =
+            Number(this.configService.get<string>('MAX_FILES_PER_TASK')) || 3;
+        if (currentCount >= MAX_FILES_PER_TASK) {
+            throw new TaskFileLimitExceededException();
+        }
         const fileUrl = await this.uploadService.uploadFile(file);
+
+        // 3. 파일명 인코딩 복원 (latin1 -> utf8)
+        const name = Buffer.from(file.originalname, 'latin1').toString('utf8');
 
         // 4. TaskFile 생성
         const taskFile = queryRunner.manager.create(TaskFile);
@@ -392,6 +405,7 @@ export class TasksService {
             fileUrl,
             task: { id: taskId },
             user: { id: userId },
+            name,
         });
 
         // 5. DB 저장

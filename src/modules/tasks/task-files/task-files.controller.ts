@@ -30,9 +30,8 @@ export class TaskFilesController {
     @Delete('/:taskFileId')
     async deleteTaskFile(
         @Req() req: TransactionalRequest,
-        @User('id') userId: number,
         @Param('taskFileId') fileId: number
     ): Promise<CommonResponse> {
-        return this.taskFilesService.deleteTaskFile(req.queryRunner, userId, fileId);
+        return this.taskFilesService.deleteTaskFile(req.queryRunner, fileId);
     }
 }

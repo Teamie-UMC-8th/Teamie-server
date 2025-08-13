@@ -62,6 +62,7 @@ export class GetTaskResponseDto {
         dto.files = task.taskFiles.map((f) => ({
             id: f.id,
             fileUrl: f.fileUrl,
+            name: f.name,
         }));
         dto.stepId = task.step.id;
         return dto;

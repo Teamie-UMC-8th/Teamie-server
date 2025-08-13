@@ -8,6 +8,9 @@ export class TaskFile extends BaseEntity {
     @Column({ length: 255 })
     fileUrl: string;
 
+    @Column({ length: 255 })
+    name: string;
+
     @ManyToOne(() => Task, (task) => task.taskFiles, { onDelete: 'CASCADE' })
     task: Task;
 
