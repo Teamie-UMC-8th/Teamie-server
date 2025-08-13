@@ -13,6 +13,8 @@ import { StepsModule } from '../steps/steps.module';
 import { TaskFilesModule } from './task-files/task-files.module';
 import { CommentsModule } from '../comments/comments.module';
 import { UploadModule } from 'src/infra/upload/upload.module';
+import { TasksListener } from './listener/tasks.listener';
+import { GateWayModule } from 'src/infra/gateway/gateway.module';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Task, Manager]),
@@ -22,11 +24,11 @@ import { UploadModule } from 'src/infra/upload/upload.module';
         forwardRef(() => StepsModule),
         TaskFilesModule,
         CommentsModule,
-        UserProjectModule,
         UploadModule,
+        GateWayModule,
     ],
     controllers: [TasksController],
-    providers: [TasksService, ManagerRepository, TaskRepository],
+    providers: [TasksService, ManagerRepository, TaskRepository, TasksListener],
     exports: [TaskRepository, ManagerRepository, TasksService],
 })
 export class TasksModule {}
