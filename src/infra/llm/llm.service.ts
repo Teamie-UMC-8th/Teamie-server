@@ -46,7 +46,7 @@ function processLLMError(error: any) {
                 throw new InternalServerErrorException(
                     'API 크레딧이 부족합니다. 충전 후 다시 시도하세요.'
                 );
-            case HttpStatus.FORBIDDEN:
+            case 403:
                 throw new InternalServerErrorException('입력이 정책에 의해 차단되었습니다.');
             case 408:
                 throw new InternalServerErrorException(

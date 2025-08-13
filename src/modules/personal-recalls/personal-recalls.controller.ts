@@ -8,7 +8,7 @@ import {
     ApiCommonResponse,
 } from 'src/common/response/swagger-response.helper';
 import { PersonalRecallResponseDto } from './dtos/personal-recall-response.dto';
-
+import { HttpStatus } from '@nestjs/common';
 @ApiTags('PersonalRecalls')
 @Controller('/projects')
 export class PersonalRecallsController {
