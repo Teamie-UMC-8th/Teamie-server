@@ -24,7 +24,7 @@ export class PortfolioCorrectionResponseDto {
     @IsString()
     companyInsight?: string;
 
-    @ApiProperty({ example: 'JD 내용', maxLength: 500 })
+    @ApiProperty({ example: 'JD 내용', maxLength: HttpStatus.INTERNAL_SERVER_ERROR })
     @IsString()
     jd: string;
 

@@ -82,7 +82,7 @@ export class MasterPortfoliosController {
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
         '마스터 포트폴리오를 찾을 수 없습니다.',
-        404
+        HttpStatus.FORBIDDEN
     )
     @Transactional()
     async createQuestions(
@@ -140,7 +140,7 @@ export class MasterPortfoliosController {
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
         '마스터 포트폴리오를 찾을 수 없습니다.',
-        404
+        HttpStatus.FORBIDDEN
     )
     @Transactional()
     async generateMasterPortfolio(
@@ -165,7 +165,7 @@ export class MasterPortfoliosController {
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
         '마스터 포트폴리오를 찾을 수 없습니다.',
-        404
+        HttpStatus.FORBIDDEN
     )
     async getMasterPortfolioGenerationResult(
         @Param('portfolioId', ParseIntPipe) portfolioId: number,
@@ -184,7 +184,7 @@ export class MasterPortfoliosController {
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
         '마스터 포트폴리오를 찾을 수 없습니다.',
-        404
+        HttpStatus.FORBIDDEN
     )
     async getMasterPortfolio(
         @Param('portfolioId', ParseIntPipe) portfolioId: number,
@@ -204,7 +204,7 @@ export class MasterPortfoliosController {
     @ApiCommonErrorResponse(
         'MASTER_PORTFOLIO_NOT_FOUND',
         '마스터 포트폴리오를 찾을 수 없습니다.',
-        404
+        HttpStatus.FORBIDDEN
     )
     @Transactional()
     async updateMasterPortfolio(

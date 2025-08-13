@@ -15,7 +15,7 @@ export class PersonalRecallsController {
     constructor(private readonly personalRecallsService: PersonalRecallsService) {}
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(PersonalRecallResponseDto)
-    @ApiCommonErrorResponse('PERSONAL_RECALL_NOT_FOUND', '개인 회고를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('PERSONAL_RECALL_NOT_FOUND', '개인 회고를 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
     @ApiOperation({
         summary: '개인 회고 조회',
         description: '프로젝트에 대한 개인 회고를 조회합니다.',
@@ -30,7 +30,7 @@ export class PersonalRecallsController {
 
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiBody({ type: UpdatePersonalRecallDto })
-    @ApiCommonErrorResponse('PERSONAL_RECALL_NOT_FOUND', '개인 회고를 찾을 수 없습니다.', 404)
+    @ApiCommonErrorResponse('PERSONAL_RECALL_NOT_FOUND', '개인 회고를 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
     @ApiOperation({
         summary: '개인 회고 수정',
         description: '프로젝트에 대한 개인 회고를 수정합니다.',

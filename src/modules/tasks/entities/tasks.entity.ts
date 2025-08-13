@@ -21,7 +21,7 @@ export class Task extends BaseEntity {
     })
     status: Status;
 
-    @Column({ type: 'varchar', length: 500, nullable: true })
+    @Column({ type: 'varchar', length: HttpStatus.INTERNAL_SERVER_ERROR, nullable: true })
     memo: string | null;
 
     @ManyToOne(() => Step, (step) => step.tasks, { onDelete: 'CASCADE' })

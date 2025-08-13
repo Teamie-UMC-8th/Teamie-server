@@ -15,7 +15,7 @@ export class Plan extends BaseEntity {
     @Column({ length: 20, nullable: true })
     location: string;
 
-    @Column({ length: 500, nullable: true })
+    @Column({ length: HttpStatus.INTERNAL_SERVER_ERROR, nullable: true })
     memo: string; //비고
 
     @Column({ type: 'time', nullable: true })

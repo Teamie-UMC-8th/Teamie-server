@@ -83,7 +83,7 @@ export class UsersController {
     }
 
     @ApiOperation({
-        summary: '프로젝트들 조회',
+        summary: '사용자가 속한 프로젝트들 조회',
         description: '사용자가 속한 프로젝트의 id,이름,프로젝트 내 역할을 반환하는 API입니다.',
     })
     @ApiCommonResponse(UserProjectResponseDto)

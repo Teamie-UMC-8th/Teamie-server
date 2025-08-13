@@ -19,7 +19,7 @@ export class PortfolioCorrection extends BaseEntity {
     @Column({ length: 5000, nullable: true })
     companyInsight: string;
 
-    @Column({ length: 500 })
+    @Column({ length: HttpStatus.INTERNAL_SERVER_ERROR })
     jd: string;
 
     @Column({
