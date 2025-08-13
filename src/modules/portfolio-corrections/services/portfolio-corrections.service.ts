@@ -1,5 +1,4 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { LLMService } from 'src/infra/llm/llm.service';
 import { correctionSchema, Correction } from 'src/infra/llm/schemas/portfolio-correction.schema';
 import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
@@ -23,7 +22,7 @@ import { RagService } from 'src/infra/llm/rag.service';
 import { PortfolioCorrectionResponseDto } from '../dtos/portfolio-correction-response.dto';
 import { RagResponseDto } from '../dtos/rag-response.dto';
 import { StatusResponseDto } from '../dtos/status-response.dto';
-import { CorrectionResultDto } from '../dtos/correction-result.dto';
+import { CorrectionResultDto, GetCorrectionResultDto } from '../dtos/correction-result.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -40,7 +39,6 @@ export class PortfolioCorrectionsService {
     constructor(
         private readonly llmService: LLMService,
         private readonly ragService: RagService,
-        private readonly promptLoader: PromptLoader,
         @InjectRepository(PortfolioCorrection)
         private readonly correctionRepository: Repository<PortfolioCorrection>,
         @InjectRepository(AICorrection)
@@ -203,31 +201,6 @@ export class PortfolioCorrectionsService {
         }
     }
 
-    // TODO: correctionId로 해당하는 프로젝트 id들과 첫 결과만 가져오고, 다른 프로젝트들을 각각 projectId로 로드하는 API를 따로 만들까 생각 중
-    // 생성된 AI 첨삭 결과 조회
-    async getCorrection(correctionId: number) {
-        // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
-        const existCorrectionPortfolio = await this.correctionRepository.findOne({
-            where: { id: correctionId },
-        });
-        if (!existCorrectionPortfolio) {
-            throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
-        }
-
-        // correctionId에 해당하는 AI 첨삭 엔티티가 있는지
-        const existAICorrection = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId } },
-        });
-        if (!existAICorrection) {
-            throw new NotFoundException(`AI 첨삭 결과가 존재하지 않습니다. ID: ${correctionId}`);
-        }
-
-        const result = await this.aiCorrectionRepository.find({
-            where: { portfolioCorrection: { id: correctionId } },
-        });
-        return result;
-    }
-
     async getSelectableProjects(userId: number) {
         // userId로 project들 조회
         const projects = await this.projectRepository
@@ -330,5 +303,72 @@ export class PortfolioCorrectionsService {
 
         const result = { status: correction.status };
         return StatusResponseDto.fromEntity(result);
+    }
+
+    // 생성된 AI 첨삭 결과 조회
+    async getCorrection(correctionId: number) {
+        // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
+        const existCorrectionPortfolio = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!existCorrectionPortfolio) {
+            throw new NotFoundException(`포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        // correctionId에 해당하는 AI 첨삭 엔티티가 있는지
+        const existAICorrection = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId } },
+        });
+        if (!existAICorrection) {
+            throw new NotFoundException(`AI 첨삭 결과가 존재하지 않습니다. ID: ${correctionId}`);
+        }
+
+        // correctionId에 해당하는 모든 AI 첨삭 결과의 projectId를 가져옴
+        const projectInfo = await this.aiCorrectionRepository.find({
+            where: { portfolioCorrection: { id: correctionId } },
+            select: ['projectId'],
+        });
+        const projectIds = projectInfo.map((item) => item.projectId);
+
+        // 각 projectId에 대해 name을 조회하여 { id, name } 객체로 반환
+        const projects = await Promise.all(
+            projectIds.map(async (projectId) => {
+                const project = await this.projectRepository.findOne({
+                    where: { id: projectId },
+                    select: ['id', 'name'],
+                });
+                return project ? { id: project.id, name: project.name } : null;
+            })
+        );
+
+        // null 값 제거
+        const projectList = projects.filter((p) => p !== null);
+
+        const result = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectIds[0] },
+        });
+        const final = {
+            projects: projectList,
+            firstCorrection: result,
+        };
+        return GetCorrectionResultDto.from(final);
+    }
+
+    // 개별 조회
+    async getCorrectionById(correctionId: number, projectId: number) {
+        // 존재 유무 체크
+        const existCorrectionPortfolio = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
+        });
+        if (!existCorrectionPortfolio) {
+            throw new NotFoundException(
+                `해당 프로젝트는 첨삭 ID ${correctionId}에 해당하는 AI 첨삭 결과가 존재하지 않습니다.`
+            );
+        }
+
+        const result = await this.aiCorrectionRepository.findOne({
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
+        });
+        return CorrectionResultDto.from(result);
     }
 }
