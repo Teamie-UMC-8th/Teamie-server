@@ -48,6 +48,7 @@ export class AuthController {
     @UseGuards(AuthGuard('kakao'))
     @Get('/kakao/callback')
     async kakaoCallback(
+        //TODO: 트랜잭션 적용 필요
         @Req() req: any,
         @KakaoUser() user: KakaoUserAfterAuth,
         @Res() res: Response

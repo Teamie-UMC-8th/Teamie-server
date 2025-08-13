@@ -1,8 +1,8 @@
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Project } from '../../projects/entities/projects.entity';
-import { Writer } from '../../mappings/writers/writers.entity';
-import { Attendee } from '../../mappings/attendees/attendees.entity';
+import { Writer } from './writers.entity';
+import { Attendee } from './attendees.entity';
 
 @Entity()
 export class Plan extends BaseEntity {

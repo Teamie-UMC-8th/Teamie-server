@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Step } from '../../steps/entities/steps.entity';
-import {
-    StepNotFoundException,
-} from 'src/common/exceptions/custom.errors';
+import { StepNotFoundException } from 'src/common/exceptions/custom.errors';
 import { QueryRunner } from 'typeorm';
 
 @Injectable()
@@ -65,7 +63,7 @@ export class StepRepository {
     }
 
     async saveStep(manager: EntityManager, step: Step): Promise<Step> {
-            return await manager.save(Step, step);
+        return await manager.save(Step, step);
     }
 
     async deleteById(manager: EntityManager, stepId: number): Promise<void> {

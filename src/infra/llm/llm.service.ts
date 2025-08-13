@@ -1,9 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Question } from '../../common/types/question.type';
-import { QuestionResponseFormat } from './formats/question-response.format';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
-import { MasterPortfolioResponseFormat } from './formats/master-portfolio-response.format';
-import { MasterPortfolioOutput } from 'src/common/types/master-portfolio.type';
 import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
@@ -14,6 +11,9 @@ import { QueryRunner } from 'typeorm';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 import { Questions, questionSchema } from './schemas/questions.schema';
 import { MasterPortfolio, masterPortfolioSchema } from './schemas/master-portfolio.schema';
+import { ProjectData } from 'src/modules/master-portfolios/types/project-data.interface';
+import { ResponseDelayManager } from 'src/common/utils/response-delay.util';
+import { checkMasterPortfolioContentStructure } from 'src/common/utils/check-masterportfolio-structure.util';
 
 function processLLMError(error: any) {
     // JSON 파싱 실패
@@ -88,7 +88,6 @@ export class LLMService {
                 baseURL: this.baseURL,
             },
         });
-        console.log(process.env.LLM_QUESTION_MODEL);
 
         this.masterPortfolioLLM = new ChatOpenAI({
             model:
@@ -117,10 +116,15 @@ export class LLMService {
         try {
             questionPromptText = await this.promptLoader.load('question.prompt.md');
         } catch (e) {
-            throw new PromptLoadingException('question.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (question.prompt.md)');
         }
 
-        const questionPrompt = ChatPromptTemplate.fromTemplate(questionPromptText);
+        let questionPrompt: ChatPromptTemplate;
+        try {
+            questionPrompt = ChatPromptTemplate.fromTemplate(questionPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (question.prompt.md)');
+        }
         const structuredLLM = this.questionLLM.withStructuredOutput<Questions>(questionSchema, {
             name: 'questions',
         });
@@ -165,17 +169,21 @@ export class LLMService {
     }
 
     // 마스터 포트폴리오 AI 생성
-    async generateMasterPortfolio(projectData: any) {
+    async generateMasterPortfolio(questionData: any, projectData: ProjectData) {
         // 마스터 포트폴리오 프롬프트를 로드합니다.
         let masterPortfolioPromptText: string;
         try {
             masterPortfolioPromptText = await this.promptLoader.load('master-portfolio.prompt.md');
-            projectData = await this.promptLoader.load('dummy-input.json');
         } catch (e) {
-            throw new PromptLoadingException('master-portfolio.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (master-portfolio.prompt.md)');
         }
 
-        const masterPortfolioPrompt = ChatPromptTemplate.fromTemplate(masterPortfolioPromptText);
+        let masterPortfolioPrompt: ChatPromptTemplate;
+        try {
+            masterPortfolioPrompt = ChatPromptTemplate.fromTemplate(masterPortfolioPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (master-portfolio.prompt.md)');
+        }
         const structuredLLM = this.masterPortfolioLLM.withStructuredOutput<MasterPortfolio>(
             masterPortfolioSchema,
             {
@@ -183,34 +191,50 @@ export class LLMService {
             }
         );
 
-        try {
-            const masterPortfolioResult = await masterPortfolioPrompt.pipe(structuredLLM).invoke({
-                projectData: projectData,
-            });
+        const operation = async () => {
+            try {
+                const masterPortfolioResult = await masterPortfolioPrompt
+                    .pipe(structuredLLM)
+                    .invoke({
+                        questionData: questionData,
+                        projectData: projectData,
+                    });
 
-            // 출력 실패
-            if (
-                !masterPortfolioResult ||
-                !masterPortfolioResult.detailInfo ||
-                !masterPortfolioResult.assignedTask ||
-                !masterPortfolioResult.keyAchievement ||
-                !masterPortfolioResult.insight
-            ) {
+                console.log(masterPortfolioResult);
+                // 출력 실패
+                if (
+                    !masterPortfolioResult ||
+                    !masterPortfolioResult.detailInfo ||
+                    !masterPortfolioResult.assignedTask ||
+                    !masterPortfolioResult.keyAchievement ||
+                    !masterPortfolioResult.insight
+                ) {
+                    throw new InternalServerErrorException(
+                        'LLM에서 빈 결과를 포함하여 생성했습니다.'
+                    );
+                }
+
+                // 생성된 JSON 값 구조 검사
+                const checkResult = checkMasterPortfolioContentStructure(masterPortfolioResult);
+                const isValid = Object.values(checkResult).every((value) => value === true);
+                if (!isValid) {
+                    throw new InternalServerErrorException(
+                        '생성된 마스터 포트폴리오의 구조가 유효하지 않습니다.'
+                    );
+                }
+
+                return masterPortfolioResult;
+            } catch (error) {
+                // 각종 에러 체크
+                processLLMError(error);
+
+                // 이외의 모든 에러
                 throw new InternalServerErrorException(
-                    'LLM에서 유효한 마스터 포트폴리오 구조를 생성하지 못했습니다.'
+                    `마스터 포트폴리오 생성 중 알 수 없는 오류가 발생했습니다. [${error?.constructor?.name}] ${error}`
                 );
             }
-
-            return masterPortfolioResult;
-        } catch (error) {
-            // 각종 에러 체크
-            processLLMError(error);
-
-            // 이외의 모든 에러
-            throw new InternalServerErrorException(
-                `마스터 포트폴리오 생성 중 알 수 없는 오류가 발생했습니다. [${error?.constructor?.name}] ${error}`
-            );
-        }
+        };
+        return ResponseDelayManager.ensureMinimumDuration(operation());
     }
 
     // AI 첨삭 생성
@@ -228,9 +252,15 @@ export class LLMService {
         try {
             correctionPromptText = await this.promptLoader.load('portfolio-correction.prompt.md');
         } catch (e) {
-            throw new PromptLoadingException('portfolio-correction.prompt.md');
+            throw new PromptLoadingException('파일 로딩 실패 (portfolio-correction.prompt.md)');
         }
-        const correctionPrompt = ChatPromptTemplate.fromTemplate(correctionPromptText);
+
+        let correctionPrompt: ChatPromptTemplate;
+        try {
+            correctionPrompt = ChatPromptTemplate.fromTemplate(correctionPromptText);
+        } catch (e) {
+            throw new PromptLoadingException('프롬프트 로딩 실패 (portfolio-correction.prompt.md)');
+        }
 
         const structuredLLM = this.correctionLLM.withStructuredOutput<Correction>(
             correctionSchema,
@@ -238,6 +268,7 @@ export class LLMService {
                 name: 'correction',
             }
         );
+
         const correctionResult = await correctionPrompt.pipe(structuredLLM).invoke({
             companyName: portfolioCorrectionData.submissionTarget,
             jobTitle: portfolioCorrectionData.jobTitle,

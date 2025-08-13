@@ -20,6 +20,7 @@ import {
     ProjectForbiddenException,
     ProjectNotFoundException,
     AlreadyProjectCompletedException,
+    ProjectLeaderNotFoundException,
 } from 'src/common/exceptions/custom.errors';
 import { Step } from '../../steps/entities/steps.entity';
 import { CreateStepDto, CreateStepResponseDto } from '../../steps/dtos/create-step.dto';
@@ -32,7 +33,6 @@ import { UpdateProfileDto, UpdateProfileResponseDto } from '../dtos/update-profi
 import { JoinProjectDto, JoinProjectResponseDto } from '../dtos/join-project.dto';
 import { ValidateInviteResponseDto } from '../dtos/validate-invite.dto';
 import { PlansService } from '../../plans/services/plans.service';
-import { TasksService } from '../../tasks/services/tasks.service';
 import { UserProfile } from '../../../common/dtos/user-profile.dto';
 import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import {
@@ -43,10 +43,9 @@ import { InviteCodeStore } from '../repositories/invite-code.store';
 import { ProjectRepository } from '../repositories/project.repository';
 import { PostsStore } from '../repositories/posts.store';
 import { Project } from '../entities/projects.entity';
-import { UserProjectRepository } from '../repositories/user-project.repository';
-import { UserProject } from '../entities/userProjects.entity';
-import { map } from 'rxjs';
-import { Manager } from 'src/modules/mappings/managers/managers.entity';
+import { UserProjectRepository } from '../user-projects/repositories/user-project.repository';
+import { UserProject } from '../user-projects/entities/user-projects.entity';
+
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -56,16 +55,8 @@ export class ProjectsService {
     constructor(
         private readonly projectRepository: ProjectRepository,
         private readonly userProjectRepository: UserProjectRepository,
-
-        @InjectRepository(PersonalRecall)
-        private readonly personalRecallRepository: Repository<PersonalRecall>,
-
-        @InjectRepository(Step)
-        private readonly stepRepository: Repository<Step>,
-
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
-
         private readonly taskRepository: TaskRepository,
 
         private readonly inviteStore: InviteCodeStore,
@@ -132,11 +123,17 @@ export class ProjectsService {
         // 3) 프로젝트 이름 조회
         const project = await this.projectRepository.findProjectName(projectId);
         if (!project) throw new ProjectNotFoundException();
-        // 4) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
+
+        // 4) 프로젝트 리더 이름 조회
+        const leaderName =
+            await this.userProjectRepository.findProjectLeaderNameByProjectId(projectId);
+        if (!leaderName) throw new ProjectLeaderNotFoundException(projectId);
+        // 5) DTO 반환 (새로 참여하는 사용자는 MEMBER 권한)
         return ValidateInviteResponseDto.fromEntity(
             projectId,
             project.name,
-            projectPermission.MEMBER
+            projectPermission.MEMBER,
+            leaderName
         );
     }
 
@@ -361,7 +358,7 @@ export class ProjectsService {
         await this.isProjectMember(currentUserId, projectId, qr.manager);
         const { newLeaderId } = dto;
         const newId = newLeaderId;
-        const current = await this.userProjectRepository.findProjectLeaderByProjectId(
+        const current = await this.userProjectRepository.findProjectLeaderByProjectIdUsingQR(
             projectId,
             qr.manager
         );

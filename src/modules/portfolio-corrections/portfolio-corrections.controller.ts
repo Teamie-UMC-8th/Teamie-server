@@ -28,7 +28,7 @@ import { ProjectResponseDto } from './dtos/project-response.dto';
 import { PortfolioCorrectionResponseDto } from './dtos/portfolio-correction-response.dto';
 import { RagResponseDto } from './dtos/rag-response.dto';
 import { CompanyInsightResponseDto } from './dtos/company-insight-response.dto';
-import { CorrectionResultDto } from './dtos/correction-result.dto';
+import { CorrectionResultDto, GetCorrectionResultDto } from './dtos/correction-result.dto';
 import { StatusResponseDto } from './dtos/status-response.dto';
 
 @ApiTags('PortfolioCorrections')
@@ -56,16 +56,16 @@ export class PortfolioCorrectionsController {
         );
     }
 
-    @Get('/me')
     @ApiOperation({
         summary: '마이페이지/사용자 별 AI 첨삭 조회 API',
         description:
             '사용자의 AI 첨삭 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 AI 첨삭 생성일자입니다.',
     })
     @ApiCommonResponseWithPagination(UserPortfolioCorrectionResponseDto)
+    @Get('/me')
     async getUsersFinalPortfolios(
-        @Query(new ValidationPipe({ transform: true })) req: DateCursor,
-        @User('id') userId: number
+        @User('id') userId: number,
+        @Query(new ValidationPipe({ transform: true })) req: DateCursor
     ): Promise<PaginatedResponseDto<UserPortfolioCorrectionResponseDto>> {
         //파라미터의 기본값 처리
         const cursorDate = req.cursor ? new Date(req.cursor) : new Date(); //NOTE: 커서의 디폴트 값은 now
@@ -118,16 +118,6 @@ export class PortfolioCorrectionsController {
     @Get(':correctionId/status')
     async getCorrectionStatus(@Param('correctionId') correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrectionStatus(correctionId);
-    }
-
-    @ApiOperation({
-        summary: '(4-1 / 분리 예정) AI 첨삭 결과 조회 API',
-        description: '특정 AI 첨삭의 결과를 조회합니다.',
-    })
-    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
-    @Get(':correctionId')
-    async getCorrection(@Param('correctionId') correctionId: number) {
-        return await this.portfolioCorrectionsService.getCorrection(correctionId);
     }
 
     @ApiOperation({
@@ -184,5 +174,33 @@ export class PortfolioCorrectionsController {
             correctionId,
             updateCompanyInsightDto.companyInsight
         );
+    }
+
+    // 결과 첫 조회 API
+    @ApiOperation({
+        summary: '(4-1) AI 첨삭 결과 조회 API',
+        description: '전체 프로젝트 목록과 첫 프로젝트에 대한 첨삭 결과를 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(GetCorrectionResultDto)
+    @Get(':correctionId')
+    async getCorrection(@Param('correctionId') correctionId: number) {
+        return await this.portfolioCorrectionsService.getCorrection(correctionId);
+    }
+
+    // 결과 개별 조회 API
+    @ApiOperation({
+        summary: '(4-2) AI 첨삭 결과 개별 조회 API',
+        description: '특정 AI 첨삭의 결과를 개별적으로 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(CorrectionResultDto)
+    @Get(':correctionId/:projectId')
+    async getCorrectionById(
+        @Param('correctionId') correctionId: number,
+        @Param('projectId') projectId: number
+    ) {
+        return await this.portfolioCorrectionsService.getCorrectionById(correctionId, projectId);
     }
 }

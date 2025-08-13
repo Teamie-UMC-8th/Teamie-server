@@ -1,22 +1,8 @@
-import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    NotImplementedException,
-    Param,
-    ParseIntPipe,
-    Patch,
-    Req,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
-import {
-    ApiCommonErrorResponse,
-    ApiCommonResponse,
-} from 'src/common/response/swagger-response.helper';
+import { ApiCommonResponse } from 'src/common/response/swagger-response.helper';
 import { PlanDetails } from './dtos/plan-details.dto';
-import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { PlansService } from './services/plans.service';
 import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
@@ -28,16 +14,15 @@ import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from './dtos/update-plan.
 export class PlansController {
     constructor(private readonly plansService: PlansService) {}
 
-    @Get('/:planId')
     @ApiOperation({
         summary: '일정 상세 페이지 조회 API',
         description: 'planId에 해당하는 일정 상세 페이지를 조회하는 API입니다.',
     })
     @ApiCommonResponse(PlanDetails)
-    @ApiCommonErrorResponse(ErrorCode.PLAN_NOT_FOUND, 'PLAN_NOT_FOUND', 404)
+    @Get('/:planId')
     async getDetails(
-        @Param('planId', ParseIntPipe) planId: number,
-        @User('id') userId: number
+        @User('id') userId: number,
+        @Param('planId', ParseIntPipe) planId: number
     ): Promise<PlanDetails> {
         const check = await this.plansService.checkPermission(userId, planId);
         if (!check) throw new ProjectForbiddenException();
