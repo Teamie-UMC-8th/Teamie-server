@@ -24,15 +24,23 @@ export class StepsController {
         description: 'step의 이름을 수정합니다.',
     })
     @ApiCommonResponse(UpdateStepResponseDto)
-    @ApiCommonErrorResponse(ErrorCode.STEP_NOT_FOUND, '해당 Step을 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
-    @ApiCommonErrorResponse(ErrorCode.UNAUTHORIZED, '인증되지 않은 사용자입니다.', HttpStatus.FORBIDDEN)
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        '해당 Step을 찾을 수 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.UNAUTHORIZED,
+        '인증되지 않은 사용자입니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Transactional()
     @Patch('/:stepId')
     async updateStep(
         @Req() req: TransactionalRequest,
         @User() userId: number,
         @Param('stepId', ParseIntPipe) stepId: number,
-        @Body() dto: UpdateStepDto,
+        @Body() dto: UpdateStepDto
     ): Promise<UpdateStepResponseDto> {
         return this.stepsService.updateStep(req.queryRunner, stepId, dto);
     }
@@ -42,9 +50,21 @@ export class StepsController {
         description: '업무의 step을 수정합니다',
     })
     @ApiCommonResponse(UpdateTaskStepResponseDto)
-    @ApiCommonErrorResponse(ErrorCode.STEP_NOT_FOUND, 'STEP을 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
-    @ApiCommonErrorResponse(ErrorCode.TASK_NOT_FOUND, 'TASK를 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
-    @ApiCommonErrorResponse(ErrorCode.UNAUTHORIZED, '인증되지 않은 사용자입니다.', HttpStatus.FORBIDDEN)
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        'STEP을 찾을 수 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.TASK_NOT_FOUND,
+        'TASK를 찾을 수 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.UNAUTHORIZED,
+        '인증되지 않은 사용자입니다.',
+        HttpStatus.FORBIDDEN
+    )
     @Transactional()
     @Patch('/:stepId/:taskId')
     async updateTaskStep(
@@ -52,7 +72,7 @@ export class StepsController {
         @User() userId: number,
         @Param('stepId', ParseIntPipe) stepId: number,
         @Param('taskId', ParseIntPipe) taskId: number,
-        @Body() dto: UpdateTaskStepDto,
+        @Body() dto: UpdateTaskStepDto
     ): Promise<UpdateTaskStepResponseDto> {
         return this.stepsService.updateTaskStep(req.queryRunner, dto, stepId, taskId);
     }
@@ -62,8 +82,16 @@ export class StepsController {
         description: 'step을 삭제합니다.',
     })
     @ApiOkResponse({ type: String, description: 'step 삭제 성공' })
-    @ApiCommonErrorResponse(ErrorCode.STEP_NOT_FOUND, 'STEP을 찾을 수 없습니다.', HttpStatus.FORBIDDEN)
-    @ApiCommonErrorResponse(ErrorCode.UNAUTHORIZED, '인증되지 않은 사용자입니다.', HttpStatus.FORBIDDEN)
+    @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        'STEP을 찾을 수 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.UNAUTHORIZED,
+        '인증되지 않은 사용자입니다.',
+        HttpStatus.FORBIDDEN
+    )
     @ApiCommonErrorResponse(
         ErrorCode.STEP_DELETE_FORBIDDEN,
         'STEP 내부에 업무가 존재할 경우, 삭제가 불가능합니다',
@@ -74,7 +102,7 @@ export class StepsController {
     async DeleteTaskResponseDto(
         @Req() req: TransactionalRequest,
         @User() userId: number,
-        @Param('stepId', ParseIntPipe) stepId: number,
+        @Param('stepId', ParseIntPipe) stepId: number
     ): Promise<CommonResponse> {
         return this.stepsService.deleteStep(req.queryRunner, stepId);
     }

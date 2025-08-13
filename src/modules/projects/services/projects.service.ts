@@ -49,6 +49,7 @@ import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
+import { PermissionResponseDto } from '../dtos/get-permission.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -544,6 +545,6 @@ export class ProjectsService {
     async getUserPermissionOfProject(userId: number, projectId: number) {
         const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
         if (!userProject) throw new ProjectForbiddenException();
-        return { permission: userProject.permission };
+        return PermissionResponseDto.from(userProject.permission);
     }
 }
