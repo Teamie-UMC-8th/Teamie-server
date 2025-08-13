@@ -32,14 +32,24 @@ export class TasksListener {
         // payload.data: { projectId, taskId, diff: { name?, status?, deadline?, managers?, stepId? } }
         const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${payload.data.projectId}`;
         const detailRoom = `${SubEventType.TASK_DETAIL}:${payload.data.taskId}`;
+        const raw = payload.data.diff ?? {};
+        const diff = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined));
         const msg = RealTimeMessage.of(
             RealTimeType.UPDATED,
             RealTimeEntity.TASK,
             { id: payload.data.taskId, ...payload.data.diff } // 변경 필드만
         );
 
+        //업무 대시보드
         this.gateway.handlePublish(dashboardRoom, msg);
+        //업무 상세페이지
         this.gateway.handlePublish(detailRoom, msg);
+
+        //팀 캘린더
+        if ('name' in diff || 'deadline' in diff) {
+            const calendarRoom = `${SubEventType.PROJECT_CALENDER}:${payload.data.projectId}`;
+            this.gateway.handlePublish(calendarRoom, msg);
+        }
     }
 
     /** 업무 삭제 → 대시보드 + 업무 상세 반영 + 상세 페이지 접속자 튕김 */
@@ -48,13 +58,18 @@ export class TasksListener {
         // payload.data: { projectId, taskId }
         const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${payload.data.projectId}`;
         const detailRoom = `${SubEventType.TASK_DETAIL}:${payload.data.taskId}`;
+        const calendarRoom = `${SubEventType.PROJECT_CALENDER}:${payload.data.projectId}`;
+
         const msg = RealTimeMessage.of(RealTimeType.DELETED, RealTimeEntity.TASK, {
             id: payload.data.taskId,
         });
-
+        //업무 대시보드
         this.gateway.handlePublish(dashboardRoom, msg);
+        //업무 상세 페이지
         this.gateway.handlePublish(detailRoom, msg);
+        //팀 캘린더
+        this.gateway.handlePublish(calendarRoom, msg);
         // 상세 페이지 사용자 강제 이탈
-        this.gateway.server.to(detailRoom).emit('forceLeave', { room: detailRoom });
+        await this.gateway.handleBanUser(payload.data.userId, detailRoom);
     }
 }

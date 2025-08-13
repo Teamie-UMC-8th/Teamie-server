@@ -16,7 +16,10 @@ import { TaskDashboardStepViewDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskDashboardStatusViewDto } from '../dtos/task-dashboard-status-view-dto';
 import { TaskInStepDto } from '../dtos/task-dashboard-step-view-dto';
 import { TaskInStatusDto } from '../dtos/task-dashboard-status-view-dto';
-import { CreateTaskFileResponseDto } from '../task-files/dtos/create-task-files.dto';
+import {
+    CreateTaskFileResponseDto,
+    TaskFileResponseDto,
+} from '../task-files/dtos/create-task-files.dto';
 import { GetCommentResponseDto } from '../../comments/dto/get-comment.dto';
 import { Status } from '../../../common/enums/status.enum';
 import { BadRequestException } from 'src/common/exceptions/custom.errors';
@@ -246,9 +249,10 @@ export class TasksService {
         await this.eventBus.publishAsync(
             `${RealTimeEntity.TASK}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, {
-                projectId,
+                projectId: projectId,
                 taskId: task.id,
                 deleted: DeletedTaskDTO.from(task.id),
+                userId: userId,
             })
         );
         return {
@@ -395,6 +399,16 @@ export class TasksService {
             queryRunner,
             taskFile
         );
+
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK_FILE}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                projectId: task.step.project.id,
+                taskId,
+                file: { id: saved.id, fileUrl: saved.fileUrl },
+            })
+        );
+
         // 6. DTO 변환 후 반환
         return CreateTaskFileResponseDto.fromEntity(saved);
     }

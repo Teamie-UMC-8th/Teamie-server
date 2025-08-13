@@ -22,7 +22,7 @@ import { GateWayModule } from 'src/infra/gateway/gateway.module';
         forwardRef(() => ProjectsModule),
         UserProjectModule,
         forwardRef(() => StepsModule),
-        TaskFilesModule, 
+        TaskFilesModule,
         CommentsModule,
         UploadModule,
         GateWayModule,
