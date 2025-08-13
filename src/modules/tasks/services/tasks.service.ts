@@ -33,6 +33,10 @@ import { StepRepository } from '../../steps/repositories/step.repository';
 import { TaskFileRepository } from '../task-files/repositories/task-file.repository';
 import { CommentRepository } from '../../comments/repositories/comments.repository';
 import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
+import {
+    UpdateTaskStatusResponseDto,
+    UpdateTaskStatusRequestDto,
+} from '../dtos/update-task-status.dto';
 import { ManagerRepository } from '../repositories/manager.repository';
 
 @Injectable()
@@ -604,6 +608,39 @@ export class TasksService {
             .getCount();
 
         return { tasks: tasks.map(TaskInStatusDto.from), totalCount };
+    }
+
+    async updateTaskStatus(
+        queryRunner: QueryRunner,
+        userId: number,
+        taskId: number,
+        dto: UpdateTaskStatusRequestDto
+    ): Promise<UpdateTaskStatusResponseDto> {
+        if (!Object.values(Status).includes(dto.status)) {
+            throw new BadRequestException(
+                `status는 ${Object.values(Status).join(', ')} 중 하나여야 합니다.`
+            );
+        }
+
+        // 1. Task 조회
+        const task = await this.taskRepository.findByIdUsingQR(queryRunner, taskId);
+
+        // 2. 프로젝트 참여 여부 확인
+        const projectId = task.step.project.id;
+        console.log(projectId);
+        await this.projectsService.isProjectMember(userId, projectId, queryRunner.manager);
+
+        // 3. 업무 상태 수정
+        task.status = dto.status;
+
+        // 4. 업무 저장 (QueryRunner 사용)
+        const updatedTask = await this.taskRepository.saveWithQueryRunner(
+            queryRunner.manager,
+            task
+        );
+
+        // 5. DTO 변환 후 반환
+        return UpdateTaskStatusResponseDto.from(updatedTask);
     }
 
     //BaseQb  + dto 기반 필터 헬퍼 함수 (검색에서 필터링하는 함수)

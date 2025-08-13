@@ -22,6 +22,7 @@ import { RagService } from 'src/infra/llm/rag.service';
 import { PortfolioCorrectionResponseDto } from '../dtos/portfolio-correction-response.dto';
 import { RagResponseDto } from '../dtos/rag-response.dto';
 import { StatusResponseDto } from '../dtos/status-response.dto';
+import { ResponseDelayManager } from 'src/common/utils/response-delay.util';
 import { CorrectionResultDto, GetCorrectionResultDto } from '../dtos/correction-result.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
@@ -129,76 +130,79 @@ export class PortfolioCorrectionsService {
             })
         );
 
-        try {
-            const correctionPromises = selectedProjects.map(async (projectId) => {
-                // 프로젝트에 해당하는 포트폴리오 데이터 조회
-                const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
-                    where: { project: { id: projectId }, user: { id: userId } },
-                });
-                const project = await qr.manager.findOne(Project, {
-                    where: { id: projectId },
-                    select: ['name'],
-                });
-                const projectName = project?.name;
+        const operation = async () => {
+            try {
+                const correctionPromises = selectedProjects.map(async (projectId) => {
+                    // 프로젝트에 해당하는 포트폴리오 데이터 조회
+                    const portfolioData = await qr.manager.findOne(MasterPortfolioAI, {
+                        where: { project: { id: projectId }, user: { id: userId } },
+                    });
+                    const project = await qr.manager.findOne(Project, {
+                        where: { id: projectId },
+                        select: ['name'],
+                    });
+                    const projectName = project?.name;
 
-                // TODO: 생성 중 실패 시에 롤백 처리 필요
+                    // TODO: 생성 중 실패 시에 롤백 처리 필요
+                    // 진행 상태 업데이트
+                    await this.correctionRepository.update(correctionId, {
+                        status: PortfolioCorrectionStatus.GENERATING,
+                    });
+
+                    // LLM을 통해 첨삭 생성
+                    const correctionResult = await this.llmService.generateCorrection(
+                        qr,
+                        correctionId,
+                        portfolioData
+                    );
+
+                    // zod 스키마로 검증
+                    let correction: Correction;
+                    try {
+                        correction = correctionSchema.parse(correctionResult);
+                    } catch (error) {
+                        console.error(`zod 스키마 검증 실패. 프로젝트 ${projectId}:`, error.errors);
+                        throw new Error(`zod 검증 실패. 프로젝트 ${projectId}`);
+                    }
+
+                    // DB에 저장
+                    await qr.manager.save(AICorrection, {
+                        projectId,
+                        portfolioCorrection: existCorrectionPortfolio,
+                        modelName:
+                            process.env.LLM_CORRECTION_MODEL ||
+                            'google/gemini-2.5-flash-lite-preview-06-17',
+                        llmTemperature: 0.3,
+                        correctionResult: correction,
+                    });
+
+                    const result = {
+                        projectId,
+                        projectName,
+                        correction,
+                    };
+                    // TODO: 수정 필요
+                    // return CorrectionResultDto.from(result);
+                    return result;
+                });
+
+                // 모든 첨삭 작업 대기
+                const correctionResults = await Promise.all(correctionPromises);
+                // 결과 합치기
+                const mergedCorrection = [...correctionResults];
+
                 // 진행 상태 업데이트
-                await this.correctionRepository.update(correctionId, {
-                    status: PortfolioCorrectionStatus.GENERATING,
+                await qr.manager.update(PortfolioCorrection, correctionId, {
+                    status: PortfolioCorrectionStatus.DONE,
                 });
 
-                // LLM을 통해 첨삭 생성
-                const correctionResult = await this.llmService.generateCorrection(
-                    qr,
-                    correctionId,
-                    portfolioData
-                );
-
-                // zod 스키마로 검증
-                let correction: Correction;
-                try {
-                    correction = correctionSchema.parse(correctionResult);
-                } catch (error) {
-                    console.error(`zod 스키마 검증 실패. 프로젝트 ${projectId}:`, error.errors);
-                    throw new Error(`zod 검증 실패. 프로젝트 ${projectId}`);
-                }
-
-                // DB에 저장
-                await qr.manager.save(AICorrection, {
-                    projectId,
-                    portfolioCorrection: existCorrectionPortfolio,
-                    modelName:
-                        process.env.LLM_CORRECTION_MODEL ||
-                        'google/gemini-2.5-flash-lite-preview-06-17',
-                    llmTemperature: 0.3,
-                    correctionResult: correction,
-                });
-
-                const result = {
-                    projectId,
-                    projectName,
-                    correction,
-                };
-                // TODO: 수정 필요
-                // return CorrectionResultDto.from(result);
-                return result;
-            });
-
-            // 모든 첨삭 작업 대기
-            const correctionResults = await Promise.all(correctionPromises);
-            // 결과 합치기
-            const mergedCorrection = [...correctionResults];
-
-            // 진행 상태 업데이트
-            await qr.manager.update(PortfolioCorrection, correctionId, {
-                status: PortfolioCorrectionStatus.DONE,
-            });
-
-            return mergedCorrection;
-        } catch (error) {
-            console.error('첨삭 과정 중 실패: ', error);
-            throw new Error('첨삭 과정 중 실패');
-        }
+                return mergedCorrection;
+            } catch (error) {
+                console.error('첨삭 과정 중 실패: ', error);
+                throw new Error('첨삭 과정 중 실패');
+            }
+        };
+        return ResponseDelayManager.ensureMinimumDuration(operation());
     }
 
     async getSelectableProjects(userId: number) {
