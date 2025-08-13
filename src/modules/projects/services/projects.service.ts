@@ -487,7 +487,11 @@ export class ProjectsService {
         projectId: number,
         manager: EntityManager
     ): Promise<boolean> {
-        const mapping = this.userProjectRepository.findByIdUsingQR(userId, projectId, manager);
+        const mapping = await this.userProjectRepository.findByIdUsingQR(
+            userId,
+            projectId,
+            manager
+        );
         if (!mapping) throw new ProjectForbiddenException();
         return true;
     }
