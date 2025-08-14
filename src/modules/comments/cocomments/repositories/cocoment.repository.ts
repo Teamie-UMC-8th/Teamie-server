@@ -57,4 +57,29 @@ export class CocommentRepository {
     ): Promise<Cocomment> {
         return queryRunner.manager.save(Cocomment, cocomment);
     }
+
+    async findByIdWithUserAndTaskForEventUsingQR(
+        qr: QueryRunner,
+        cocommentId: number
+    ): Promise<Cocomment> {
+        const cc = await qr.manager
+            .createQueryBuilder(Cocomment, 'cc')
+            .leftJoinAndSelect('cc.user', 'user')
+            .leftJoinAndSelect('cc.comment', 'comment')
+            .leftJoinAndSelect('comment.task', 'task')
+            .select([
+                'cc.id',
+                'cc.content',
+                'user.id',
+                'user.name',
+                'user.imageUrl',
+                'comment.id',
+                'task.id',
+            ])
+            .where('cc.id = :cocommentId', { cocommentId })
+            .getOne();
+
+        if (!cc) throw new CocommentNotFoundException();
+        return cc;
+    }
 }

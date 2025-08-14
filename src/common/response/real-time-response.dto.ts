@@ -10,8 +10,14 @@ export enum RealTimeEntity {
     PLAN = 'plan',
     TASK_FILE = 'task_file',
     STEP = 'step',
+    COMMENT = 'comment',
+    COCOMMENT = 'cocomment',
 }
 
+export enum TaskChannel {
+    STATUS_UPDATED = 'task.STATUS_UPDATED',
+    FIELDS_UPDATED = 'task.FIELDS_UPDATED',
+}
 export class RealTimeMessage<T = any> {
     type: RealTimeType; //행동 구분
     entity: RealTimeEntity; //도메인 구분

@@ -13,12 +13,17 @@ import {
 } from '../cocomments/dto/create-cocomment.dto';
 import { CommentRepository } from '../repositories/comments.repository';
 import { CocommentRepository } from '../cocomments/repositories/cocoment.repository';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
+import { UpdatedCommentDTO } from '../dto/comment-payload.dto';
+import { CreatedCocommentDTO } from '../cocomments/dto/cocomment-payload.dto';
 @Injectable()
 export class CommentsService {
     constructor(
         private readonly commentRepository: CommentRepository,
-
-        private readonly cocommentRepository: CocommentRepository
+        private readonly cocommentRepository: CocommentRepository,
+        private readonly eventBus: EventBusService
     ) {}
 
     async updateComment(
@@ -28,7 +33,7 @@ export class CommentsService {
         dto: UpdateCommentRequestDto
     ): Promise<UpdateCommentResponseDto> {
         // 1. 댓글 존재 여부 확인 (작성자 정보까지 조회)
-        const comment = await this.commentRepository.findByIdWithUserWithQueryRunner(
+        const comment = await this.commentRepository.findByIdWithUserAndTaskForEventUsingQR(
             queryRunner,
             commentId
         );
@@ -47,7 +52,16 @@ export class CommentsService {
             comment
         );
 
-        // 5. DTO 변환 후 반환
+        // 5. 웹소켓 이벤트 발행
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COMMENT}.${RealTimeType.UPDATED}`,
+            EventPayloadDto.from(RealTimeType.UPDATED, {
+                taskId: (comment as any).task.id,
+                comment: UpdatedCommentDTO.from(updatedComment),
+            })
+        );
+
+        // 6. DTO 변환 후 반환
         return UpdateCommentResponseDto.from(updatedComment);
     }
 
@@ -57,7 +71,7 @@ export class CommentsService {
         commentId: number
     ): Promise<CommonResponse> {
         // 댓글 존재 여부 확인
-        const comment = await this.commentRepository.findByIdWithUserWithQueryRunner(
+        const comment = await this.commentRepository.findByIdWithUserAndTaskForEventUsingQR(
             queryRunner,
             commentId
         );
@@ -69,6 +83,15 @@ export class CommentsService {
 
         // 댓글 삭제
         await this.commentRepository.deleteCommentWithQueryRunner(queryRunner, commentId);
+
+        //웹소켓 이벤트 발행
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COMMENT}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                taskId: (comment as any).task.id,
+                commentId,
+            })
+        );
 
         return CommonResponse.success({ message: `댓글 ID ${commentId} 삭제 완료` });
     }
@@ -96,6 +119,20 @@ export class CommentsService {
         const saved = await this.cocommentRepository.saveCocommentWithQueryRunner(
             queryRunner,
             cocomment
+        );
+
+        const withUser = await this.cocommentRepository.findByIdWithUserAndTaskForEventUsingQR(
+            queryRunner,
+            saved.id
+        );
+
+        // 3) publish
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COCOMMENT}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                taskId: withUser.comment.task.id,
+                cocomment: CreatedCocommentDTO.from(withUser),
+            })
         );
 
         // 4. 응답 반환

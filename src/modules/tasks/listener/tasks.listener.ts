@@ -29,7 +29,9 @@ export class TasksListener {
     /** 업무 수정 → 대시보드 + 업무 상세에 모두 반영 */
     @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`, { async: true })
     async onTaskUpdated(payload: EventPayloadDto) {
-        // payload.data: { projectId, taskId, diff: { name?, status?, deadline?, managers?, stepId? } }
+        // diff 이벤트만 처리
+        if (!payload?.data?.diff) return;
+
         const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${payload.data.projectId}`;
         const detailRoom = `${SubEventType.TASK_DETAIL}:${payload.data.taskId}`;
         const raw = payload.data.diff ?? {};
@@ -71,5 +73,20 @@ export class TasksListener {
         this.gateway.handlePublish(calendarRoom, msg);
         // 상세 페이지 사용자 강제 이탈
         await this.gateway.handleBanUser(payload.data.userId, detailRoom);
+    }
+
+    /** 업무 상태 수정 → 프로젝트 대시보드에만 반영*/
+    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`, { async: true })
+    async onTaskStatusUpdated(payload: EventPayloadDto) {
+        // 상태 전용 이벤트만 처리
+        if (!payload?.data?.task) return;
+
+        const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${payload.data.projectId}`;
+        const msg = RealTimeMessage.of(
+            RealTimeType.UPDATED,
+            RealTimeEntity.TASK,
+            payload.data.task
+        );
+        this.gateway.handlePublish(dashboardRoom, msg);
     }
 }
