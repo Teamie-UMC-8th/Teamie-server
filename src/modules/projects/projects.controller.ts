@@ -326,11 +326,21 @@ export class ProjectsController {
     }
 
     @ApiOperation({
-        summary: '팀 캘린더 조회 API',
+        summary: '팀 캘린더 조회',
         description:
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.PLAN_DATE_TOO_LONG,
+        '최대 31일까지만 조회할 수 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
@@ -344,10 +354,26 @@ export class ProjectsController {
     }
 
     @ApiOperation({
-        summary: '일정 생성 API',
-        description: '팀 캘린더에서 새로운 일정을 생성하는 API입니다.',
+        summary: '일정 생성',
+        description:
+            '팀 캘린더에서 새로운 일정을 생성하는 API입니다. 프로젝트 생성 일자 이전에는 일정을 생성할 수 없습니다.',
     })
     @ApiCommonResponse(CreatePlanResponse)
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.PLAN_DATE_CONFLICT,
+        '프로젝트 생성일자 이전에는 일정 생성이 불가능합니다.',
+        HttpStatus.FORBIDDEN
+    )
     @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Post('/:projectId/plans')
@@ -373,7 +399,7 @@ export class ProjectsController {
     }
 
     @ApiOperation({
-        summary: '사용자의 프로젝트 권한 조회 API',
+        summary: '사용자의 프로젝트 권한 조회',
         description: '사용자의 프로젝트 권한을 조회합니다.',
     })
     @ApiCommonResponse(PermissionResponseDto)
