@@ -241,7 +241,10 @@ export class ProjectsService {
         // 1) 프로젝트 존재 검사 & 수정 가능 확인
         let project = await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 2) 팀장 권한 확인
-        await this.userProjectRepository.findWithPermission(userId, projectId, qr.manager);
+        const permission = await this.userProjectRepository.findWithPermission(userId, projectId, qr.manager);
+        if (!permission || permission !== projectPermission.LEAD) {
+            throw new ProjectUpdateForbiddenException('팀장만 프로젝트를 완료할 수 있습니다.');
+        }
 
         // 3) 프로젝트 완료 처리
         project.isCompleted = true;
