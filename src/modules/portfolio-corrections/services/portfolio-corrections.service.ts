@@ -31,6 +31,7 @@ import { RagResponseDto } from '../dtos/rag-response.dto';
 import { StatusResponseDto } from '../dtos/status-response.dto';
 import { ResponseDelayManager } from 'src/common/utils/response-delay.util';
 import { CorrectionResultDto, GetCorrectionResultDto } from '../dtos/correction-result.dto';
+import { UpdatePortfolioCorrectionDto } from '../dtos/portfolio-correction.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -406,5 +407,50 @@ export class PortfolioCorrectionsService {
             where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
         });
         return CorrectionResultDto.from(result);
+    }
+
+    // 포트폴리오 첨삭 업데이트
+    async updatePortfolioCorrection(
+        qr: QueryRunner,
+        correctionId: number,
+        updatePortfolioCorrectionDto: UpdatePortfolioCorrectionDto
+    ) {
+        await checkCorrectionExists(qr, correctionId);
+
+        await qr.manager.update(
+            PortfolioCorrection,
+            {
+                id: correctionId,
+            },
+            {
+                title: updatePortfolioCorrectionDto.title,
+            }
+        );
+
+        return {
+            id: correctionId,
+            title: updatePortfolioCorrectionDto.title,
+        };
+    }
+
+    // 포트폴리오 첨삭 조회
+    async getPortfolioCorrection(correctionId: number) {
+        const correction = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!correction) {
+            throw new PortfolioCorrectionNotFoundException(correctionId);
+        }
+
+        return PortfolioCorrectionResponseDto.fromEntity(correction);
+    }
+
+    // 포트폴리오 첨삭 삭제
+    async deletePortfolioCorrection(correctionId: number) {
+        const result = await this.correctionRepository.delete({ id: correctionId });
+        if (result.affected === 0) {
+            throw new PortfolioCorrectionNotFoundException(correctionId);
+        }
+        return `포트폴리오 첨삭 id ${correctionId}가 성공적으로 삭제되었습니다.`;
     }
 }

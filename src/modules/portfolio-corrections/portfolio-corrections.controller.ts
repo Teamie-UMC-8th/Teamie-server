@@ -10,6 +10,7 @@ import {
     Req,
     ValidationPipe,
     HttpStatus,
+    Delete,
 } from '@nestjs/common';
 import { PortfolioCorrectionsService } from './services/portfolio-corrections.service';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
@@ -33,6 +34,7 @@ import { CompanyInsightResponseDto } from './dtos/company-insight-response.dto';
 import { CorrectionResultDto, GetCorrectionResultDto } from './dtos/correction-result.dto';
 import { StatusResponseDto } from './dtos/status-response.dto';
 import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
+import { UpdatePortfolioCorrectionDto } from './dtos/portfolio-correction.dto';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -65,7 +67,7 @@ export class PortfolioCorrectionsController {
             '사용자의 AI 첨삭 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 AI 첨삭 생성일자입니다.',
     })
     @ApiCommonResponseWithPagination(UserPortfolioCorrectionResponseDto)
-    @Get('/me')
+    @Get('me')
     async getUsersPortfolioCorrections(
         @User('id') userId: number,
         @Query(new ValidationPipe({ transform: true })) req: DateCursor
@@ -88,6 +90,58 @@ export class PortfolioCorrectionsController {
     @Get('projects')
     async getSelectableProjects(@User('id') userId: number) {
         return await this.portfolioCorrectionsService.getSelectableProjects(userId);
+    }
+
+    @ApiOperation({
+        summary: '포트폴리오 첨삭 수정',
+        description: '사용자가 포트폴리오 첨삭을 수정합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiBody({ type: UpdatePortfolioCorrectionDto })
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
+    @Transactional()
+    @Patch(':correctionId')
+    async updatePortfolioCorrection(
+        @Req() req: TransactionalRequest,
+        @Param('correctionId', ParseIntPipe) correctionId: number,
+        @Body() updatePortfolioCorrectionDto: UpdatePortfolioCorrectionDto
+    ) {
+        return await this.portfolioCorrectionsService.updatePortfolioCorrection(
+            req.queryRunner,
+            correctionId,
+            updatePortfolioCorrectionDto
+        );
+    }
+
+    @ApiOperation({
+        summary: '포트폴리오 첨삭 조회',
+        description: '특정 포트폴리오 첨삭의 정보를 조회합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
+    @Get(':correctionId')
+    async getPortfolioCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
+        return await this.portfolioCorrectionsService.getPortfolioCorrection(correctionId);
+    }
+
+    @ApiOperation({
+        summary: '포트폴리오 첨삭 삭제',
+        description: '특정 포트폴리오 첨삭을 삭제합니다.',
+    })
+    @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
+    @Delete(':correctionId')
+    async deletePortfolioCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
+        return await this.portfolioCorrectionsService.deletePortfolioCorrection(correctionId);
     }
 
     @ApiOperation({
