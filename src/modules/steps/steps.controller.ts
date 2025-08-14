@@ -56,6 +56,11 @@ export class StepsController {
         HttpStatus.FORBIDDEN
     )
     @ApiCommonErrorResponse(
+        ErrorCode.STEP_NOT_FOUND,
+        '이동할 스텝이 현재 스텝과 같은 프로젝트에 속하지 않습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
         ErrorCode.TASK_NOT_FOUND,
         'TASK를 찾을 수 없습니다.',
         HttpStatus.FORBIDDEN

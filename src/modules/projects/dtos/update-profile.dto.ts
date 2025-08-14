@@ -9,7 +9,7 @@ export class UpdateProfileDto {
     @IsInt()
     id: number;
 
-    @ApiProperty({ example: 'LEAD' })
+    @ApiProperty({ example: '기획' })
     @IsString()
     @IsNotEmpty()
     // 필요하면 enum으로 제한: @IsEnum(projectRole)
