@@ -3,11 +3,13 @@ import {
     Controller,
     Get,
     Param,
+    ParseIntPipe,
     Patch,
     Post,
     Query,
     Req,
     ValidationPipe,
+    HttpStatus,
 } from '@nestjs/common';
 import { PortfolioCorrectionsService } from './services/portfolio-corrections.service';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
@@ -30,6 +32,7 @@ import { RagResponseDto } from './dtos/rag-response.dto';
 import { CompanyInsightResponseDto } from './dtos/company-insight-response.dto';
 import { CorrectionResultDto, GetCorrectionResultDto } from './dtos/correction-result.dto';
 import { StatusResponseDto } from './dtos/status-response.dto';
+import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -40,7 +43,7 @@ export class PortfolioCorrectionsController {
     ) {}
 
     @ApiOperation({
-        summary: '(1-1) 포트폴리오 첨삭 생성 API',
+        summary: '(1-1) 포트폴리오 첨삭 생성',
         description: '사용자가 포트폴리오 첨삭을 생성합니다.',
     })
     @ApiBody({ type: CreatePortfolioCorrectionDto })
@@ -57,7 +60,7 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '마이페이지/사용자 별 AI 첨삭 조회 API',
+        summary: '마이페이지/사용자 별 AI 첨삭 조회',
         description:
             '사용자의 AI 첨삭 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 AI 첨삭 생성일자입니다.',
     })
@@ -78,7 +81,7 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '(3-1) 사용자 별 선택 가능한 프로젝트 조회 API',
+        summary: '(3-1) 사용자 별 선택 가능한 프로젝트 조회',
         description: '사용자가 선택할 수 있는 프로젝트 리스트를 조회하는 API입니다.',
     })
     @ApiCommonResponseArray(ProjectResponseDto)
@@ -88,17 +91,45 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: '(3-2) AI 첨삭 생성 API',
+        summary: '(3-2) AI 첨삭 생성',
         description: '사용자가 선택한 프로젝트들에 대해 AI 첨삭을 생성합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponseArray(CorrectionResultDto)
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
+        {
+            errorCode: 'PORTFOLIOCORRECTION4001',
+            reason: '프로젝트를 선택해야 합니다.',
+        },
+        {
+            errorCode: 'PORTFOLIOCORRECTION4002',
+            reason: '프로젝트는 최대 6개까지 선택할 수 있습니다.',
+        },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, [
+        {
+            errorCode: 'PORTFOLIOCORRECTION4041',
+            reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+        },
+        {
+            errorCode: 'PROJECT4041',
+            reason: '프로젝트를 찾을 수 없습니다.',
+        },
+        {
+            errorCode: 'MASTERPORTFOLIO4042',
+            reason: '마스터포트폴리오 AI 결과를 찾을 수 없습니다.',
+        },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.CONFLICT, {
+        errorCode: 'LLM4091',
+        reason: 'AI 생성 결과가 이미 존재합니다.',
+    })
     @Transactional()
     @Post(':correctionId/generate')
     async generateCorrection(
         @Req() req: TransactionalRequest,
         @User('id') userId: number,
-        @Param('correctionId') correctionId: number,
+        @Param('correctionId', ParseIntPipe) correctionId: number,
         @Body() createCorrectionDto: CreateCorrectionsDto
     ) {
         return await this.portfolioCorrectionsService.generateCorrection(
@@ -110,48 +141,63 @@ export class PortfolioCorrectionsController {
     }
 
     @ApiOperation({
-        summary: 'AI 첨삭 상태 조회 API',
+        summary: 'AI 첨삭 상태 조회',
         description: '특정 AI 첨삭의 상태를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponse(StatusResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
     @Get(':correctionId/status')
-    async getCorrectionStatus(@Param('correctionId') correctionId: number) {
+    async getCorrectionStatus(@Param('correctionId', ParseIntPipe) correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrectionStatus(correctionId);
     }
 
     @ApiOperation({
-        summary: '(1-2) RAG 시작 API',
+        summary: '(1-2) RAG 시작',
         description:
             'RAG를 진행합니다. 키워드 및 관련 데이터를 생성/수집하고, 최종적으로 기업 분석 정보를 생성합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponse(PortfolioCorrectionResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
     @Transactional()
     @Post(':correctionId/rag')
-    async startRAG(@Req() req: TransactionalRequest, @Param('correctionId') correctionId: number) {
+    async startRAG(
+        @Req() req: TransactionalRequest,
+        @Param('correctionId', ParseIntPipe) correctionId: number
+    ) {
         return await this.portfolioCorrectionsService.startRAG(req.queryRunner, correctionId);
     }
 
     @ApiOperation({
-        summary: '(2-1) RAG 데이터 조회 API',
+        summary: '(2-1) RAG 데이터 조회',
         description: '특정 AI 첨삭의 RAG 데이터를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponse(RagResponseDto)
     @Get(':correctionId/rag')
-    async getRAGData(@Param('correctionId') correctionId: number) {
+    async getRAGData(@Param('correctionId', ParseIntPipe) correctionId: number) {
         return await this.portfolioCorrectionsService.getRAGData(correctionId);
     }
 
     @ApiOperation({
-        summary: '(2-2) 기업 분석 정보 조회 API',
+        summary: '(2-2) 기업 분석 정보 조회',
         description: '특정 AI 첨삭의 기업 분석 정보를 조회합니다.',
     })
     @ApiCommonResponse(CompanyInsightResponseDto)
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
     @Get(':correctionId/company-insight')
-    async getCompanyInsight(@Param('correctionId') correctionId: number) {
+    async getCompanyInsight(@Param('correctionId', ParseIntPipe) correctionId: number) {
         return await this.portfolioCorrectionsService.getCompanyInsight(correctionId);
     }
 
@@ -162,11 +208,15 @@ export class PortfolioCorrectionsController {
     @ApiBody({ type: UpdateCompanyInsightDto })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponse(PortfolioCorrectionResponseDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4041',
+        reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+    })
     @Transactional()
     @Patch(':correctionId/company-insight')
     async updateCompanyInsight(
         @Req() req: TransactionalRequest,
-        @Param('correctionId') correctionId: number,
+        @Param('correctionId', ParseIntPipe) correctionId: number,
         @Body() updateCompanyInsightDto: UpdateCompanyInsightDto
     ) {
         return await this.portfolioCorrectionsService.updateCompanyInsight(
@@ -178,28 +228,42 @@ export class PortfolioCorrectionsController {
 
     // 결과 첫 조회 API
     @ApiOperation({
-        summary: '(4-1) AI 첨삭 결과 조회 API',
+        summary: '(4-1) AI 첨삭 결과 조회',
         description: '전체 프로젝트 목록과 첫 프로젝트에 대한 첨삭 결과를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiCommonResponse(GetCorrectionResultDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, [
+        {
+            errorCode: 'PORTFOLIOCORRECTION4041',
+            reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
+        },
+        {
+            errorCode: 'PORTFOLIOCORRECTION4042',
+            reason: 'AI 첨삭 결과를 찾을 수 없습니다.',
+        },
+    ])
     @Get(':correctionId')
-    async getCorrection(@Param('correctionId') correctionId: number) {
+    async getCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrection(correctionId);
     }
 
     // 결과 개별 조회 API
     @ApiOperation({
-        summary: '(4-2) AI 첨삭 결과 개별 조회 API',
+        summary: '(4-2) AI 첨삭 결과 개별 조회',
         description: '특정 AI 첨삭의 결과를 개별적으로 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(CorrectionResultDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'PORTFOLIOCORRECTION4042',
+        reason: 'AI 첨삭 결과를 찾을 수 없습니다.',
+    })
     @Get(':correctionId/:projectId')
     async getCorrectionById(
-        @Param('correctionId') correctionId: number,
-        @Param('projectId') projectId: number
+        @Param('correctionId', ParseIntPipe) correctionId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
     ) {
         return await this.portfolioCorrectionsService.getCorrectionById(correctionId, projectId);
     }
