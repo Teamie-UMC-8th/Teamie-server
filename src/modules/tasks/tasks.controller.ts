@@ -117,11 +117,13 @@ export class TasksController {
     @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
         {
             errorCode: 'COMMON400',
-            reason: '유효하지 않은 사용자 ID가 포함되어 있습니다.',
+            reason: '잘못된 REQUEST입니다.',
+            data: '유효하지 않은 사용자 ID가 포함되어 있습니다.',
         },
         {
             errorCode: 'COMMON400',
-            reason: '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
+            reason: '잘못된 REQUEST입니다.',
+            data: '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
         },
     ])
     @Transactional()
