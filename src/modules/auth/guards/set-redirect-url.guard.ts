@@ -5,10 +5,13 @@ import { Observable } from 'rxjs';
 export class SetRedirectUrlGuard implements CanActivate {
     canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
         const request = context.switchToHttp().getRequest();
-        const { redirect_url } = request.query;
+        const { redirect_url, redirect_path } = request.query;
 
         if (redirect_url) {
             request.session.redirectUrl = redirect_url;
+        }
+        if (redirect_path) {
+            request.session.redirectPath = redirect_path;
         }
 
         return true;

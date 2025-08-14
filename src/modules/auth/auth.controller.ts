@@ -34,7 +34,10 @@ export class AuthController {
     @Pulbic()
     @UseGuards(SetRedirectUrlGuard, AuthGuard('kakao'))
     @Get('/kakao')
-    async kakaoLogin(@Query('redirect_url') redirect_url?: string) {}
+    async kakaoLogin(
+        @Query('redirect_url') redirect_url?: string,
+        @Query('redirect_path') redirect_path?: string
+    ) {}
 
     @ApiOperation({
         summary: '카카오 로그인 콜백',
@@ -63,7 +66,8 @@ export class AuthController {
         const safeOrigin = this.authService.validateRedirectOrigin(baseRedirect)
             ? baseRedirect
             : this.configService.get('CLIENT_REDIRECT_URI') || 'http://localhost:3000';
-        const redirectPath = this.configService.get('CLIENT_REDIRECT_PATH') || '/docs';
+        const redirectPath =
+            req.session.redirectPath || this.configService.get('CLIENT_REDIRECT_PATH') || '/docs';
         // 슬래시 중복 방지
         const fullRedirect = safeOrigin.endsWith('/')
             ? safeOrigin.slice(0, -1) + redirectPath
