@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { LLMService } from 'src/infra/llm/llm.service';
 import { correctionSchema, Correction } from 'src/infra/llm/schemas/portfolio-correction.schema';
 import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
-import { QueryRunner, Repository } from 'typeorm';
+import { In, QueryRunner, Repository } from 'typeorm';
 import { AICorrection } from '../entities/ai-correction.entity';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { UserPortfolioCorrectionResponseDto } from '../dtos/user-portfolio-correction-response.dto';
@@ -54,7 +54,9 @@ export class PortfolioCorrectionsService {
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
         @InjectRepository(RAGData)
-        private readonly ragDataRepository: Repository<RAGData>
+        private readonly ragDataRepository: Repository<RAGData>,
+        @InjectRepository(MasterPortfolioAI)
+        private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>
     ) {}
     async getPortfolioCorrectionsByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
@@ -215,7 +217,23 @@ export class PortfolioCorrectionsService {
             .where('user.id = :userId', { userId })
             .getMany();
 
-        return projects.map(ProjectResponseDto.from);
+        const projectsWithBoolean = await Promise.all(
+            projects.map(async (project) => {
+                const projectId = project.id;
+                const hasMasterPortfolio =
+                    (await this.masterPortfolioAIRepository.findOne({
+                        where: { project: { id: projectId } },
+                    })) !== null;
+                return {
+                    ...project,
+                    hasMasterPortfolio,
+                };
+            })
+        );
+
+        // 반환값이 있으면 1, 없으면 0으로 hasMasterPortfolio 속성 추가
+
+        return projectsWithBoolean.map(ProjectResponseDto.from);
     }
 
     async createPortfolioCorrection(
