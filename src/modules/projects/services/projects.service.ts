@@ -284,6 +284,8 @@ export class ProjectsService {
         projectId: number,
         userId: number
     ): Promise<CreateStepResponseDto> {
+        // 프로젝트 존재 확인
+        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 프로젝트 멤버인지 확인
         await this.isProjectMember(userId, projectId, qr.manager);
         let savedStep: Step;
