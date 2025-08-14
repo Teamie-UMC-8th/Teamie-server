@@ -329,6 +329,7 @@ export class MasterPortfoliosService {
             masterPortfolioId,
             projectId
         );
+        console.log(JSON.stringify(projectData, null, 4));
 
         // 진행 상태를 `GENERATING`으로 업데이트합니다.
         await this.masterPortfolioRepository.update(
