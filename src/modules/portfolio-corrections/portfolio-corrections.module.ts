@@ -8,10 +8,17 @@ import { PortfolioCorrection } from './entities/portfolio-correction.entity';
 import { AICorrection } from './entities/ai-correction.entity';
 import { Project } from '../projects/entities/projects.entity';
 import { RAGData } from './entities/rag-data.entity';
+import { MasterPortfolioAI } from '../master-portfolios/entities/master-portfolio-ai.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([PortfolioCorrection, AICorrection, Project, RAGData]),
+        TypeOrmModule.forFeature([
+            PortfolioCorrection,
+            AICorrection,
+            Project,
+            RAGData,
+            MasterPortfolioAI,
+        ]),
         LLMModule,
     ],
     controllers: [PortfolioCorrectionsController],

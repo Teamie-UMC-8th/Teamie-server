@@ -26,7 +26,10 @@ export class ProjectResponseDto {
     @ApiProperty({ example: null, nullable: true })
     completedAt: Date | null;
 
-    static from(entity: Project): ProjectResponseDto {
+    @ApiProperty({ example: true })
+    hasMasterPortfolio: boolean;
+
+    static from(entity: any): ProjectResponseDto {
         const dto = new ProjectResponseDto();
         dto.id = entity.id;
         dto.name = entity.name;
@@ -36,6 +39,7 @@ export class ProjectResponseDto {
         dto.rule = entity.rule;
         dto.isCompleted = entity.isCompleted;
         dto.completedAt = entity.completedAt;
+        dto.hasMasterPortfolio = entity.hasMasterPortfolio;
 
         return dto;
     }
