@@ -50,6 +50,7 @@ import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-resp
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
+import { ca } from 'zod/v4/locales';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -377,16 +378,30 @@ export class ProjectsService {
             projectId,
             qr.manager
         );
+        if (!current) {
+            throw new ProjectLeaderNotFoundException(projectId);
+        }
         if (current?.oldLeaderId === newLeaderId) {
             throw new ProjectUpdateForbiddenException('이미 팀장입니다.');
         }
-        // 지목된 사람 권한을 LEAD로 변경
-        await this.userProjectRepository.updateUserRole(
-            projectId,
-            newLeaderId,
-            projectPermission.LEAD,
-            qr.manager
-        );
+        try {
+            // 1) 현재 팀장 권한을 MEMBER로 변경
+            await this.userProjectRepository.updatePermission(
+                projectId,
+                current.oldLeaderId,
+                projectPermission.MEMBER,
+                qr.manager
+            );
+            // 지목된 사람 권한을 LEAD로 변경
+            await this.userProjectRepository.updatePermission(
+                projectId,
+                newLeaderId,
+                projectPermission.LEAD,
+                qr.manager
+            );
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
 
         // 5) 응답 반환 (permission은 LEAD로 고정)
         return ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD);
