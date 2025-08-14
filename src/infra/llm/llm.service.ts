@@ -1,7 +1,25 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Question } from '../../common/types/question.type';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
-import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
+import {
+    FailJSONParseException,
+    LLMGenerateQuestionFailedException,
+    LLMIncludesEmptyException,
+    LLMSyntaxErrorException,
+    LLMUnknownGenerateErrorException,
+    LLMZodErrorException,
+    MasterPortfolioAIResultNotValidException,
+    PortfolioCorrectionNotFoundException,
+    PromptLoadingException,
+    APIBadRequestException,
+    APIUnauthorizedException,
+    APIPaymentRequiredException,
+    APIForbiddenException,
+    APITimeoutException,
+    APITooManyRequestsException,
+    APIBadGatewayException,
+    APIServiceUnavailableException,
+} from 'src/common/exceptions/custom.errors';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
@@ -19,52 +37,38 @@ import { PromptManager } from 'src/common/utils/prompt.util';
 function processLLMError(error: any) {
     // JSON 파싱 실패
     if (error.constructor.name === 'OutputParserException') {
-        throw new InternalServerErrorException(`JSON 파싱에 실패했습니다. ${error.message}`);
+        throw new FailJSONParseException(error.message);
     }
 
     // SyntaxError
     if (error.constructor.name === 'SyntaxError') {
-        throw new InternalServerErrorException(`LLM 응답이 이상한 형태입니다. ${error.message}`);
+        throw new LLMSyntaxErrorException(`${error.message}`);
     }
 
     // Zod 스키마 검증 에러
     if (error.name === 'ZodError') {
-        throw new InternalServerErrorException(
-            `생성된 결과의 형식이 올바르지 않습니다. ${error.message}`
-        );
+        throw new LLMZodErrorException(`${error.message}`);
     }
 
     // OpenRouter API 에러 코드별 처리
     if (error.status) {
         switch (error.status) {
             case 400:
-                throw new InternalServerErrorException('잘못된 요청입니다.');
+                throw new APIBadRequestException();
             case 401:
-                throw new InternalServerErrorException(
-                    'API 인증에 실패했습니다. API 키를 확인하세요.'
-                );
+                throw new APIUnauthorizedException();
             case 402:
-                throw new InternalServerErrorException(
-                    'API 크레딧이 부족합니다. 충전 후 다시 시도하세요.'
-                );
+                throw new APIPaymentRequiredException();
             case 403:
-                throw new InternalServerErrorException('입력이 정책에 의해 차단되었습니다.');
+                throw new APIForbiddenException();
             case 408:
-                throw new InternalServerErrorException(
-                    '요청 시간이 초과되었습니다. 잠시 후 다시 시도하세요.'
-                );
+                throw new APITimeoutException();
             case 429:
-                throw new InternalServerErrorException(
-                    '요청이 너무 많아 제한되었습니다. 잠시 후 다시 시도하세요.'
-                );
+                throw new APITooManyRequestsException();
             case 502:
-                throw new InternalServerErrorException(
-                    '모델 서버에 문제가 있습니다. 잠시 후 다시 시도하세요.'
-                );
+                throw new APIBadGatewayException();
             case 503:
-                throw new InternalServerErrorException(
-                    '사용 가능한 모델이 없습니다. 잠시 후 다시 시도하세요.'
-                );
+                throw new APIServiceUnavailableException();
         }
     }
 }
@@ -120,7 +124,7 @@ export class LLMService {
         });
 
         try {
-            // 실패 테스트용(옵션): 타입 과심화 방지를 위해 any 캐스팅 사용
+            // 실패 테스트용: 타입 과심화 방지를 위해 any 캐스팅 사용
             // const zodSchema = z.object({
             //     name: z.string().describe('배우의 이름'),
             //     films: z.array(z.string()).describe('출연 영화 목록'),
@@ -135,12 +139,10 @@ export class LLMService {
 
             // 구조화된 출력 실패
             if (!questions || !questions.questions || !Array.isArray(questions.questions)) {
-                throw new InternalServerErrorException(
-                    'LLM에서 유효한 질문 구조를 생성하지 못했습니다.'
-                );
+                throw new LLMGenerateQuestionFailedException('유효한 질문 구조가 아님.');
             }
             if (questions.questions.length === 0) {
-                throw new InternalServerErrorException('LLM에서 질문을 생성하지 못했습니다.');
+                throw new LLMGenerateQuestionFailedException('아무 질문도 생성되지 않음.');
             }
 
             return questions.questions.map((q) => ({
@@ -152,8 +154,8 @@ export class LLMService {
             processLLMError(error);
 
             // 이외의 모든 에러
-            throw new InternalServerErrorException(
-                `질문 생성 중 알 수 없는 오류가 발생했습니다. [${error?.constructor?.name}] ${error}`
+            throw new LLMUnknownGenerateErrorException(
+                `(질문) [${error?.constructor?.name}] ${error}`
             );
         }
     }
@@ -188,18 +190,14 @@ export class LLMService {
                     !masterPortfolioResult.keyAchievement ||
                     !masterPortfolioResult.insight
                 ) {
-                    throw new InternalServerErrorException(
-                        'LLM에서 빈 결과를 포함하여 생성했습니다.'
-                    );
+                    throw new LLMIncludesEmptyException();
                 }
 
                 // 생성된 JSON 값 구조 검사
                 const checkResult = checkMasterPortfolioContentStructure(masterPortfolioResult);
                 const isValid = Object.values(checkResult).every((value) => value === true);
                 if (!isValid) {
-                    throw new InternalServerErrorException(
-                        '생성된 마스터 포트폴리오의 구조가 유효하지 않습니다.'
-                    );
+                    throw new MasterPortfolioAIResultNotValidException();
                 }
 
                 return masterPortfolioResult;
@@ -208,8 +206,8 @@ export class LLMService {
                 processLLMError(error);
 
                 // 이외의 모든 에러
-                throw new InternalServerErrorException(
-                    `마스터 포트폴리오 생성 중 알 수 없는 오류가 발생했습니다. [${error?.constructor?.name}] ${error}`
+                throw new LLMUnknownGenerateErrorException(
+                    `(마스터 포트폴리오) [${error?.constructor?.name}] ${error}`
                 );
             }
         };
@@ -222,9 +220,7 @@ export class LLMService {
             where: { id: correctionId },
         });
         if (!portfolioCorrectionData) {
-            throw new InternalServerErrorException(
-                `포트폴리오 첨삭이 존재하지 않습니다. ID: ${correctionId}`
-            );
+            throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
         const correctionPrompt = await PromptManager.getPrompt(this.promptLoader, "portfolio-correction.prompt.md")

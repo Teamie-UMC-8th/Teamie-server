@@ -3,7 +3,11 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { RAGDataType } from 'src/common/enums/rag-data-type.enum';
-import { PromptLoadingException } from 'src/common/exceptions/custom.errors';
+import {
+    PortfolioCorrectionNotFoundException,
+    PromptLoadingException,
+    RAGAlreadyExistsException,
+} from 'src/common/exceptions/custom.errors';
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.entity';
 import { QueryRunner } from 'typeorm';
@@ -59,7 +63,7 @@ export class RagService {
         });
         // 이미 진행된 상태인 경우, RAG 프로세스 중단
         if (status && (status.status === 'DONE' || status.status === 'COMPANY_INSIGHT')) {
-            throw new InternalServerErrorException('이미 RAG가 진행되었습니다.');
+            throw new RAGAlreadyExistsException();
         }
 
         // step1. 검색어 추출
@@ -84,7 +88,7 @@ export class RagService {
             where: { id: correctionId },
         });
         if (!inputData) {
-            throw new NotFoundException('포트폴리오 첨삭 데이터를 찾을 수 없습니다.');
+            throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
         // TODO: 키워드 개수 제한이 프롬프트에서 적용되지 않고 있음.

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Questions } from '../entities/questions.entity';
 import { In, QueryRunner, Repository } from 'typeorm';
@@ -12,10 +12,16 @@ import {
 } from '../dtos/master-portfolio-response.dto';
 import {
     AIGenerationAlreadyExists,
+    InvalidQuestionTypeException,
+    MasterPortfolioAIGenerateFailException,
     MasterPortfolioAINotFoundException,
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
+    MasterPortfolioSaveFailException,
     ProjectNotFoundException,
+    QuestionGenerationException,
+    QuestionNotFoundException,
+    QuestionUpdateException,
 } from 'src/common/exceptions/custom.errors';
 import { QuestionResponseDto, UpdateQuestionDto } from '../dtos/question.dto';
 import { QuestionType } from 'src/common/enums/question-type.enum';
@@ -130,8 +136,6 @@ export class MasterPortfoliosService {
         private readonly masterPortfolioRepository: Repository<MasterPortfolio>,
         @InjectRepository(MasterPortfolioAI)
         private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
-        @InjectRepository(Project)
-        private readonly projectRepository: Repository<Project>,
         @InjectRepository(Plan)
         private readonly planRepository: Repository<Plan>,
         private readonly llmService: LLMService
@@ -195,7 +199,7 @@ export class MasterPortfoliosService {
                 // questionType 유효성 검증
                 if (!Object.values(QuestionType).includes(q.questionType)) {
                     // 추후 추가적인 처리 필요
-                    throw new Error(`Invalid question type: ${q.questionType}`);
+                    throw new InvalidQuestionTypeException(q.questionType);
                 }
 
                 const questionEntity = qr.manager.create(Questions, {
@@ -207,8 +211,7 @@ export class MasterPortfoliosService {
                 const savedQuestion = await qr.manager.save(Questions, questionEntity);
                 questionEntities.push(QuestionResponseDto.from(savedQuestion));
             } catch (e) {
-                console.error(`질문 생성 중 오류 발생: ${e.message}`);
-                throw new InternalServerErrorException(`질문 생성 중 오류 발생: ${e.message}`);
+                throw new QuestionGenerationException(e.message);
             }
         }
 
@@ -229,7 +232,9 @@ export class MasterPortfoliosService {
             order: { questionId: 'ASC' },
         });
         if (questions.length === 0) {
-            throw new BadRequestException('생성된 질문이 없습니다. 먼저 질문을 생성해주세요.');
+            throw new QuestionNotFoundException(
+                '생성된 질문이 없습니다. 먼저 질문을 생성해주세요.'
+            );
         }
 
         return questions;
@@ -245,8 +250,8 @@ export class MasterPortfoliosService {
             });
             if (!questionExists) {
                 // questionId+portfolioId가 존재하지 않을 때
-                throw new BadRequestException(
-                    `Question ID ${questionId} does not exist for portfolio ${portfolioId}`
+                throw new QuestionNotFoundException(
+                    `질문 ID ${questionId}는 포트폴리오 ${portfolioId}에 존재하지 않습니다.`
                 );
             }
 
@@ -262,15 +267,15 @@ export class MasterPortfoliosService {
                         }
                     );
                 } else {
-                    throw new BadRequestException(
-                        `Answer is required for question type ${QuestionType.YES_NO} with ID ${questionId}`
+                    throw new QuestionUpdateException(
+                        `질문 타입이 ${QuestionType.YES_NO}인 질문 ID ${questionId}는 answer 값이 필요합니다.`
                     );
                 }
             } else if (questionType === QuestionType.TEXT) {
                 // answer가 있으면 안됨
                 if (q.answer) {
-                    throw new BadRequestException(
-                        `Answer is not allowed for question type ${QuestionType.TEXT} with ID ${questionId}`
+                    throw new QuestionUpdateException(
+                        `질문 타입이 ${QuestionType.TEXT}인 질문 ID ${questionId}는 answer 값이 존재할 수 없습니다.`
                     );
                 }
                 await qr.manager.update(
@@ -304,7 +309,7 @@ export class MasterPortfoliosService {
             where: { masterPortfolio: { id: portfolioId } },
         });
         if (!checkQuestions) {
-            throw new BadRequestException(
+            throw new QuestionNotFoundException(
                 '마스터 포트폴리오 AI 생성을 하기 위해서는 질문이 먼저 생성되어야 합니다.'
             );
         }
@@ -347,12 +352,10 @@ export class MasterPortfoliosService {
                     { status: MasterPortfolioStatus.NEED_ANSWERS }
                 );
 
-                throw new InternalServerErrorException(
-                    '마스터 포트폴리오 AI 생성에 실패했습니다. 다시 시도해주세요.'
+                throw new MasterPortfolioAIGenerateFailException(
+                    '생성 결과가 없습니다. 다시 시도해주세요.'
                 );
             }
-
-            console.log('생성된 마스터 포트폴리오:', generatedPortfolio);
 
             // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
             const createdPortfolio = qr.manager.create(MasterPortfolioAI, {
@@ -380,10 +383,7 @@ export class MasterPortfoliosService {
             try {
                 await qr.manager.save(MasterPortfolioAI, createdPortfolio);
             } catch (e) {
-                console.error(`마스터 포트폴리오 AI 생성 중 오류 발생: ${e.message}`);
-                throw new InternalServerErrorException(
-                    `Failed to save master portfolio AI: ${e.message}`
-                );
+                throw new MasterPortfolioSaveFailException(e.message);
             }
         } catch (error) {
             // 실패 시, 상태를 이전으로 돌립니다.
