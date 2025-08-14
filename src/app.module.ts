@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HealthCheckModule } from './modules/health-check/health-check.module';
+import { HealthCheckModule } from './infra/health-check/health-check.module';
 import { typeORMConfig } from './config/typeorm.config';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { ProjectsModule } from './modules/projects/projects.module';

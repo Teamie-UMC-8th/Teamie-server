@@ -23,5 +23,6 @@ import { MasterPortfolioAI } from '../master-portfolios/entities/master-portfoli
     ],
     controllers: [PortfolioCorrectionsController],
     providers: [PortfolioCorrectionsService, PromptLoader],
+    exports: [PortfolioCorrectionsService],
 })
 export class PortfolioCorrectionsModule {}
