@@ -427,9 +427,10 @@ export class PortfolioCorrectionsService {
             }
         );
 
-        return await qr.manager.findOne(PortfolioCorrection, {
-            where: { id: correctionId },
-        });
+        return {
+            id: correctionId,
+            title: updatePortfolioCorrectionDto.title,
+        };
     }
 
     // 포트폴리오 첨삭 조회

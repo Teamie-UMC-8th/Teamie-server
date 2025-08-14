@@ -67,7 +67,7 @@ export class PortfolioCorrectionsController {
             '사용자의 AI 첨삭 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 AI 첨삭 생성일자입니다.',
     })
     @ApiCommonResponseWithPagination(UserPortfolioCorrectionResponseDto)
-    @Get('/me')
+    @Get('me')
     async getUsersPortfolioCorrections(
         @User('id') userId: number,
         @Query(new ValidationPipe({ transform: true })) req: DateCursor
@@ -87,7 +87,7 @@ export class PortfolioCorrectionsController {
         description: '사용자가 선택할 수 있는 프로젝트 리스트를 조회하는 API입니다.',
     })
     @ApiCommonResponseArray(ProjectResponseDto)
-    @Get('/projects')
+    @Get('projects')
     async getSelectableProjects(@User('id') userId: number) {
         return await this.portfolioCorrectionsService.getSelectableProjects(userId);
     }
