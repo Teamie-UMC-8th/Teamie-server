@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PortfolioCorrection } from '../entities/portfolio-correction.entity';
 
 export class UserPortfolioCorrectionResponseDto {
     @ApiProperty({
@@ -25,12 +26,19 @@ export class UserPortfolioCorrectionResponseDto {
     })
     jobTitle: string;
 
-    static fromEntity(entity: { id: number; title: string; createdAt: Date; jobTitle: string }) {
+    @ApiProperty({
+        example: 'A기업',
+        description: '기업명',
+    })
+    submissionTarget: string;
+
+    static fromEntity(entity: PortfolioCorrection) {
         const dto = new UserPortfolioCorrectionResponseDto();
         dto.correctionId = entity.id;
         dto.title = entity.title;
         dto.createdAt = entity.createdAt.toISOString();
         dto.jobTitle = entity.jobTitle;
+        dto.submissionTarget = entity.submissionTarget;
         return dto;
     }
 }

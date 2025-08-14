@@ -49,7 +49,7 @@ export class PortfolioCorrectionsService {
         @InjectRepository(RAGData)
         private readonly ragDataRepository: Repository<RAGData>
     ) {}
-    async getFinalPortfoliosByUser(userId: number, cursorDate: Date, pageSize: number) {
+    async getPortfolioCorrectionsByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
             .createQueryBuilder('fp')
             .where('fp.userId = :userId', { userId })

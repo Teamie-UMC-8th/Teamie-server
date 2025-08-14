@@ -63,14 +63,14 @@ export class PortfolioCorrectionsController {
     })
     @ApiCommonResponseWithPagination(UserPortfolioCorrectionResponseDto)
     @Get('/me')
-    async getUsersFinalPortfolios(
+    async getUsersPortfolioCorrections(
         @User('id') userId: number,
         @Query(new ValidationPipe({ transform: true })) req: DateCursor
     ): Promise<PaginatedResponseDto<UserPortfolioCorrectionResponseDto>> {
         //파라미터의 기본값 처리
         const cursorDate = req.cursor ? new Date(req.cursor) : new Date(); //NOTE: 커서의 디폴트 값은 now
         const pageSize = Number(this.configService.get('PAGE_SIZE')) || 20;
-        return await this.portfolioCorrectionsService.getFinalPortfoliosByUser(
+        return await this.portfolioCorrectionsService.getPortfolioCorrectionsByUser(
             userId,
             cursorDate,
             pageSize
