@@ -117,7 +117,10 @@ export class LLMService {
 
     async generateQuestions(inputData: string): Promise<Array<Question>> {
         // 질문 생성 프롬프트를 로드합니다.
-        const questionPrompt = await PromptManager.getPrompt(this.promptLoader, "question.prompt.md")
+        const questionPrompt = await PromptManager.getPrompt(
+            this.promptLoader,
+            'question.prompt.md'
+        );
 
         const structuredLLM = this.questionLLM.withStructuredOutput<Questions>(questionSchema, {
             name: 'questions',
@@ -163,7 +166,10 @@ export class LLMService {
     // 마스터 포트폴리오 AI 생성
     async generateMasterPortfolio(questionData: any, projectData: ProjectData) {
         // 마스터 포트폴리오 프롬프트를 로드합니다.
-        const masterPortfolioPrompt = await PromptManager.getPrompt(this.promptLoader, "master-portfolio.prompt.md")
+        const masterPortfolioPrompt = await PromptManager.getPrompt(
+            this.promptLoader,
+            'master-portfolio.prompt.md'
+        );
 
         const structuredLLM = this.masterPortfolioLLM.withStructuredOutput<MasterPortfolio>(
             masterPortfolioSchema,
@@ -223,7 +229,10 @@ export class LLMService {
             throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
-        const correctionPrompt = await PromptManager.getPrompt(this.promptLoader, "portfolio-correction.prompt.md")
+        const correctionPrompt = await PromptManager.getPrompt(
+            this.promptLoader,
+            'portfolio-correction.prompt.md'
+        );
 
         const structuredLLM = this.correctionLLM.withStructuredOutput<Correction>(
             correctionSchema,

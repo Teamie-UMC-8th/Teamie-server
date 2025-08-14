@@ -78,7 +78,10 @@ export class RagService {
 
     // 키워드 추출
     private async extractSearchQuery(qr: QueryRunner, correctionId: number) {
-        const queryExtractionPrompt = await PromptManager.getPrompt(this.promptLoader, "keyword-extract.prompt.md");
+        const queryExtractionPrompt = await PromptManager.getPrompt(
+            this.promptLoader,
+            'keyword-extract.prompt.md'
+        );
 
         const queryExtractor = this.queryLLM.withStructuredOutput<SearchQuery>(searchQuerySchema, {
             name: 'searchQuery',
@@ -149,7 +152,10 @@ export class RagService {
     // 기업 분석 정보 생성
     private async generateCompanyInsights(searchResults: string[]) {
         // RAG 답변 생성을 위한 로직 구현
-        const companyProfilePrompt = await PromptManager.getPrompt(this.promptLoader, "company-profile.prompt.md");
+        const companyProfilePrompt = await PromptManager.getPrompt(
+            this.promptLoader,
+            'company-profile.prompt.md'
+        );
 
         const companyProfile = await companyProfilePrompt
             .pipe(this.ragLLM)

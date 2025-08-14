@@ -60,3 +60,16 @@ export class UpdatedTaskDTO {
         return dto;
     }
 }
+
+/**업데이트 - 상태 */
+export class UpdatedTaskStatusDTO {
+    id: number;
+    status: Status;
+
+    static from(task: Task): UpdatedTaskStatusDTO {
+        const dto = new UpdatedTaskStatusDTO();
+        dto.id = task.id;
+        dto.status = task.status;
+        return dto;
+    }
+}

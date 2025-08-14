@@ -46,8 +46,13 @@ import { TaskFileLimitExceededException } from 'src/common/exceptions/custom.err
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
-import { CreatedTaskDTO, UpdatedTaskDTO, DeletedTaskDTO } from '../dtos/task-payload.dto';
-
+import {
+    CreatedTaskDTO,
+    UpdatedTaskDTO,
+    DeletedTaskDTO,
+    UpdatedTaskStatusDTO,
+} from '../dtos/task-payload.dto';
+import { CreatedCommentDTO } from '../../comments/dto/comment-payload.dto';
 @Injectable()
 export class TasksService {
     constructor(
@@ -370,6 +375,20 @@ export class TasksService {
             content: createCommentRequestDto.content,
         });
         const saved = await this.commentRepository.saveCommentWithQueryRunner(queryRunner, comment);
+
+        const withUser = await this.commentRepository.findByIdWithUserAndTaskForEventUsingQR(
+            queryRunner,
+            saved.id
+        );
+
+        // 3) publish
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COMMENT}.${RealTimeType.CREATED}`,
+            EventPayloadDto.from(RealTimeType.CREATED, {
+                taskId,
+                comment: CreatedCommentDTO.from(withUser),
+            })
+        );
         // 4. 응답 반환
         return CreateCommentResponseDto.from(saved);
     }
@@ -742,7 +761,16 @@ export class TasksService {
             task
         );
 
-        // 5. DTO 변환 후 반환
+        // 5. publish
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+            EventPayloadDto.from(RealTimeType.UPDATED, {
+                projectId,
+                task: UpdatedTaskStatusDTO.from(updatedTask),
+            })
+        );
+
+        // 6. DTO 변환 후 반환
         return UpdateTaskStatusResponseDto.from(updatedTask);
     }
 

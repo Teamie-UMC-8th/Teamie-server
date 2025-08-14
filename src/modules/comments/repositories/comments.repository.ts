@@ -101,4 +101,27 @@ export class CommentRepository {
     async saveCommentWithQueryRunner(queryRunner: QueryRunner, comment: Comment): Promise<Comment> {
         return queryRunner.manager.save(Comment, comment);
     }
+
+    async findByIdWithUserAndTaskForEventUsingQR(
+        queryRunner: QueryRunner,
+        commentId: number
+    ): Promise<Comment> {
+        const comment = await queryRunner.manager
+            .createQueryBuilder(Comment, 'comment')
+            .leftJoinAndSelect('comment.user', 'user')
+            .leftJoin('comment.task', 'task')
+            .select([
+                'comment.id',
+                'comment.content',
+                'user.id',
+                'user.name',
+                'user.imageUrl',
+                'task.id', // <-- 방 라우팅에 필요
+            ])
+            .where('comment.id = :commentId', { commentId })
+            .getOne();
+
+        if (!comment) throw new CommentNotFoundException();
+        return comment;
+    }
 }
