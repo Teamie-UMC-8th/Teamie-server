@@ -8,6 +8,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { SetRedirectUrlGuard } from './guards/set-redirect-url.guard';
 import { InternalServerError } from 'src/common/exceptions/custom.errors';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -46,13 +47,14 @@ export class AuthController {
     })
     @Pulbic()
     @UseGuards(AuthGuard('kakao'))
+    @Transactional()
     @Get('/kakao/callback')
     async kakaoCallback(
-        //TODO: 트랜잭션 적용 필요
-        @Req() req: any,
+        @Req() req: TransactionalRequest,
         @KakaoUser() user: KakaoUserAfterAuth,
         @Res() res: Response
     ): Promise<void> {
+        const qr = req.queryRunner;
         // 클라이언트 요청 host 파싱
         const baseRedirect =
             req.session.redirectUrl ||
@@ -69,7 +71,7 @@ export class AuthController {
 
         // 사용자 인증 by JWT
         const kakaoUser = user;
-        const accessToken = await this.authService.handleKakaoLogin(kakaoUser);
+        const accessToken = await this.authService.handleKakaoLogin(qr, kakaoUser);
         req.session.destroy((err: Error) => {
             if (err) {
                 throw new InternalServerError('세션 파괴 중 에러 발생');
