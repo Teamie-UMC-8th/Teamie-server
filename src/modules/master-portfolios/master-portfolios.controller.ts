@@ -8,26 +8,18 @@ import {
     ParseIntPipe,
     Patch,
     Post,
-    Query,
     Req,
-    ValidationPipe,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
-import { UserMasterPortfoliosResponseDto } from './dtos/user-master-portfolios-response.dto';
 import { MasterPortfoliosService } from './services/master-portfolios.service';
 import { User } from 'src/common/decorators/user.decorator';
 import { MasterPortfolioRequestDto } from './dtos/master-portfolio-request.dto';
 import {
-    ApiCommonErrorResponse,
     ApiCommonResponse,
     ApiCommonResponseArray,
-    ApiCommonResponseWithPagination,
 } from 'src/common/response/swagger-response.helper';
 import { QuestionResponseDto, UpdateQuestionDto } from './dtos/question.dto';
 import { MasterPortfolioResponseDto } from './dtos/master-portfolio-response.dto';
-import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { MasterPortfolioAIResponseDto } from './dtos/master-portfolio-ai-response.dto';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { CreateQuestions } from './dtos/create-questions.dto';
@@ -37,31 +29,7 @@ import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-
 @ApiTags('MasterPortfolios')
 @Controller('master-portfolios')
 export class MasterPortfoliosController {
-    constructor(
-        private readonly configService: ConfigService,
-        private readonly masterPortfoliosService: MasterPortfoliosService
-    ) {}
-
-    @ApiOperation({
-        summary: '마이페이지/사용자 별 마스터포트폴리오 조회',
-        description:
-            '사용자의 마스터포트폴리오 리스트를 조회하는 API입니다. 페이징을 포함하며, 커서는 프로젝트 생성일자입니다.',
-    })
-    @ApiCommonResponseWithPagination(UserMasterPortfoliosResponseDto)
-    @Get('/me')
-    async getUsersMasterPortfolios(
-        @User('id') userId: number,
-        @Query(new ValidationPipe({ transform: true })) req: DateCursor
-    ): Promise<PaginatedResponseDto<UserMasterPortfoliosResponseDto>> {
-        //파라미터의 기본값 처리
-        const cursorDate = req.cursor ? new Date(req.cursor) : new Date(); //NOTE: 커서의 디폴트 값은 now
-        const pageSize = Number(this.configService.get('PAGE_SIZE')) || 20;
-        return await this.masterPortfoliosService.getMasterPortfoliosByUser(
-            userId,
-            cursorDate,
-            pageSize
-        );
-    }
+    constructor(private readonly masterPortfoliosService: MasterPortfoliosService) {}
 
     @ApiOperation({
         summary: '마스터 포트폴리오 진행 상태 조회',

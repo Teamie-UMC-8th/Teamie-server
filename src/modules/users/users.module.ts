@@ -8,6 +8,7 @@ import { MasterPortfoliosModule } from '../master-portfolios/master-portfolios.m
 import { UserRepository } from './repositories/user.repository';
 import { UserProjectModule } from '../projects/user-projects/user-project.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { PortfolioCorrectionsModule } from '../portfolio-corrections/portfolio-corrections.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { TasksModule } from '../tasks/tasks.module';
         MasterPortfoliosModule,
         UserProjectModule,
         forwardRef(() => TasksModule),
+        PortfolioCorrectionsModule,
     ],
     controllers: [UsersController],
     providers: [UsersService, UserRepository],
