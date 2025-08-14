@@ -257,6 +257,14 @@ export class PortfolioCorrectionsService {
     }
 
     async getRAGData(correctionId: number) {
+        // correctionId 존재 유무 확인
+        const correction = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!correction) {
+            throw new PortfolioCorrectionNotFoundException(correctionId);
+        }
+
         const ragData = await this.ragDataRepository.find({
             where: { portfolioCorrection: { id: correctionId } },
         });
@@ -277,6 +285,14 @@ export class PortfolioCorrectionsService {
     }
 
     async getCompanyInsight(correctionId: number) {
+        // correctionId 존재 유무 확인
+        const correction = await this.correctionRepository.findOne({
+            where: { id: correctionId },
+        });
+        if (!correction) {
+            throw new PortfolioCorrectionNotFoundException(correctionId);
+        }
+
         return await this.correctionRepository.findOne({
             where: { id: correctionId },
             select: ['companyInsight'],

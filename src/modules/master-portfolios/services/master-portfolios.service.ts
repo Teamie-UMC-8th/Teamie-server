@@ -18,6 +18,7 @@ import {
     MasterPortfolioDuplicateException,
     MasterPortfolioNotFoundException,
     MasterPortfolioSaveFailException,
+    PlanNotFoundException,
     ProjectNotFoundException,
     QuestionGenerationException,
     QuestionNotFoundException,
@@ -346,26 +347,10 @@ export class MasterPortfoliosService {
             const generatedPortfolio: MasterPortfolioOutput =
                 await this.llmService.generateMasterPortfolio(questionData, projectData);
             if (!generatedPortfolio) {
-                // 실패 시, 상태를 이전으로 돌립니다.
-                await this.masterPortfolioRepository.update(
-                    { id: portfolioId },
-                    { status: MasterPortfolioStatus.NEED_ANSWERS }
-                );
-
                 throw new MasterPortfolioAIGenerateFailException(
                     '생성 결과가 없습니다. 다시 시도해주세요.'
                 );
             }
-
-            // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
-            const createdPortfolio = qr.manager.create(MasterPortfolioAI, {
-                user: { id: userId },
-                project: { id: projectId },
-                detailInfo: generatedPortfolio.detailInfo,
-                assignedTask: generatedPortfolio.assignedTask,
-                keyAchievement: generatedPortfolio.keyAchievement,
-                insight: generatedPortfolio.insight,
-            });
 
             // TODO: 직접작성 기능을 도입하는 시점에는 해당 코드 삭제
             // 생성된 결과를 마스터 포트폴리오 엔티티에도 저장합니다.
@@ -381,6 +366,15 @@ export class MasterPortfoliosService {
             );
 
             try {
+                // 생성된 마스터 포트폴리오를 데이터베이스에 저장합니다.
+                const createdPortfolio = qr.manager.create(MasterPortfolioAI, {
+                    user: { id: userId },
+                    project: { id: projectId },
+                    detailInfo: generatedPortfolio.detailInfo,
+                    assignedTask: generatedPortfolio.assignedTask,
+                    keyAchievement: generatedPortfolio.keyAchievement,
+                    insight: generatedPortfolio.insight,
+                });
                 await qr.manager.save(MasterPortfolioAI, createdPortfolio);
             } catch (e) {
                 throw new MasterPortfolioSaveFailException(e.message);
