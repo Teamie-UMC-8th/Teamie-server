@@ -64,7 +64,7 @@ export class StepsService {
 
         // 2) 이동할 step 존재 여부 확인
         const newStep = await this.stepRepository.findByIdUsingQR(qr.manager, newStepId);
-        if (newStep.project.id != step.project.id) {
+        if (newStep.project.id !== step.project.id) {
             throw new StepNotFoundException(
                 '이동할 스텝이 현재 스텝과 같은 프로젝트에 속하지 않습니다.'
             );
