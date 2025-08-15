@@ -41,6 +41,7 @@ import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
 import { PermissionResponseDto } from './dtos/get-permission.dto';
+import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
 import { getProjectIsCompleted } from './dtos/get-project-isCompleted.dto';
 @ApiTags('Projects')
 @Controller('/projects')
@@ -52,7 +53,9 @@ export class ProjectsController {
 
     @ApiOperation({ summary: '프로젝트 생성', description: '새로운 프로젝트를 생성합니다.' })
     @ApiCommonResponse(CreateProjectResponseDto)
-    @ApiCommonErrorResponse(ErrorCode.UNAUTHORIZED, '인증되지 않은 사용자입니다.') //추후에 실제 구현 필요
+    @ApiCommonErrorResponses(HttpStatus.UNAUTHORIZED, [
+        { errorCode: ErrorCode.UNAUTHORIZED, reason: '인증되지 않은 사용자입니다.' },
+    ])
     @Transactional()
     @Post()
     async createProject(
@@ -68,26 +71,14 @@ export class ProjectsController {
         description: 'inviteCode가 유효한지 확인합니다.',
     })
     @ApiCommonResponse(ValidateInviteResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.INVALID_INVITE_CODE,
-        '유효하지 않은 초대코드입니다.',
-        HttpStatus.BAD_REQUEST
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_ALREADY_COMPLETED,
-        '이미 완료된 프로젝트입니다',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.EXPIRED_INVITE_CODE,
-        '유효기간이 지난 url입니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.ALREDY_JOIN,
-        '이미 프로젝트에 참여하였습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
+        { errorCode: ErrorCode.INVALID_INVITE_CODE, reason: '유효하지 않은 초대코드입니다.' },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_ALREADY_COMPLETED, reason: '이미 완료된 프로젝트입니다' },
+        { errorCode: ErrorCode.EXPIRED_INVITE_CODE, reason: '유효기간이 지난 url입니다.' },
+        { errorCode: ErrorCode.ALREDY_JOIN, reason: '이미 프로젝트에 참여하였습니다.' },
+    ])
     @Get('/join/validate')
     async validateInvite(@User('id') userId: number, @Query('inviteCode') inviteCode: string) {
         return await this.projectsService.joinValidate(userId, inviteCode);
@@ -111,16 +102,15 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(AllProjectResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        'FORBIDDEN_USER_FOR_UPDATE',
-        '해당 프로젝트에 접근 권한이 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+            reason: '해당 프로젝트에 접근 권한이 없습니다.',
+        },
+    ])
     @Get('/:projectId')
     async getProjectFullData(
         @User('id') userId: number,
@@ -132,16 +122,13 @@ export class ProjectsController {
     @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(AllProjectResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_USER_FOR_UPDATE,
-        '해당 항목을 수정할 권한이 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_UPDATE,
+            reason: '해당 항목을 수정할 권한이 없습니다.',
+        },
+    ])
     @Transactional()
     @Patch('/:projectId')
     async updateProject(
@@ -156,16 +143,13 @@ export class ProjectsController {
     @ApiOperation({ summary: '프로젝트 완료', description: '프로젝트를 완료합니다.' })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(CompleteProjectResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_USER_FOR_UPDATE,
-        '프로젝트는 팀장만 완료할 수 있습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_UPDATE,
+            reason: '프로젝트는 팀장만 완료할 수 있습니다.',
+        },
+    ])
     @Transactional()
     @Patch(':projectId/complete')
     async completeProject(
@@ -182,11 +166,9 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(CreateStepResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+    ])
     @Transactional()
     @Post(':projectId/steps')
     async createStep(
@@ -204,16 +186,10 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number })
     @ApiCommonResponse(CreatePostResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.POSTS_EXCEEDED,
-        '포스트잇은 16개까지 생성될 수 있습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+        { errorCode: ErrorCode.POSTS_EXCEEDED, reason: '포스트잇은 16개까지 생성될 수 있습니다.' },
+    ])
     @Post(':projectId/posts')
     async createPost(
         @Req() req: TransactionalRequest,
@@ -231,26 +207,15 @@ export class ProjectsController {
     @ApiParam({ name: 'projectId', type: Number })
     @ApiParam({ name: 'postId', type: Number })
     @ApiCommonResponse(DeletePostResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.POST_NOT_FOUND,
-        '포스트잇을 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.NOT_POST_AUTHOR,
-        '포스트잇 작성자만 삭제할 수 있습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
-        '해당 프로젝트에 접근 권한이 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+        { errorCode: ErrorCode.POST_NOT_FOUND, reason: '포스트잇을 찾을 수 없습니다.' },
+        { errorCode: ErrorCode.NOT_POST_AUTHOR, reason: '포스트잇 작성자만 삭제할 수 있습니다.' },
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+            reason: '해당 프로젝트에 접근 권한이 없습니다.',
+        },
+    ])
     @Delete(':projectId/posts/:postId')
     async deletePost(
         @User('id') userId: number,
@@ -266,26 +231,18 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(ChangeLeaderResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_SELF_ASSIGN,
-        '자기 자신을 팀장으로 지목할 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.ASSIGNEE_NOT_MEMBER,
-        '해당 사람은 프로젝트 멤버가 아닙니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.ALREDY_LEADER,
-        '이미 팀장인 사용자입니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+        {
+            errorCode: ErrorCode.FORBIDDEN_SELF_ASSIGN,
+            reason: '자기 자신을 팀장으로 지목할 수 없습니다.',
+        },
+        {
+            errorCode: ErrorCode.ASSIGNEE_NOT_MEMBER,
+            reason: '해당 사람은 프로젝트 멤버가 아닙니다.',
+        },
+        { errorCode: ErrorCode.ALREDY_LEADER, reason: '이미 팀장인 사용자입니다.' },
+    ])
     @Transactional()
     @Patch(':projectId/leader')
     async changeProjectLeader(
@@ -308,12 +265,10 @@ export class ProjectsController {
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
     @ApiCommonResponse(UpdateProfileResponseDto)
-    @ApiCommonErrorResponse(ErrorCode.NOT_YOUR_PROFILE, '자신의 프로필만 수정할 수 있습니다.')
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        { errorCode: ErrorCode.NOT_YOUR_PROFILE, reason: '자신의 프로필만 수정할 수 있습니다.' },
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+    ])
     @Transactional()
     @Patch('/:projectId/profile')
     async changeProfile(
@@ -331,16 +286,15 @@ export class ProjectsController {
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PLAN_DATE_TOO_LONG,
-        '최대 31일까지만 조회할 수 있습니다.',
-        HttpStatus.BAD_REQUEST
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
-        '해당 프로젝트에 접근 권한이 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
+        { errorCode: ErrorCode.PLAN_DATE_TOO_LONG, reason: '최대 31일까지만 조회할 수 있습니다.' },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+            reason: '해당 프로젝트에 접근 권한이 없습니다.',
+        },
+    ])
     @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
@@ -359,21 +313,19 @@ export class ProjectsController {
             '팀 캘린더에서 새로운 일정을 생성하는 API입니다. 프로젝트 생성 일자 이전에는 일정을 생성할 수 없습니다.',
     })
     @ApiCommonResponse(CreatePlanResponse)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.NOT_FOUND
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
-        '해당 프로젝트에 접근 권한이 없습니다.',
-        HttpStatus.FORBIDDEN
-    )
-    @ApiCommonErrorResponse(
-        ErrorCode.PLAN_DATE_CONFLICT,
-        '프로젝트 생성일자 이전에는 일정 생성이 불가능합니다.',
-        HttpStatus.FORBIDDEN
-    )
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, [
+        { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
+    ])
+    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
+        {
+            errorCode: ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+            reason: '해당 프로젝트에 접근 권한이 없습니다.',
+        },
+        {
+            errorCode: ErrorCode.PLAN_DATE_CONFLICT,
+            reason: '프로젝트 생성일자 이전에는 일정 생성이 불가능합니다.',
+        },
+    ])
     @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Post('/:projectId/plans')
@@ -417,11 +369,6 @@ export class ProjectsController {
         description: '사용자의 프로젝트 권한을 조회합니다.',
     })
     @ApiCommonResponse(PermissionResponseDto)
-    @ApiCommonErrorResponse(
-        ErrorCode.PROJECT_NOT_FOUND,
-        '프로젝트를 찾을 수 없습니다.',
-        HttpStatus.NOT_FOUND
-    )
     @ApiCommonErrorResponse(
         ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
         '해당 프로젝트에 접근 권한이 없습니다.',
