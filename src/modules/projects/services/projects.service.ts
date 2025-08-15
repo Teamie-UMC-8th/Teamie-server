@@ -51,6 +51,7 @@ import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
 import { ca } from 'zod/v4/locales';
+import { getProjectIsCompleted } from '../dtos/get-project-isCompleted.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -576,5 +577,16 @@ export class ProjectsService {
         const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
         if (!userProject) throw new ProjectForbiddenException();
         return PermissionResponseDto.from(userProject.permission);
+    }
+
+    //프로젝트 종료 여부 조회
+    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted>  {
+        // 프로젝트 멤버 권한 검사
+        await this.assertProjectMember(userId, projectId);
+
+        //프로젝트 종료 여부 검사
+        const isCompleted = await this.projectRepository.findIsCompletedByProjectId(projectId);
+        
+        return { isCompleted};
     }
 }
