@@ -12,8 +12,8 @@ export class UserRepository {
         private readonly userRepository: Repository<User>
     ) {}
 
-    async saveUser(user: Partial<User>): Promise<User> {
-        return this.userRepository.save(user);
+    async saveUser(qr: QueryRunner, user: User): Promise<User> {
+        return await qr.manager.save(user);
     }
 
     //조회
@@ -26,8 +26,8 @@ export class UserRepository {
         return user;
     }
 
-    async findByKakaoId(kakaoId: string): Promise<User | null> {
-        return await this.userRepository.findOne({
+    async findByKakaoId(qr: QueryRunner, kakaoId: string): Promise<User | null> {
+        return await qr.manager.findOne(User, {
             where: {
                 kakaoId: kakaoId,
             },

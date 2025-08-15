@@ -8,6 +8,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { SetRedirectUrlGuard } from './guards/set-redirect-url.guard';
 import { InternalServerError } from 'src/common/exceptions/custom.errors';
+import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -33,7 +34,10 @@ export class AuthController {
     @Pulbic()
     @UseGuards(SetRedirectUrlGuard, AuthGuard('kakao'))
     @Get('/kakao')
-    async kakaoLogin(@Query('redirect_url') redirect_url?: string) {}
+    async kakaoLogin(
+        @Query('redirect_url') redirect_url?: string,
+        @Query('redirect_path') redirect_path?: string
+    ) {}
 
     @ApiOperation({
         summary: '카카오 로그인 콜백',
@@ -46,13 +50,14 @@ export class AuthController {
     })
     @Pulbic()
     @UseGuards(AuthGuard('kakao'))
+    @Transactional()
     @Get('/kakao/callback')
     async kakaoCallback(
-        //TODO: 트랜잭션 적용 필요
-        @Req() req: any,
+        @Req() req: TransactionalRequest,
         @KakaoUser() user: KakaoUserAfterAuth,
         @Res() res: Response
     ): Promise<void> {
+        const qr = req.queryRunner;
         // 클라이언트 요청 host 파싱
         const baseRedirect =
             req.session.redirectUrl ||
@@ -61,7 +66,8 @@ export class AuthController {
         const safeOrigin = this.authService.validateRedirectOrigin(baseRedirect)
             ? baseRedirect
             : this.configService.get('CLIENT_REDIRECT_URI') || 'http://localhost:3000';
-        const redirectPath = this.configService.get('CLIENT_REDIRECT_PATH') || '/docs';
+        const redirectPath =
+            req.session.redirectPath || this.configService.get('CLIENT_REDIRECT_PATH') || '/docs';
         // 슬래시 중복 방지
         const fullRedirect = safeOrigin.endsWith('/')
             ? safeOrigin.slice(0, -1) + redirectPath
@@ -69,7 +75,7 @@ export class AuthController {
 
         // 사용자 인증 by JWT
         const kakaoUser = user;
-        const accessToken = await this.authService.handleKakaoLogin(kakaoUser);
+        const accessToken = await this.authService.handleKakaoLogin(qr, kakaoUser);
         req.session.destroy((err: Error) => {
             if (err) {
                 throw new InternalServerError('세션 파괴 중 에러 발생');

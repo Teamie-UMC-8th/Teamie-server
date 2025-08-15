@@ -1,4 +1,5 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
@@ -7,7 +8,10 @@ import { UnAuthorizedException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-    constructor(private reflector: Reflector) {
+    constructor(
+        private reflector: Reflector,
+        private readonly configService: ConfigService
+    ) {
         super();
     }
 
@@ -30,6 +34,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             context.getClass(),
         ]);
         if (isPublic) return true;
+        // 마스터 토큰 체크
+        const request = context.switchToHttp().getRequest();
+        const token = request.cookies?.['accessToken'];
+        if (token && token === this.configService.get('MASTER_JWT')) {
+            request.user = {
+                id: this.configService.get('MASTER_USER_ID'),
+            };
+            return true;
+        }
         return super.canActivate(context);
     }
 }
