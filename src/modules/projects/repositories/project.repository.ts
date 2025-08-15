@@ -93,4 +93,19 @@ export class ProjectRepository {
             throw new ProjectTransactionException();
         }
     }
+
+    //프로젝트 종료 여부
+    async findIsCompletedByProjectId(projectId: number): Promise<boolean> {
+        const result = await this.projectRepository
+            .createQueryBuilder('project')
+            .select('project.isCompleted', 'isCompleted')
+            .where('project.id = :projectId', { projectId })
+            .getRawOne<{ isCompleted: boolean }>();
+
+        if (!result) {
+            throw new ProjectNotFoundException();
+        }
+
+        return result.isCompleted;
+    }
 }
