@@ -50,7 +50,7 @@ import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-resp
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
-import { ca } from 'zod/v4/locales';
+import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { getProjectIsCompleted } from '../dtos/get-project-isCompleted.dto';
 @Injectable()
 export class ProjectsService {
@@ -274,7 +274,14 @@ export class ProjectsService {
         }
 
         // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
-        await this.masterPortfoliosService.createMasterPortfolio(qr.manager, userId, projectId);
+        const members = await this.userProjectRepository.findUsersByProjectId(projectId); // [UserProject]
+        for (const up of members) {
+            await this.masterPortfoliosService.createMasterPortfolio(
+                qr.manager,
+                up.user.id,
+                projectId
+            );
+        }
 
         // 5) 초대코드 정리 (InviteCodeStore 사용)
         const codes = await this.inviteStore.listCodesByProject(projectId);
