@@ -602,54 +602,65 @@ export class TasksService {
 
         await this.projectsService.assertProjectMember(userId, projectId);
 
-        //2) 필터용 baseQb
-        const baseQb = this.buildSearchBaseQb(projectId, dto);
-
-        // 3) 전체 개수
-        const totalCount = await baseQb.getCount();
+        //  전체 개수
+        const totalCount = await this.taskRepository.findCountByProjectIdWithFilters(
+            projectId,
+            dto
+        );
 
         // 4) 그룹별 5개씩 병렬 조회
         if (view === 'status') {
             const statuses = [Status.NOTSTART, Status.ONGOING, Status.COMPLETED];
-            const statusGroups = await Promise.all(
-                statuses.map(async (status) => {
-                    const tasks = await baseQb
-                        .clone() // 이미 모든 조인이 들어있음
-                        .andWhere('task.status = :status', { status })
-                        .orderBy('task.deadline', 'ASC')
-                        .addOrderBy('task.createdAt', 'ASC')
-                        .limit(limit)
-                        .getMany();
+            const statusGroups: { status: Status; tasks: TaskInStatusDto[] }[] = [];
 
-                    return {
+            for (const status of statuses) {
+                const tasks =
+                    await this.taskRepository.findTop5SearchByProjectIdAndStatusOrderByDeadlineAsc(
+                        projectId,
                         status,
-                        tasks: tasks.map(TaskInStatusDto.from),
-                    };
-                })
-            );
+                        limit,
+                        dto
+                    );
 
-            return { projectId, projectName: project.name, statusGroups, totalCount };
+                statusGroups.push({
+                    status,
+                    tasks: tasks.map((task) => TaskInStatusDto.from(task)),
+                });
+            }
+
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                statusGroups,
+                totalCount,
+            };
         } else {
             const steps = await this.stepRepository.findByProjectId(projectId);
 
-            const stepGroups = await Promise.all(
-                steps.map(async (step) => {
-                    const tasks = await baseQb
-                        .clone()
-                        .andWhere('task.stepId = :stepId', { stepId: step.id })
-                        .orderBy('task.deadline', 'ASC')
-                        .addOrderBy('task.createdAt', 'ASC')
-                        .limit(limit)
-                        .getMany();
+            const stepGroups: { stepId: number; stepName: string; tasks: TaskInStepDto[] }[] = [];
 
-                    return {
-                        stepId: step.id,
-                        stepName: step.name,
-                        tasks: tasks.map(TaskInStepDto.from),
-                    };
-                })
-            );
+            for (const step of steps) {
+                const tasks =
+                    await this.taskRepository.findTop5SearchByProjectIdAndStepOrderByDeadlineAsc(
+                        projectId,
+                        step.id,
+                        limit,
+                        dto
+                    );
 
+                stepGroups.push({
+                    stepId: step.id,
+                    stepName: step.name,
+                    tasks: tasks.map((task) => TaskInStepDto.from(task)),
+                });
+            }
+
+            return {
+                projectId: project.id,
+                projectName: project.name,
+                steps: stepGroups,
+                totalCount,
+            };
             return { projectId, projectName: project.name, steps: stepGroups, totalCount };
         }
     }
@@ -671,23 +682,16 @@ export class TasksService {
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 
-        const baseQb = this.buildSearchBaseQb(projectId, dto);
+        const tasks = await this.taskRepository.findSearchByProjectAndStepPaginated(
+            projectId,
+            stepId,
+            limit,
+            offset,
+            dto
+        );
+        const totalCount = tasks.totalCount;
 
-        const tasks = await baseQb
-            .clone()
-            .andWhere('task.stepId = :stepId', { stepId })
-            .orderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .skip(offset)
-            .take(limit)
-            .getMany();
-
-        const totalCount = await baseQb
-            .clone()
-            .andWhere('task.stepId = :stepId', { stepId })
-            .getCount();
-
-        return { tasks: tasks.map(TaskInStepDto.from), totalCount };
+        return { tasks: tasks.items.map((t) => TaskInStepDto.from(t)), totalCount };
     }
 
     async getSearchMoreTasksByStatus(
@@ -713,23 +717,16 @@ export class TasksService {
 
         if (offset < 0) throw new BadRequestException('offset은 0 이상이어야 합니다.');
 
-        const baseQb = this.buildSearchBaseQb(projectId, dto);
+        const tasks = await this.taskRepository.findSearchByProjectAndStatusPaginated(
+            projectId,
+            status,
+            limit,
+            offset,
+            dto
+        );
+        const totalCount = tasks.totalCount;
 
-        const tasks = await baseQb
-            .clone()
-            .andWhere('task.status = :status', { status })
-            .orderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .skip(offset)
-            .take(limit)
-            .getMany();
-
-        const totalCount = await baseQb
-            .clone()
-            .andWhere('task.status = :status', { status })
-            .getCount();
-
-        return { tasks: tasks.map(TaskInStatusDto.from), totalCount };
+        return { tasks: tasks.items.map((t) => TaskInStatusDto.from(t)), totalCount };
     }
 
     async updateTaskStatus(
@@ -772,35 +769,6 @@ export class TasksService {
 
         // 6. DTO 변환 후 반환
         return UpdateTaskStatusResponseDto.from(updatedTask);
-    }
-
-    //BaseQb  + dto 기반 필터 헬퍼 함수 (검색에서 필터링하는 함수)
-    private buildSearchBaseQb(projectId: number, dto: GetSearchTaskDto) {
-        const qb = this.taskRepository.getProjectTasksBaseQb(projectId);
-
-        if (dto.statuses?.length) {
-            qb.andWhere('task.status IN (:...statuses)', { statuses: dto.statuses });
-        }
-        if (dto.managerIds?.length) {
-            qb.andWhere('user.id IN (:...managerIds)', { managerIds: dto.managerIds });
-        }
-        if (dto.dateBefore || dto.dateAfter) {
-            qb.andWhere(
-                new Brackets((q) => {
-                    if (dto.dateBefore) {
-                        q.where('task.deadline <= :dateBefore', {
-                            dateBefore: `${dto.dateBefore} 23:59:59`,
-                        });
-                    }
-                    if (dto.dateAfter) {
-                        q.orWhere('task.deadline >= :dateAfter', {
-                            dateAfter: `${dto.dateAfter} 00:00:00`,
-                        });
-                    }
-                })
-            );
-        }
-        return qb;
     }
 }
 
