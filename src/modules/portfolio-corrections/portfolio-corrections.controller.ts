@@ -266,7 +266,7 @@ export class PortfolioCorrectionsController {
             reason: 'AI 첨삭 결과를 찾을 수 없습니다.',
         },
     ])
-    @Get(':correctionId')
+    @Get(':correctionId/results')
     async getCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
         return await this.portfolioCorrectionsService.getCorrection(correctionId);
     }
