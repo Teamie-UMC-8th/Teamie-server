@@ -36,7 +36,7 @@ $ npm run start:prod
     - 개발 CI/CD용 branch
 - feature
     - 기능 구현용 branch
-    - 반드시 `develop`에서 뻗어나와 `dev`로 `merge` 되어야한다.
+    - 반드시 `dev`에서 뻗어나와 `dev`로 `merge` 되어야한다.
 ```
 
 ### 커밋 컨벤션
