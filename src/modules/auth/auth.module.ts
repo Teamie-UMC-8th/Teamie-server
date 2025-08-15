@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RedisModule } from 'src/infra/redis/redis.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
             }),
             inject: [ConfigService],
         }),
+        RedisModule,
     ],
     controllers: [AuthController],
     providers: [AuthService, KakaoStrategy, JwtStrategy, JwtAuthGuard],
