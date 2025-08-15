@@ -13,13 +13,13 @@ export class CreatedTaskDTO {
     status: Status;
     deadline: string | null; // ISO8601 or null
     stepId: number;
+    memo: string | null;
 
     static from(task: Task, stepId: number): CreatedTaskDTO {
         const dto = new CreatedTaskDTO();
         dto.id = task.id;
         dto.name = task.name;
         dto.status = task.status;
-        dto.deadline = toIsoOrNull(task.deadline);
         dto.stepId = stepId;
         return dto;
     }
@@ -40,10 +40,10 @@ export class DeletedTaskDTO {
 export class UpdatedTaskDTO {
     name?: string;
     status?: Status;
+    memo?: string | null;
     deadline?: string | null; // ISO8601 or null
     stepId?: number;
     managers?: UserProfile[];
-
     static from(
         diff: Record<string, any>,
         entity: Task,
@@ -54,6 +54,7 @@ export class UpdatedTaskDTO {
         if ('status' in diff) dto.status = entity.status;
         if ('deadline' in diff) dto.deadline = toIsoOrNull(entity.deadline);
         if ('stepId' in diff) dto.stepId = entity.step.id;
+        if ('memo' in diff) dto.memo = entity.memo;
         if ('managers' in diff) {
             dto.managers = managerEntities.map((m) => UserProfile.from(m.user as User));
         }

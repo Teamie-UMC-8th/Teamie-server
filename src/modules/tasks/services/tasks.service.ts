@@ -121,6 +121,7 @@ export class TasksService {
             name: task.name,
             deadline: task.deadline as Date | null,
             status: task.status,
+            memo: task.memo,
             stepId: task.step.id,
             managerIds: new Set(beforeManagers.map((m) => m.user.id)),
         };
@@ -180,6 +181,10 @@ export class TasksService {
 
         if (dto.status !== undefined && dto.status !== before.status) {
             diff.status = updatedTask.status;
+        }
+
+        if (dto.memo !== undefined && dto.memo !== before.memo) {
+            diff.memo = updatedTask.memo;
         }
 
         if (dto.deadline !== undefined) {
