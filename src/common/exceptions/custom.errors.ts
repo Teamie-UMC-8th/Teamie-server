@@ -452,7 +452,7 @@ export class PostsExceededException extends CustomHttpException {
     constructor(data?: any) {
         super(
             ErrorCode.POSTS_EXCEEDED,
-            '포스트잇은 10개까지 생성될 수 있습니다.',
+            '포스트잇은 16개까지 생성될 수 있습니다.',
             HttpStatus.CONFLICT,
             data
         );
