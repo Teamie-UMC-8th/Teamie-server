@@ -20,8 +20,6 @@ export class CreatedTaskDTO {
         dto.id = task.id;
         dto.name = task.name;
         dto.status = task.status;
-        dto.memo = task.memo;
-        dto.deadline = toIsoOrNull(task.deadline);
         dto.stepId = stepId;
         return dto;
     }
