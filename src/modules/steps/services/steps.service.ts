@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Delete, Injectable } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { CommonResponse } from '../../../common/response/common-response.dto';
 import { UpdateStepDto, UpdateStepResponseDto } from '../dtos/update-step.dto';
@@ -12,9 +12,9 @@ import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-tas
 import { StepRepository } from '../repositories/step.repository';
 import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
-import { UpdatedStepDTO, DeletedStepDTO } from '../dtos/step-payload.dto';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { UpdatedTaskStepDTO, DeletedStepDTO, UpdatedStepDTO } from '../dtos/step-payload.dto';
 @Injectable()
 export class StepsService {
     constructor(
@@ -36,9 +36,7 @@ export class StepsService {
         await this.eventBus.publishAsync(
             `${RealTimeEntity.STEP}.${RealTimeType.UPDATED}`,
             EventPayloadDto.from(RealTimeType.UPDATED, {
-                projectId: step.project.id,
-                stepId: updatedStep.id,
-                name: updatedStep.name,
+                step: UpdatedStepDTO.from(step.project.id, updatedStep),
             })
         );
         return UpdateStepResponseDto.fromEntity(updatedStep, stepId);
@@ -76,6 +74,12 @@ export class StepsService {
             step: { id: newStepId } as any,
         });
         await this.taskRepository.saveWithQueryRunner(qr.manager, partial);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+            EventPayloadDto.from(RealTimeType.UPDATED, {
+                task: UpdatedTaskStepDTO.from(newStep.project.id, partial.id, newStepId),
+            })
+        );
 
         // 4) DTO 생성하여 반환
         return UpdateTaskStepResponseDto.fromEntity(taskId, newStepId);
@@ -97,8 +101,7 @@ export class StepsService {
         await this.eventBus.publishAsync(
             `${RealTimeEntity.STEP}.${RealTimeType.DELETED}`,
             EventPayloadDto.from(RealTimeType.DELETED, {
-                projectId: stepRaw.project.id,
-                stepId,
+                step: DeletedStepDTO.from(stepRaw.project.id, stepId),
             })
         );
         return CommonResponse.success({ message: `스텝 ID ${stepId} 삭제 완료` });

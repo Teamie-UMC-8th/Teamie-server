@@ -35,3 +35,17 @@ export class UpdatedStepDTO {
         return dto;
     }
 }
+
+export class UpdatedTaskStepDTO {
+    projectId: number;
+    id: number;
+    stepId: number;
+
+    static from(projectId: number, id: number, stepId: number): UpdatedTaskStepDTO {
+        const dto = new UpdatedTaskStepDTO();
+        dto.projectId = projectId;
+        dto.id = id;
+        dto.stepId = stepId;
+        return dto;
+    }
+}
