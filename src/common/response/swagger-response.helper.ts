@@ -48,35 +48,53 @@ export const ApiCommonResponseArray = <T extends Type<any>>(model: T) => {
     );
 };
 
-export const ApiCommonResponseWithPagination = <T extends Type<any>>(model: T) => {
+export const ApiCommonResponseWithPagination = <T extends Type<any>>(
+    model: T,
+    hasNextPageExample,
+    lastPageExample
+) => {
     return applyDecorators(
         ApiExtraModels(CommonResponse, PaginatedResponseDto, PageInfoDto, model),
         ApiOkResponse({
             description: '성공 응답',
-            schema: {
-                allOf: [
-                    { $ref: getSchemaPath(CommonResponse) },
-                    {
-                        properties: {
-                            isSuccess: { type: 'boolean', example: true },
-                            error: { type: 'null', example: null },
-                            result: {
-                                allOf: [
-                                    { $ref: getSchemaPath(PaginatedResponseDto) },
-                                    {
-                                        properties: {
-                                            data: {
-                                                type: 'array',
-                                                items: { $ref: getSchemaPath(model) },
+            content: {
+                'application/json': {
+                    schema: {
+                        allOf: [
+                            { $ref: getSchemaPath(CommonResponse) },
+                            {
+                                properties: {
+                                    isSuccess: { type: 'boolean', example: true },
+                                    error: { type: 'null', example: null },
+                                    result: {
+                                        allOf: [
+                                            { $ref: getSchemaPath(PaginatedResponseDto) },
+                                            {
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: getSchemaPath(model) },
+                                                    },
+                                                    pageInfo: { $ref: getSchemaPath(PageInfoDto) },
+                                                },
                                             },
-                                            pageInfo: { $ref: getSchemaPath(PageInfoDto) },
-                                        },
+                                        ],
                                     },
-                                ],
+                                },
                             },
+                        ],
+                    },
+                    examples: {
+                        hasNextPage_true: {
+                            summary: '다음 페이지가 있는 경우',
+                            value: hasNextPageExample,
+                        },
+                        lastPage_true: {
+                            summary: '마지막 페이지',
+                            value: lastPageExample,
                         },
                     },
-                ],
+                },
             },
         })
     );

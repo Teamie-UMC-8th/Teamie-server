@@ -27,18 +27,19 @@ export class UsersService {
     ) {}
 
     //회원가입 여부 확인
-    async findUserByKakaoId(kakaoId: string): Promise<User | null> {
-        return await this.userRepository.findByKakaoId(kakaoId);
+    async findUserByKakaoId(qr: QueryRunner, kakaoId: string): Promise<User | null> {
+        return await this.userRepository.findByKakaoId(qr, kakaoId);
     }
 
     //회원가입
-    async createUser(kakaoUser: KakaoUserAfterAuth): Promise<User> {
-        return await this.userRepository.saveUser({
+    async createUser(qr: QueryRunner, kakaoUser: KakaoUserAfterAuth): Promise<User> {
+        const newUser = qr.manager.create(User, {
             name: kakaoUser.nickname,
             email: kakaoUser.email,
             imageUrl: kakaoUser.profileImage,
             kakaoId: kakaoUser.id,
         });
+        return await this.userRepository.saveUser(qr, newUser);
     }
 
     //사용자 리스트의 유효성 체크

@@ -7,10 +7,16 @@ import {
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { QueryRunner } from 'typeorm';
 import { CocommentRepository } from '../repositories/cocoment.repository';
-
+import { UpdatedCocommentDTO } from '../dto/cocomment-payload.dto';
+import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
+import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
+import { EventBusService } from 'src/infra/event-bus/event-bus.service';
 @Injectable()
 export class CocommentsService {
-    constructor(private readonly cocommentRepository: CocommentRepository) {}
+    constructor(
+        private readonly cocommentRepository: CocommentRepository,
+        private readonly eventBus: EventBusService
+    ) {}
 
     async updateCocomment(
         queryRunner: QueryRunner,
@@ -18,7 +24,7 @@ export class CocommentsService {
         cocommentId: number,
         dto: UpdateCocommentRequestDto
     ): Promise<UpdateCocommentResponseDto> {
-        const cocomment = await this.cocommentRepository.findByIdWithUserWithQueryRunner(
+        const cocomment = await this.cocommentRepository.findByIdWithUserAndTaskForEventUsingQR(
             queryRunner,
             cocommentId
         );
@@ -29,12 +35,20 @@ export class CocommentsService {
 
         cocomment.content = dto.content;
 
-        const updatedComment = await this.cocommentRepository.saveCocommentWithQueryRunner(
+        const updatedCocomment = await this.cocommentRepository.saveCocommentWithQueryRunner(
             queryRunner,
             cocomment
         );
 
-        return UpdateCocommentResponseDto.from(updatedComment);
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COCOMMENT}.${RealTimeType.UPDATED}`,
+            EventPayloadDto.from(RealTimeType.UPDATED, {
+                taskId: cocomment.comment.task.id,
+                cocomment: UpdatedCocommentDTO.from(updatedCocomment),
+            })
+        );
+
+        return UpdateCocommentResponseDto.from(updatedCocomment);
     }
 
     async deleteCocomment(
@@ -43,7 +57,7 @@ export class CocommentsService {
         cocommentId: number
     ): Promise<CommonResponse> {
         // 대댓글 존재 여부 확인
-        const cocomment = await this.cocommentRepository.findByIdWithUserWithQueryRunner(
+        const cocomment = await this.cocommentRepository.findByIdWithUserAndTaskForEventUsingQR(
             queryRunner,
             cocommentId
         );
@@ -55,6 +69,15 @@ export class CocommentsService {
 
         // 대댓글 삭제
         await this.cocommentRepository.deleteCocommentWithQueryRunner(queryRunner, cocommentId);
+
+        //웹소켓 이벤트 발행
+        await this.eventBus.publishAsync(
+            `${RealTimeEntity.COCOMMENT}.${RealTimeType.DELETED}`,
+            EventPayloadDto.from(RealTimeType.DELETED, {
+                taskId: cocomment.comment.task.id,
+                cocommentId,
+            })
+        );
 
         return CommonResponse.success({ message: `대댓글 ID ${cocommentId} 삭제 완료` });
     }
