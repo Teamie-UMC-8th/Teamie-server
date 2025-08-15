@@ -162,7 +162,7 @@ export class UserProjectRepository {
         }
     }
 
-    //LEAD, MEMBER 권한 변경
+    //프로젝트 내 역할 변경
     async updateUserRole(
         projectId: number,
         userId: number,
@@ -171,11 +171,20 @@ export class UserProjectRepository {
     ): Promise<UserProject> {
         const up = await this.findUserProjectUsingQR(projectId, userId, manager);
         if (!up) throw new ProjectForbiddenException();
-        try {
-            up.role = role;
-            return await manager.save(UserProject, up);
-        } catch {
-            throw new ProjectTransactionException();
-        }
+        up.role = role;
+        return await manager.save(UserProject, up);
+    }
+
+    //LEAD, MEMBER 권한 변경
+    async updatePermission(
+        projectId: number,
+        userId: number,
+        permission: projectPermission,
+        manager: EntityManager
+    ): Promise<UserProject> {
+        const up = await this.findUserProjectUsingQR(projectId, userId, manager);
+        if (!up) throw new ProjectForbiddenException();
+        up.permission = permission;
+        return await manager.save(UserProject, up);
     }
 }

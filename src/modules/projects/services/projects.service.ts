@@ -50,6 +50,7 @@ import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-resp
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
+import { ca } from 'zod/v4/locales';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -240,7 +241,14 @@ export class ProjectsService {
         // 1) 프로젝트 존재 검사 & 수정 가능 확인
         let project = await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 2) 팀장 권한 확인
-        await this.userProjectRepository.findWithPermission(userId, projectId, qr.manager);
+        const permission = await this.userProjectRepository.findWithPermission(
+            userId,
+            projectId,
+            qr.manager
+        );
+        if (!permission || permission !== projectPermission.LEAD) {
+            throw new ProjectUpdateForbiddenException('팀장만 프로젝트를 완료할 수 있습니다.');
+        }
 
         // 3) 프로젝트 완료 처리
         project.isCompleted = true;
@@ -377,16 +385,30 @@ export class ProjectsService {
             projectId,
             qr.manager
         );
+        if (!current) {
+            throw new ProjectLeaderNotFoundException(projectId);
+        }
         if (current?.oldLeaderId === newLeaderId) {
             throw new ProjectUpdateForbiddenException('이미 팀장입니다.');
         }
-        // 지목된 사람 권한을 LEAD로 변경
-        await this.userProjectRepository.updateUserRole(
-            projectId,
-            newLeaderId,
-            projectPermission.LEAD,
-            qr.manager
-        );
+        try {
+            // 1) 현재 팀장 권한을 MEMBER로 변경
+            await this.userProjectRepository.updatePermission(
+                projectId,
+                current.oldLeaderId,
+                projectPermission.MEMBER,
+                qr.manager
+            );
+            // 지목된 사람 권한을 LEAD로 변경
+            await this.userProjectRepository.updatePermission(
+                projectId,
+                newLeaderId,
+                projectPermission.LEAD,
+                qr.manager
+            );
+        } catch (err) {
+            throw new ProjectTransactionException();
+        }
 
         // 5) 응답 반환 (permission은 LEAD로 고정)
         return ChangeLeaderResponseDto.fromEntity(newId, projectPermission.LEAD);

@@ -94,7 +94,8 @@ export class TaskRepository {
             .leftJoinAndSelect('manager.user', 'user')
             .where('step.projectId = :projectId', { projectId })
             .andWhere('task.status = :status', { status })
-            .orderBy('task.deadline', 'ASC')
+            .orderBy('task.deadline IS NULL', 'ASC') // NULLS LAST
+            .addOrderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
             .distinct(true)
             .limit(limit)
@@ -114,7 +115,8 @@ export class TaskRepository {
             .leftJoinAndSelect('manager.user', 'user')
             .where('step.projectId = :projectId', { projectId })
             .andWhere('step.id = :stepId', { stepId })
-            .orderBy('task.deadline', 'ASC')
+            .orderBy('task.deadline IS NULL', 'ASC') // NULLS LAST
+            .addOrderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
             .distinct(true)
             .limit(limit)
@@ -157,7 +159,8 @@ export class TaskRepository {
             .addSelect(['user.id', 'user.name'])
             .where('step.projectId = :projectId', { projectId })
             .andWhere('step.id = :stepId', { stepId })
-            .orderBy('task.deadline', 'ASC')
+            .orderBy('task.deadline IS NULL', 'ASC') // NULLS LAST
+            .addOrderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
             .skip(offset)
             .take(limit);
@@ -189,7 +192,8 @@ export class TaskRepository {
             .addSelect(['user.id', 'user.name'])
             .where('step.projectId = :projectId', { projectId })
             .andWhere('task.status = :status', { status })
-            .orderBy('task.deadline', 'ASC')
+            .orderBy('task.deadline IS NULL', 'ASC') // NULLS LAST
+            .addOrderBy('task.deadline', 'ASC')
             .addOrderBy('task.createdAt', 'ASC')
             .skip(offset)
             .take(limit);
