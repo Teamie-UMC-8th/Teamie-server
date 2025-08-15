@@ -392,9 +392,23 @@ export class ProjectsController {
         description: '프로젝트에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiOkResponse({ type: UserProfile, isArray: true })
+    @ApiCommonResponseArray(UserProfile)
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/members')
-    async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
+    async getProjectMemberList(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
         return await this.projectsService.getProjectMemberList(projectId);
     }
 
@@ -403,6 +417,11 @@ export class ProjectsController {
         description: '사용자의 프로젝트 권한을 조회합니다.',
     })
     @ApiCommonResponse(PermissionResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
     @ApiCommonErrorResponse(
         ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
         '해당 프로젝트에 접근 권한이 없습니다.',

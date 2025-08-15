@@ -22,7 +22,13 @@ export class UploadService {
         const region = this.configService.get<string>('AWS_REGION')!;
         const key = `upload/${uuid()}-${file.originalname}`;
 
-        const command = new PutObjectCommand({ Bucket: bucket, Key: key, Body: file.buffer });
+        const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+            ContentDisposition: 'inline',
+        });
         await this.s3.send(command);
 
         return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;

@@ -10,6 +10,12 @@ export class ProjectSummaryResponseDto {
     id: number;
 
     @ApiProperty({
+        example: '2025-07-14T20:35:00.000Z',
+        description: '프로젝트 생성일자',
+    })
+    createdAt: string;
+
+    @ApiProperty({
         example: '프로젝트명',
         description: '프로젝트 이름',
     })
@@ -36,6 +42,7 @@ export class ProjectSummaryResponseDto {
     static fromEntity(project: Project): ProjectSummaryResponseDto {
         const dto = new ProjectSummaryResponseDto();
         dto.id = project.id;
+        dto.createdAt = project.createdAt.toISOString();
         dto.name = project.name;
         dto.goal = project.goal;
         dto.rule = project.rule;

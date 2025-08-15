@@ -495,7 +495,8 @@ export class ProjectsService {
 
     // assert - GET 전용 단순 검증용
     async assertProjectMember(userId: number, projectId: number): Promise<boolean> {
-        const mapping = this.userProjectRepository.findById(userId, projectId);
+        await this.projectRepository.findByProjectId(projectId);
+        const mapping = await this.userProjectRepository.findById(userId, projectId);
         if (!mapping) throw new ProjectForbiddenException();
         return true;
     }
@@ -571,6 +572,7 @@ export class ProjectsService {
 
     // 사용자의 프로젝트 권한 조회
     async getUserPermissionOfProject(userId: number, projectId: number) {
+        await this.projectRepository.findByProjectId(projectId);
         const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
         if (!userProject) throw new ProjectForbiddenException();
         return PermissionResponseDto.from(userProject.permission);
