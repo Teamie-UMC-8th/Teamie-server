@@ -7,7 +7,8 @@ export class ProjectMemberGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
-        const userId = request.userId;
+        const userId = request.user?.id;
+        console.log(userId);
         const projectId = Number(request.params.projectId);
         return await this.projectService.assertProjectMember(userId, projectId);
     }
