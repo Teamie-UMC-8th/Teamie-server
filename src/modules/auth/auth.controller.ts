@@ -1,13 +1,15 @@
-import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './services/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { KakaoUser, KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
-import { Response } from 'express';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
+import { ApiOkResponse, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Pulbic } from 'src/common/decorators/public.decorator';
 import { SetRedirectUrlGuard } from './guards/set-redirect-url.guard';
 import { InternalServerError } from 'src/common/exceptions/custom.errors';
+import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
+import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
 
 @ApiTags('Auth')
 @Controller('/auth')
@@ -89,5 +91,36 @@ export class AuthController {
             //TODO: 추후 refreshToken 구현 필요
             res.redirect(fullRedirect);
         });
+    }
+
+    @ApiOperation({
+        summary: '로그아웃',
+        description: 'JWT 토큰을 만료시키고 서버에서 로그아웃을 수행합니다.',
+    })
+    @ApiOkResponse({
+        schema: {
+            example: {
+                isSuccess: true,
+                error: null,
+                result: 'Logout from Server',
+            },
+        },
+    })
+    @ApiCommonErrorResponses(HttpStatus.UNAUTHORIZED, [
+        { errorCode: ErrorCode.UNAUTHORIZED, reason: '유효하지 않은 사용자입니다.' },
+        { errorCode: ErrorCode.LOGOUT_USER, reason: '로그아웃한 사용자입니다.' },
+    ])
+    @Post('logout')
+    async handleLogout(@Req() req: Request) {
+        const token = req.cookies?.['accessToken'];
+        if (token) {
+            await this.authService.blacklistToken(token);
+        }
+        req.res?.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+        });
+        return 'Logout from Server';
     }
 }

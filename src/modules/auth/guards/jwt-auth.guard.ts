@@ -1,13 +1,16 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
-import { UnAuthorizedException } from 'src/common/exceptions/custom.errors';
+import { LogoutUserException, UnAuthorizedException } from 'src/common/exceptions/custom.errors';
+import { AuthService } from '../services/auth.service';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-    constructor(private reflector: Reflector) {
+    constructor(
+        private reflector: Reflector,
+        private readonly authService: AuthService
+    ) {
         super();
     }
 
@@ -24,12 +27,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         return user;
     }
 
-    canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+    async canActivate(context: ExecutionContext): Promise<boolean> {
         const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
         if (isPublic) return true;
-        return super.canActivate(context);
+
+        const request = context.switchToHttp().getRequest();
+        const token = request.cookies?.['accessToken'];
+        // blacklist 체크
+        if (token && (await this.authService.isTokenBlacklisted(token))) {
+            throw new LogoutUserException();
+        }
+
+        const result = (await super.canActivate(context)) as boolean;
+        return result;
     }
 }

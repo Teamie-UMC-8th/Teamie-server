@@ -1,17 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { KakaoUserAfterAuth } from 'src/common/decorators/user.decorator';
 import { UsersService } from '../../users/services/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserInvariantViolationException } from 'src/common/exceptions/custom.errors';
 import { WsException } from '@nestjs/websockets';
 import { ConfigService } from '@nestjs/config';
+import { RedisClientType } from 'redis';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly userService: UsersService,
         private readonly jwtService: JwtService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        @Inject('REDIS_CLIENT')
+        private readonly redis: RedisClientType
     ) {}
 
     async handleKakaoLogin(kakaoUser: KakaoUserAfterAuth): Promise<String> {
@@ -56,5 +59,18 @@ export class AuthService {
         } catch {
             return false;
         }
+    }
+
+    async blacklistToken(token: string) {
+        const decoded: any = this.jwtService.decode(token);
+        const exp = decoded?.exp || this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60;
+        const ttl = exp - Math.floor(Date.now() / 1000);
+        if (ttl > 0) {
+            await this.redis.set(`blacklist:${token}`, '1', { EX: ttl });
+        }
+    }
+
+    async isTokenBlacklisted(token: string): Promise<boolean> {
+        return !!(await this.redis.get(`blacklist:${token}`));
     }
 }
