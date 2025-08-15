@@ -36,7 +36,7 @@ $ npm run start:prod
     - 개발 CI/CD용 branch
 - feature
     - 기능 구현용 branch
-    - 반드시 `develop`에서 뻗어나와 `develop`으로 `merge` 되어야한다.
+    - 반드시 `develop`에서 뻗어나와 `dev`로 `merge` 되어야한다.
 ```
 
 ### 커밋 컨벤션
@@ -85,6 +85,50 @@ ex) [Feature] 로그인 구현
     - {sub-domain} : 상위 도메인과 연관된 하위 도메인
 - infra : 외부 시스템과 연동되는 코드를 포함
 ```
+## 서버 아키텍처 다이어그램
+<img width="867" height="612" alt="티미_다이어그램" src="https://github.com/user-attachments/assets/922b9c7d-538c-4a24-a47c-567d17490039" />
+
+## 팀원 정보
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/hyoinkang">
+        <img src="https://avatars.githubusercontent.com/hyoinkang" width="100px;" alt=""/>
+        <br />
+        <sub><b>강효인</b></sub>
+      </a>
+      <br />
+      🛠 Lead
+    </td>
+    <td align="center">
+      <a href="https://github.com/chaechae128">
+        <img src="https://avatars.githubusercontent.com/chaechae128" width="100px;" alt=""/>
+        <br />
+        <sub><b>김채연</b></sub>
+      </a>
+      <br />
+      🛠 Member
+    </td>
+    <td align="center">
+      <a href="https://github.com/sunggyeong">
+        <img src="https://avatars.githubusercontent.com/sunggyeong" width="100px;" alt=""/>
+        <br />
+        <sub><b>강성경</b></sub>
+      </a>
+      <br />
+      🛠 Member
+    </td>
+    <td align="center">
+      <a href="https://github.com/chowon442">
+        <img src="https://avatars.githubusercontent.com/chowon442" width="100px;" alt=""/>
+        <br />
+        <sub><b>나준원</b></sub>
+      </a>
+      <br />
+      🛠 Member
+    </td>
+  </tr>
+</table>
 
 ## License
 
