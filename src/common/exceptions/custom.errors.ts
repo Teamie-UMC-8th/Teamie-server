@@ -121,6 +121,12 @@ export class UnAuthorizedException extends CustomHttpException {
     }
 }
 
+export class LogoutUserException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.LOGOUT_USER, '로그아웃한 사용자입니다.', HttpStatus.UNAUTHORIZED, data);
+    }
+}
+
 export class APIUnauthorizedException extends CustomHttpException {
     constructor(data?: any) {
         super(

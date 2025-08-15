@@ -5,6 +5,7 @@ export enum ErrorCode {
     INTERNAL_SERVER_ERROR = 'COMMON500',
     TRANSACTION_ERROR = 'COMMON501',
     //사용자
+    LOGOUT_USER = 'USER401',
     USER_NOT_FOUND = 'USER404',
     USER_INVARIANT_VIOLATION = 'AUTH5001',
     //프로젝트
