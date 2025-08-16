@@ -3,9 +3,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 로케일 설정 추가
+# UTF-8 인코딩 설정
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
+
+# vim 설치
+RUN apk add --no-cache vim
 
 # 의존성만 먼저 복사
 COPY package*.json ./
