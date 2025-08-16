@@ -580,13 +580,13 @@ export class ProjectsService {
     }
 
     //프로젝트 종료 여부 조회
-    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted>  {
+    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted> {
         // 프로젝트 멤버 권한 검사
         await this.assertProjectMember(userId, projectId);
 
         //프로젝트 종료 여부 검사
         const isCompleted = await this.projectRepository.findIsCompletedByProjectId(projectId);
-        
-        return { isCompleted};
+
+        return { isCompleted };
     }
 }
