@@ -288,12 +288,12 @@ export class PortfolioCorrectionsService {
             where: { portfolioCorrection: { id: correctionId } },
         });
         const keywords: string[] = [];
-        const links: string[] = [];
+        const links: { title: string; url: string }[] = [];
         ragData.forEach((item) => {
             if (item.type === RAGDataType.KEYWORD) {
                 keywords.push(item.keyword);
             } else if (item.type === RAGDataType.LINK) {
-                links.push(item.link);
+                links.push({ title: item.title, url: item.link });
             }
         });
         const result = {
