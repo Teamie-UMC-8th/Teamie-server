@@ -333,7 +333,7 @@ export class ProjectsController {
     @ApiCommonResponseArray(TeamCalenderResponseDto)
     @ApiCommonErrorResponse(
         ErrorCode.PLAN_DATE_TOO_LONG,
-        '최대 31일까지만 조회할 수 있습니다.',
+        '최대 45일까지만 조회할 수 있습니다.',
         HttpStatus.BAD_REQUEST
     )
     @ApiCommonErrorResponse(
@@ -344,7 +344,6 @@ export class ProjectsController {
     @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
-        @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Query(new ValidationPipe({ transform: true })) query: CalenderQueryDto
     ) {
