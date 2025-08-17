@@ -369,27 +369,19 @@ export class PortfolioCorrectionsService {
         });
         const projectIds = projectInfo.map((item) => item.projectId);
 
-        // 각 projectId에 대해 name을 조회하여 { id, name } 객체로 반환
-        const projects = await Promise.all(
-            projectIds.map(async (projectId) => {
-                const project = await this.projectRepository.findOne({
-                    where: { id: projectId },
-                    select: ['id', 'name', 'createdAt'],
-                });
-                return project
-                    ? { id: project.id, name: project.name, createdAt: project.createdAt }
-                    : null;
-            })
-        );
-
-        // null 값 제거
-        const projectList = projects.filter((p) => p !== null);
-        // 프로젝트 생성일 기준 최신순으로 정렬
-        projectList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        const projectId = projectList[0].id;
+        // { id, name } 객체로 반환
+        const projects = await this.projectRepository.find({
+            where: { id: In(projectIds) },
+            select: ['id', 'name', 'createdAt'],
+            order: { createdAt: 'DESC' }, // 최신순으로 정렬
+        });
+        const projectList = projects.map((project) => ({
+            id: project.id,
+            name: project.name,
+        }));
 
         const result = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectList[0].id },
         });
         const final = {
             projects: projectList,
