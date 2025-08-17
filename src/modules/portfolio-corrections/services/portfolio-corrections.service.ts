@@ -374,17 +374,22 @@ export class PortfolioCorrectionsService {
             projectIds.map(async (projectId) => {
                 const project = await this.projectRepository.findOne({
                     where: { id: projectId },
-                    select: ['id', 'name'],
+                    select: ['id', 'name', 'createdAt'],
                 });
-                return project ? { id: project.id, name: project.name } : null;
+                return project
+                    ? { id: project.id, name: project.name, createdAt: project.createdAt }
+                    : null;
             })
         );
 
         // null 값 제거
         const projectList = projects.filter((p) => p !== null);
+        // 프로젝트 생성일 기준 최신순으로 정렬
+        projectList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        const projectId = projectList[0].id;
 
         const result = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId }, projectId: projectIds[0] },
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
         });
         const final = {
             projects: projectList,
