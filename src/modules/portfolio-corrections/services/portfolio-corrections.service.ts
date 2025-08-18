@@ -176,7 +176,7 @@ export class PortfolioCorrectionsService {
                         modelName:
                             process.env.LLM_CORRECTION_MODEL ||
                             'google/gemini-2.5-flash-lite-preview-06-17',
-                        llmTemperature: 0.3,
+                        llmTemperature: parseFloat(process.env.LLM_CORRECTION_TEMPERATURE || '0.3'),
                         correctionResult: correction,
                     });
 
