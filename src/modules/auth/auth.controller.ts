@@ -77,7 +77,10 @@ export class AuthController {
 
         // 사용자 인증 by JWT
         const kakaoUser = user;
-        const accessToken = await this.authService.handleKakaoLogin(qr, kakaoUser);
+        const { accessToken, refreshToken } = await this.authService.handleKakaoLogin(
+            qr,
+            kakaoUser
+        );
         req.session.destroy((err: Error) => {
             if (err) {
                 throw new InternalServerError('세션 파괴 중 에러 발생');
@@ -92,9 +95,14 @@ export class AuthController {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
-                maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
+                maxAge: 1000 * (this.configService.get('JWT_EXPIRES_IN') || 60 * 60), // 1시간
             });
-            //TODO: 추후 refreshToken 구현 필요
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 1000 * (this.configService.get('JWT_REFRESH_EXPIRES_IN') || 60 * 60 * 24), // 1일
+            });
             res.redirect(fullRedirect);
         });
     }
@@ -118,11 +126,20 @@ export class AuthController {
     ])
     @Post('logout')
     async handleLogout(@Req() req: Request) {
-        const token = req.cookies?.['accessToken'];
-        if (token) {
-            await this.authService.blacklistToken(token);
+        const accessToken = req.cookies?.['accessToken'];
+        const refreshToken = req.cookies?.['refreshToken'];
+        if (accessToken) {
+            await this.authService.blacklistToken(accessToken);
+        }
+        if (refreshToken) {
+            await this.authService.revokeRefreshToken(refreshToken);
         }
         req.res?.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+        });
+        req.res?.clearCookie('refreshToken', {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
