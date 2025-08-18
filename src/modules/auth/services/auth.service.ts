@@ -4,6 +4,7 @@ import { UsersService } from '../../users/services/users.service';
 import { JwtService } from '@nestjs/jwt';
 import {
     TransactionException,
+    UnAuthorizedException,
     UserInvariantViolationException,
 } from 'src/common/exceptions/custom.errors';
 import { WsException } from '@nestjs/websockets';
@@ -48,6 +49,20 @@ export class AuthService {
         }
     }
 
+    async refreshAccessToken(refreshToken: string): Promise<string> {
+        if (!refreshToken) throw new UnAuthorizedException('리프레시 토큰이 존재하지 않음.');
+        const payload = await this.jwtService.verifyAsync(refreshToken, {
+            secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        });
+        const isValid = await this.verifyRefreshToken(
+            refreshToken,
+            payload.userId,
+            payload.tokenId
+        );
+        if (!isValid) throw new UnAuthorizedException('리프레시 토큰이 만료됨.');
+        return await this.generateAccessToken(payload.userId);
+    }
+
     async generateAccessToken(userId: number): Promise<string> {
         const payload = {
             userId: userId,
@@ -82,11 +97,8 @@ export class AuthService {
         }
     }
 
-    async verifyRefreshToken(refreshToken: string) {
-        const payload = await this.jwtService.verifyAsync(refreshToken);
-        const storedHash = await this.redis.get(
-            `refreshToken:${payload.userId}:${payload.tokenId}`
-        );
+    async verifyRefreshToken(refreshToken: string, userId: number, tokenId: number) {
+        const storedHash = await this.redis.get(`refreshToken:${userId}:${tokenId}`);
         if (!storedHash) return false;
 
         const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
