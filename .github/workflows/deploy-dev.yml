@@ -51,7 +51,7 @@ jobs:
             set -euo pipefail
 
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker compose up -d --pull always redis_container app
+            docker compose up -d --pull always redis_container 
 
             CURRENT_TG=$(aws elbv2 describe-listeners \
               --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
@@ -76,8 +76,8 @@ jobs:
 
             echo "Active=$ACTIVE, Inactive=$INACTIVE → Deploy to $INACTIVE"
 
-            docker compose pull teamie-$INACTIVE
-            docker compose up -d teamie-$INACTIVE
+            docker compose pull app-$INACTIVE
+            docker compose up -d app-$INACTIVE
 
             for i in {1..30}; do
               if curl -fsS http://127.0.0.1:${INACTIVE_PORT}/health > /dev/null; then
@@ -88,7 +88,7 @@ jobs:
               sleep 2
             done
 
-            docker compose exec -T teamie-$INACTIVE npm run migrate:run
+            docker compose exec -T app-$INACTIVE npm run migrate:run
 
             aws elbv2 modify-listener \
               --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
