@@ -94,13 +94,11 @@ export class RagService {
             throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
-        // TODO: 키워드 개수 제한이 프롬프트에서 적용되지 않고 있음.
-        // 최종적으로 k개의 키워드 추출
+        // 실행
         const extractedQuery = await queryExtractionPrompt.pipe(queryExtractor).invoke({
             companyName: inputData.submissionTarget,
             jobTitle: inputData.jobTitle,
             jobDescription: inputData.jd,
-            k: parseInt(process.env.REQUIRED_KEYWORD_COUNT || '2', 10),
         });
 
         const queryList = extractedQuery.query.split(',').map((q) => q.trim());

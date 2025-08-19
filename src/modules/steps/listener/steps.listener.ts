@@ -47,5 +47,4 @@ export class StepsListener {
         const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${deleted.projectId}`;
         this.gateway.handlePublish(dashboardRoom, msg);
     }
-
 }
