@@ -50,8 +50,6 @@ jobs:
           script: |
             set -euo pipefail
 
-            cd /home/ubuntu/Teamie-server
-
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
             docker compose up -d --pull always redis_container app
 
