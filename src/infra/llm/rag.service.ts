@@ -11,7 +11,7 @@ import {
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.entity';
 import { QueryRunner } from 'typeorm';
-import { SearchQuery, searchQuerySchema } from './schemas/portfolio-correction.schema';
+import { SearchKeywords, searchKeywordsSchema } from './schemas/portfolio-correction.schema';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 import { PromptManager } from 'src/common/utils/prompt.util';
@@ -83,9 +83,12 @@ export class RagService {
             'keyword-extract.prompt.md'
         );
 
-        const queryExtractor = this.queryLLM.withStructuredOutput<SearchQuery>(searchQuerySchema, {
-            name: 'searchQuery',
-        });
+        const queryExtractor = this.queryLLM.withStructuredOutput<SearchKeywords>(
+            searchKeywordsSchema,
+            {
+                name: 'searchKeywords',
+            }
+        );
 
         const inputData = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
@@ -101,7 +104,7 @@ export class RagService {
             jobDescription: inputData.jd,
         });
 
-        const queryList = extractedQuery.query.split(',').map((q) => q.trim());
+        const queryList = extractedQuery.search_keywords;
 
         queryList.forEach(async (query) => {
             await qr.manager.save(RAGData, {
