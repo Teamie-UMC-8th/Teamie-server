@@ -19,7 +19,7 @@ import { RedisModule } from 'src/infra/redis/redis.module';
             useFactory: async (configService: ConfigService) => ({
                 secret: configService.get<string>('JWT_SECRET'),
                 signOptions: {
-                    expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+                    expiresIn: configService.get<number>('JWT_EXPIRES_IN') || 60 * 60,
                 },
             }),
             inject: [ConfigService],
