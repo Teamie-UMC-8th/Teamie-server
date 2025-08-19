@@ -88,8 +88,6 @@ jobs:
               sleep 2
             done
 
-            docker compose exec -T app-$INACTIVE npm run migrate:run
-
             aws elbv2 modify-listener \
               --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
               --region ${{ secrets.AWS_REGION }} \
