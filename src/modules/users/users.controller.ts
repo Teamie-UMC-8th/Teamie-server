@@ -98,11 +98,12 @@ export class UsersController {
 
     @ApiOperation({
         summary: '나의 프로젝트 조회',
-        description: '사용자가 속한 프로젝트의 id,이름,프로젝트 내 역할을 반환하는 API입니다.',
+        description:
+            '사용자가 속한 프로젝트의 id, 이름, 프로젝트 내 역할을 반환하는 API입니다. 완료되지 않은 프로젝트만을 반환합니다.',
     })
     @ApiCommonResponse(UserProjectResponseDto)
     @Get('/me/projects')
-    async getUserProject(@User('id') userId: number) {
+    async getUserProject(@User('id') userId: number): Promise<UserProjectResponseDto[]> {
         return await this.userService.getUserProject(userId);
     }
 

@@ -41,7 +41,7 @@ import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
 import { PermissionResponseDto } from './dtos/get-permission.dto';
-
+import { getProjectIsCompleted } from './dtos/get-project-isCompleted.dto';
 @ApiTags('Projects')
 @Controller('/projects')
 export class ProjectsController {
@@ -333,7 +333,7 @@ export class ProjectsController {
     @ApiCommonResponseArray(TeamCalenderResponseDto)
     @ApiCommonErrorResponse(
         ErrorCode.PLAN_DATE_TOO_LONG,
-        '최대 31일까지만 조회할 수 있습니다.',
+        '최대 45일까지만 조회할 수 있습니다.',
         HttpStatus.BAD_REQUEST
     )
     @ApiCommonErrorResponse(
@@ -344,7 +344,6 @@ export class ProjectsController {
     @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
-        @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Query(new ValidationPipe({ transform: true })) query: CalenderQueryDto
     ) {
@@ -392,9 +391,23 @@ export class ProjectsController {
         description: '프로젝트에 참여자 리스트를 조회합니다.',
     })
     @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
-    @ApiOkResponse({ type: UserProfile, isArray: true })
+    @ApiCommonResponseArray(UserProfile)
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/members')
-    async getProjectMemberList(@Param('projectId', ParseIntPipe) projectId: number) {
+    async getProjectMemberList(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
         return await this.projectsService.getProjectMemberList(projectId);
     }
 
@@ -403,6 +416,11 @@ export class ProjectsController {
         description: '사용자의 프로젝트 권한을 조회합니다.',
     })
     @ApiCommonResponse(PermissionResponseDto)
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
     @ApiCommonErrorResponse(
         ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
         '해당 프로젝트에 접근 권한이 없습니다.',
@@ -414,5 +432,28 @@ export class ProjectsController {
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
         return await this.projectsService.getUserPermissionOfProject(userId, projectId);
+    }
+
+    @ApiOperation({
+        summary: '프로젝트 종료 여부 조회',
+        description: '프로젝트 id를 통해 종료 여부를 조회합니다.',
+    })
+    @ApiCommonResponse(getProjectIsCompleted)
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.PROJECT_NOT_FOUND,
+        '프로젝트를 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND
+    )
+    @Get('/:projectId/isCompleted')
+    async getProjectIsCompleted(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
+        return await this.projectsService.isCompleted(userId, projectId);
     }
 }

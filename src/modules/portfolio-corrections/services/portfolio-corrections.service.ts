@@ -176,7 +176,7 @@ export class PortfolioCorrectionsService {
                         modelName:
                             process.env.LLM_CORRECTION_MODEL ||
                             'google/gemini-2.5-flash-lite-preview-06-17',
-                        llmTemperature: 0.3,
+                        llmTemperature: parseFloat(process.env.LLM_CORRECTION_TEMPERATURE || '0.3'),
                         correctionResult: correction,
                     });
 
@@ -288,12 +288,12 @@ export class PortfolioCorrectionsService {
             where: { portfolioCorrection: { id: correctionId } },
         });
         const keywords: string[] = [];
-        const links: string[] = [];
+        const links: { title: string; url: string }[] = [];
         ragData.forEach((item) => {
             if (item.type === RAGDataType.KEYWORD) {
                 keywords.push(item.keyword);
             } else if (item.type === RAGDataType.LINK) {
-                links.push(item.link);
+                links.push({ title: item.title, url: item.link });
             }
         });
         const result = {
@@ -369,22 +369,19 @@ export class PortfolioCorrectionsService {
         });
         const projectIds = projectInfo.map((item) => item.projectId);
 
-        // 각 projectId에 대해 name을 조회하여 { id, name } 객체로 반환
-        const projects = await Promise.all(
-            projectIds.map(async (projectId) => {
-                const project = await this.projectRepository.findOne({
-                    where: { id: projectId },
-                    select: ['id', 'name'],
-                });
-                return project ? { id: project.id, name: project.name } : null;
-            })
-        );
-
-        // null 값 제거
-        const projectList = projects.filter((p) => p !== null);
+        // { id, name } 객체로 반환
+        const projects = await this.projectRepository.find({
+            where: { id: In(projectIds) },
+            select: ['id', 'name', 'createdAt'],
+            order: { createdAt: 'DESC' }, // 최신순으로 정렬
+        });
+        const projectList = projects.map((project) => ({
+            id: project.id,
+            name: project.name,
+        }));
 
         const result = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId }, projectId: projectIds[0] },
+            where: { portfolioCorrection: { id: correctionId }, projectId: projectList[0].id },
         });
         const final = {
             projects: projectList,

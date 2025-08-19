@@ -51,6 +51,7 @@ import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
 import { ca } from 'zod/v4/locales';
+import { getProjectIsCompleted } from '../dtos/get-project-isCompleted.dto';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -442,14 +443,14 @@ export class ProjectsService {
     }
 
     async getTeamCalender(projectId: number, startDate: string, endDate: string) {
-        //검색 범위 제한 - 최대 31일
+        //검색 범위 제한 - 최대 45일
         const start = new Date(startDate);
         const end = new Date(endDate);
 
         const diffInMs = end.getTime() - start.getTime();
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
-        if (diffInDays > 31) {
+        if (diffInDays > 45) {
             throw new InvalidDateException({
                 startDate: startDate,
                 endDate: endDate,
@@ -495,7 +496,8 @@ export class ProjectsService {
 
     // assert - GET 전용 단순 검증용
     async assertProjectMember(userId: number, projectId: number): Promise<boolean> {
-        const mapping = this.userProjectRepository.findById(userId, projectId);
+        await this.projectRepository.findByProjectId(projectId);
+        const mapping = await this.userProjectRepository.findById(userId, projectId);
         if (!mapping) throw new ProjectForbiddenException();
         return true;
     }
@@ -571,8 +573,20 @@ export class ProjectsService {
 
     // 사용자의 프로젝트 권한 조회
     async getUserPermissionOfProject(userId: number, projectId: number) {
+        await this.projectRepository.findByProjectId(projectId);
         const userProject = await this.userProjectRepository.findUserProject(userId, projectId);
         if (!userProject) throw new ProjectForbiddenException();
         return PermissionResponseDto.from(userProject.permission);
+    }
+
+    //프로젝트 종료 여부 조회
+    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted> {
+        // 프로젝트 멤버 권한 검사
+        await this.assertProjectMember(userId, projectId);
+
+        //프로젝트 종료 여부 검사
+        const isCompleted = await this.projectRepository.findIsCompletedByProjectId(projectId);
+
+        return { isCompleted };
     }
 }
