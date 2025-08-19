@@ -3,7 +3,6 @@ import { Step } from '../entities/steps.entity';
 export class CreatedStepDTO {
     id: number;
     name: string;
-
     static from(entity: Step): CreatedStepDTO {
         const dto = new CreatedStepDTO();
         dto.id = entity.id;
@@ -36,16 +35,3 @@ export class UpdatedStepDTO {
     }
 }
 
-export class UpdatedTaskStepDTO {
-    projectId: number;
-    id: number;
-    stepId: number;
-
-    static from(projectId: number, id: number, stepId: number): UpdatedTaskStepDTO {
-        const dto = new UpdatedTaskStepDTO();
-        dto.projectId = projectId;
-        dto.id = id;
-        dto.stepId = stepId;
-        return dto;
-    }
-}

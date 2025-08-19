@@ -74,3 +74,18 @@ export class UpdatedTaskStatusDTO {
         return dto;
     }
 }
+
+/**업데이트 - 스텝 이동 */
+export class UpdatedTaskStepDTO {
+    projectId: number;
+    id: number;
+    stepId: number;
+
+    static from(projectId: number, id: number, stepId: number): UpdatedTaskStepDTO {
+        const dto = new UpdatedTaskStepDTO();
+        dto.projectId = projectId;
+        dto.id = id;
+        dto.stepId = stepId;
+        return dto;
+    }
+}
