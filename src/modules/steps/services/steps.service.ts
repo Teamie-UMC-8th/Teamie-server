@@ -12,7 +12,6 @@ import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from '../dtos/update-tas
 import { StepRepository } from '../repositories/step.repository';
 import { TaskRepository } from 'src/modules/tasks/repositories/task.repository';
 import { EventBusService } from 'src/infra/event-bus/event-bus.service';
-import { UpdatedStepDTO, DeletedStepDTO } from '../dtos/step-payload.dto';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 @Injectable()

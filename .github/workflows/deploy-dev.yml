@@ -48,10 +48,59 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           port: 22
           script: |
+            set -euo pipefail
+
+            cd /home/ubuntu/Teamie-server
+
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker compose down
             docker compose up -d --pull always redis_container app
-            docker compose exec -T app npm run migrate:run
+
+            CURRENT_TG=$(aws elbv2 describe-listeners \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --region ${{ secrets.AWS_REGION }} \
+              --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn || Listeners[0].DefaultActions[0].TargetGroupArn' \
+              --output text)
+
+            BLUE_TG=${{ secrets.BLUE_TG_ARN }}
+            GREEN_TG=${{ secrets.GREEN_TG_ARN }}
+
+            if [ "$CURRENT_TG" = "$BLUE_TG" ]; then
+              ACTIVE=blue
+              INACTIVE=green
+              INACTIVE_TG=$GREEN_TG
+              INACTIVE_PORT=3001
+            else
+              ACTIVE=green
+              INACTIVE=blue
+              INACTIVE_TG=$BLUE_TG
+              INACTIVE_PORT=3000
+            fi
+
+            echo "Active=$ACTIVE, Inactive=$INACTIVE → Deploy to $INACTIVE"
+
+            docker compose pull teamie-$INACTIVE
+            docker compose up -d taemie-$INACTIVE
+
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:${INACTIVE_PORT}/health > /dev/null; then
+                echo "Health OK on ${INACTIVE} (port ${INACTIVE_PORT})"
+                break
+              fi
+              echo "Waiting health... (${i})"
+              sleep 2
+            done
+
+            docker compose exec -T teamie-$INACTIVE npm run migrate:run
+
+            aws elbv2 modify-listener \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --region ${{ secrets.AWS_REGION }} \
+              --default-actions Type=forward,TargetGroupArn=${INACTIVE_TG}
+
+            echo "ALB switched to $INACTIVE"
+
+            sleep 20
+            docker compose stop app-$ACTIVE || true
+
             docker compose logs
             docker image prune -f
-
