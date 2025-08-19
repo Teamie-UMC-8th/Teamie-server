@@ -31,7 +31,7 @@ export class RagService {
         this.queryLLM = new ChatOpenAI({
             model:
                 process.env.QUERY_GENERATION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_QUERY_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
@@ -40,7 +40,7 @@ export class RagService {
 
         this.ragLLM = new ChatOpenAI({
             model: process.env.RAG_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_RAG_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
