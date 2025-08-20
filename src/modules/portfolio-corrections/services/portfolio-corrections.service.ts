@@ -12,6 +12,7 @@ import {
     AIGenerationAlreadyExists,
     LLMZodErrorException,
     MasterPortfolioAINotFoundException,
+    MasterPortfolioNotFoundException,
     PortfolioCorrectionNotFoundException,
     ProjectMaxSelectedException,
     ProjectNotFoundException,
@@ -32,6 +33,9 @@ import { StatusResponseDto } from '../dtos/status-response.dto';
 import { ResponseDelayManager } from 'src/common/utils/response-delay.util';
 import { CorrectionResultDto, GetCorrectionResultDto } from '../dtos/correction-result.dto';
 import { UpdatePortfolioCorrectionDto } from '../dtos/portfolio-correction.dto';
+import { MasterPortfolio } from 'src/modules/master-portfolios/entities/master-portfolios.entity';
+import { TransformMasterPortfolioUtil } from 'src/common/utils/transformMasterPortfolio.util';
+import { MasterPortfolioOutputDto } from '../dtos/master-portfolio-output.dto';
 
 async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
@@ -57,7 +61,9 @@ export class PortfolioCorrectionsService {
         @InjectRepository(RAGData)
         private readonly ragDataRepository: Repository<RAGData>,
         @InjectRepository(MasterPortfolioAI)
-        private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>
+        private readonly masterPortfolioAIRepository: Repository<MasterPortfolioAI>,
+        @InjectRepository(MasterPortfolio)
+        private readonly masterPortfolioRepository: Repository<MasterPortfolio>
     ) {}
     async getPortfolioCorrectionsByUser(userId: number, cursorDate: Date, pageSize: number) {
         const portfolios = await this.correctionRepository
@@ -449,5 +455,24 @@ export class PortfolioCorrectionsService {
             throw new PortfolioCorrectionNotFoundException(correctionId);
         }
         return `포트폴리오 첨삭 id ${correctionId}가 성공적으로 삭제되었습니다.`;
+    }
+
+    // AI 첨삭 페이지에서 projectId로 마스터 포트폴리오 개별 조회
+    async getMasterPortfolio(userId: number, projectId: number) {
+        const masterPortfolio = await this.masterPortfolioRepository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+        if (!masterPortfolio) {
+            throw new MasterPortfolioNotFoundException(`프로젝트 ID: ${projectId}`);
+        }
+        const input = {
+            detailInfo: masterPortfolio.detailInfo || '',
+            assignedTask: masterPortfolio.assignedTask || '',
+            keyAchievement: masterPortfolio.keyAchievement || '',
+            insight: masterPortfolio.insight || '',
+        };
+
+        const result = TransformMasterPortfolioUtil.transformMasterPortfolio(input);
+        return MasterPortfolioOutputDto.from(result);
     }
 }
