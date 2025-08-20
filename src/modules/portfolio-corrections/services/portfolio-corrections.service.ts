@@ -47,6 +47,21 @@ async function checkCorrectionExists(qr: QueryRunner, correctionId: number) {
     }
 }
 
+function removeOriginalContent(correctionData) {
+    if (!correctionData) return correctionData;
+
+    const filtered = { ...correctionData };
+    Object.keys(filtered).forEach((sectionKey) => {
+        if (filtered[sectionKey]?.lines) {
+            filtered[sectionKey].lines = filtered[sectionKey].lines.map((line) => {
+                const { original_content, ...lineWithoutOriginalContent } = line;
+                return lineWithoutOriginalContent;
+            });
+        }
+    });
+    return filtered;
+}
+
 @Injectable()
 export class PortfolioCorrectionsService {
     constructor(
@@ -389,9 +404,15 @@ export class PortfolioCorrectionsService {
         const result = await this.aiCorrectionRepository.findOne({
             where: { portfolioCorrection: { id: correctionId }, projectId: projectList[0].id },
         });
+
+        const filteredResult = removeOriginalContent(result?.correctionResult);
+
         const final = {
             projects: projectList,
-            firstCorrection: result,
+            firstCorrection: {
+                ...result,
+                correctionResult: filteredResult,
+            },
         };
         return GetCorrectionResultDto.from(final);
     }
@@ -409,7 +430,13 @@ export class PortfolioCorrectionsService {
         const result = await this.aiCorrectionRepository.findOne({
             where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
         });
-        return CorrectionResultDto.from(result);
+
+        const filteredResult = removeOriginalContent(result?.correctionResult);
+
+        return CorrectionResultDto.from({
+            ...result,
+            correctionResult: filteredResult,
+        });
     }
 
     // 포트폴리오 첨삭 업데이트
