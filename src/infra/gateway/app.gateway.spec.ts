@@ -2,16 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppGateway } from './app.gateway';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { Server, Socket } from 'socket.io';
-import { SubscribePayloadDto } from './dtos/subscribe-payload.dto';
+import { SubscribePayloadDto, ValidatePayloadDto } from './dtos/subscribe-payload.dto';
 import {
     RealTimeEntity,
     RealTimeMessage,
     RealTimeType,
 } from 'src/common/response/real-time-response.dto';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
+import { EventBusService } from '../event-bus/event-bus.service';
 
 describe('AppGateway', () => {
     let gateway: AppGateway;
+    let eventBus: EventBusService;
     let authService: AuthService;
     let consoleLogSpy: jest.SpyInstance;
     let moduleRef: TestingModule;
@@ -19,6 +21,10 @@ describe('AppGateway', () => {
     const mockServer = {
         to: jest.fn().mockReturnThis(),
         emit: jest.fn(),
+    };
+
+    const mockEventBus = {
+        publishAsync: jest.fn(),
     };
 
     // 소켓 모킹용 유틸
@@ -46,10 +52,15 @@ describe('AppGateway', () => {
                         verifyWsToken: jest.fn(),
                     },
                 },
+                {
+                    provide: EventBusService,
+                    useValue: mockEventBus,
+                },
             ],
         }).compile();
 
         gateway = moduleRef.get<AppGateway>(AppGateway);
+        eventBus = moduleRef.get<EventBusService>(EventBusService);
         authService = moduleRef.get<AuthService>(AuthService);
         gateway.server = mockServer as unknown as Server;
 
@@ -98,6 +109,54 @@ describe('AppGateway', () => {
     });
 
     describe('handleSubscribe', () => {
+        describe('validateRequest', () => {
+            const client = createMockSocket('mock-client');
+            it('eventType이 PLAN_DETAIL일 때, plan-detail.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.PLAN_DETAIL,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(
+                    `${payload.eventType}.validate`,
+                    expectedDto
+                );
+            });
+
+            it('eventType이 TASK_DETAIL일 때, task-detail.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.TASK_DETAIL,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(
+                    `${payload.eventType}.validate`,
+                    expectedDto
+                );
+            });
+
+            it('eventType이 그 외(PROJECT.*)일 때, project.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.PROJECT_CALENDER,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(`project.validate`, expectedDto);
+            });
+        });
+
         it('신규 구독: 구독 중인 room이 없을 때 새로운 room에 정상적으로 join', async () => {
             const socket = createMockSocket('socket-sub-new');
             const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
