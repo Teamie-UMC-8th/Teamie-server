@@ -11,7 +11,7 @@ import {
 import { PromptLoader } from 'src/common/utils/prompt.loader';
 import { RAGData } from 'src/modules/portfolio-corrections/entities/rag-data.entity';
 import { QueryRunner } from 'typeorm';
-import { SearchQuery, searchQuerySchema } from './schemas/portfolio-correction.schema';
+import { SearchKeywords, searchKeywordsSchema } from './schemas/portfolio-correction.schema';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { PortfolioCorrection } from 'src/modules/portfolio-corrections/entities/portfolio-correction.entity';
 import { PromptManager } from 'src/common/utils/prompt.util';
@@ -31,7 +31,7 @@ export class RagService {
         this.queryLLM = new ChatOpenAI({
             model:
                 process.env.QUERY_GENERATION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_QUERY_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
@@ -40,7 +40,7 @@ export class RagService {
 
         this.ragLLM = new ChatOpenAI({
             model: process.env.RAG_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_RAG_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
@@ -83,9 +83,12 @@ export class RagService {
             'keyword-extract.prompt.md'
         );
 
-        const queryExtractor = this.queryLLM.withStructuredOutput<SearchQuery>(searchQuerySchema, {
-            name: 'searchQuery',
-        });
+        const queryExtractor = this.queryLLM.withStructuredOutput<SearchKeywords>(
+            searchKeywordsSchema,
+            {
+                name: 'searchKeywords',
+            }
+        );
 
         const inputData = await qr.manager.findOne(PortfolioCorrection, {
             where: { id: correctionId },
@@ -94,16 +97,14 @@ export class RagService {
             throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
-        // TODO: 키워드 개수 제한이 프롬프트에서 적용되지 않고 있음.
-        // 최종적으로 k개의 키워드 추출
+        // 실행
         const extractedQuery = await queryExtractionPrompt.pipe(queryExtractor).invoke({
             companyName: inputData.submissionTarget,
             jobTitle: inputData.jobTitle,
             jobDescription: inputData.jd,
-            k: parseInt(process.env.REQUIRED_KEYWORD_COUNT || '2', 10),
         });
 
-        const queryList = extractedQuery.query.split(',').map((q) => q.trim());
+        const queryList = extractedQuery.search_keywords;
 
         queryList.forEach(async (query) => {
             await qr.manager.save(RAGData, {

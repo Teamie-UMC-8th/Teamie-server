@@ -50,9 +50,9 @@ export const correctionSchema = z.object({
 
 export type Correction = z.infer<typeof correctionSchema>;
 
-// 검색어
-export const searchQuerySchema = z.object({
-    query: z.string().describe('검색에 사용할 최적화된 검색어'),
+// 검색어 목록
+export const searchKeywordsSchema = z.object({
+    search_keywords: z.array(z.string()).describe('검색에 사용할 최적화된 검색어 목록'),
 });
 
-export type SearchQuery = z.infer<typeof searchQuerySchema>;
+export type SearchKeywords = z.infer<typeof searchKeywordsSchema>;

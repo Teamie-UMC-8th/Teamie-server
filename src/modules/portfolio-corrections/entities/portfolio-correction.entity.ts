@@ -13,13 +13,13 @@ export class PortfolioCorrection extends BaseEntity {
     @Column({ length: 20 })
     submissionTarget: string;
 
-    @Column({ length: 15 })
+    @Column({ length: 50 })
     jobTitle: string;
 
     @Column({ length: 5000, nullable: true })
     companyInsight: string;
 
-    @Column({ length: 500 })
+    @Column({ length: 1000 })
     jd: string;
 
     @Column({
