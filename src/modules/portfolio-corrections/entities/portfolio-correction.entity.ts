@@ -16,10 +16,10 @@ export class PortfolioCorrection extends BaseEntity {
     @Column({ length: 50 })
     jobTitle: string;
 
-    @Column({ length: 5000, nullable: true })
+    @Column({ length: 7000, nullable: true })
     companyInsight: string;
 
-    @Column({ length: 1000 })
+    @Column({ length: 3000 })
     jd: string;
 
     @Column({
