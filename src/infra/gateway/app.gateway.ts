@@ -7,14 +7,17 @@ import {
     SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
+    WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
-import { SubscribePayloadDto } from './dtos/subscribe-payload.dto';
+import { SubscribePayloadDto, ValidatePayloadDto } from './dtos/subscribe-payload.dto';
 import { allowedOrigins } from 'src/config/app.config';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { RealTimeMessage } from 'src/common/response/real-time-response.dto';
 import { getAccessTokenFromCookie } from 'src/common/utils/cookie.parse';
+import { EventBusService } from '../event-bus/event-bus.service';
+import { SubEventType } from 'src/common/enums/sub-event-type.enum';
 
 @UseFilters(new WebSocketExceptionFilter())
 @WebSocketGateway({
@@ -35,7 +38,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private subscriptions: Map<string, string> = new Map();
     // ban을 위한 userId -> socket.id 매핑
     private userSockets: Map<number, Set<string>> = new Map();
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly eventBus: EventBusService
+    ) {}
 
     async handleConnection(client: Socket) {
         //사용자 인증/인가
@@ -75,9 +81,17 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('subscribe')
     async handleSubscribe(
-        @MessageBody(new ValidationPipe()) payload: SubscribePayloadDto,
+        @MessageBody(
+            new ValidationPipe({
+                exceptionFactory: (errors) => {
+                    return new WsException(errors.join(', '));
+                },
+            })
+        )
+        payload: SubscribePayloadDto,
         @ConnectedSocket() client: Socket
     ) {
+        await this.validateId(payload, client);
         const roomKey: string = `${payload.eventType}:${payload.id}`;
         const currentRoomKey = this.subscriptions.get(client.id);
 
@@ -132,6 +146,35 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 socket.leave(roomKey);
                 this.subscriptions.delete(id);
             }
+        }
+    }
+
+    // subscribe에 대한 request validation을 위한 유틸함수
+    private async validateId(payload: SubscribePayloadDto, client: Socket) {
+        try {
+            switch (payload.eventType) {
+                case SubEventType.PLAN_DETAIL:
+                    this.eventBus.publishAsync(
+                        `${SubEventType.PLAN_DETAIL}.validate`,
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+                    break;
+
+                case SubEventType.TASK_DETAIL:
+                    this.eventBus.publishAsync(
+                        `${SubEventType.TASK_DETAIL}.validate`,
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+                    break;
+
+                default:
+                    this.eventBus.publishAsync(
+                        'project.validate',
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+            }
+        } catch (err) {
+            console.log(err);
         }
     }
 }

@@ -12,6 +12,7 @@ import { AttendeeRepository } from './repositories/attendees.repository';
 import { PlansListener } from './listener/plans.listener';
 import { EventBusModule } from 'src/infra/event-bus/event-bus.module';
 import { GateWayModule } from 'src/infra/gateway/gateway.module';
+import { UserProjectModule } from '../projects/user-projects/user-project.module';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { GateWayModule } from 'src/infra/gateway/gateway.module';
         UsersModule,
         EventBusModule,
         GateWayModule,
+        UserProjectModule,
     ],
     controllers: [PlansController],
     providers: [PlansService, PlansListener, PlanRepository, WriterRepository, AttendeeRepository],

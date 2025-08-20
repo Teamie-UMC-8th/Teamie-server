@@ -14,6 +14,8 @@ import { ProjectRepository } from './repositories/project.repository';
 import { InviteCodeStore } from './repositories/invite-code.store';
 import { PostsStore } from './repositories/posts.store';
 import { UserProjectModule } from './user-projects/user-project.module';
+import { GateWayModule } from 'src/infra/gateway/gateway.module';
+import { ProjectsListener } from './listener/projects.listener';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Project, User]),
@@ -24,9 +26,10 @@ import { UserProjectModule } from './user-projects/user-project.module';
         forwardRef(() => PlansModule),
         forwardRef(() => TasksModule),
         UserProjectModule,
+        GateWayModule,
     ],
     controllers: [ProjectsController],
-    providers: [ProjectsService, ProjectRepository, InviteCodeStore, PostsStore],
+    providers: [ProjectsService, ProjectRepository, InviteCodeStore, PostsStore, ProjectsListener],
     exports: [ProjectsService], // 다른 모듈에서 사용 가능하게 할 경우
 })
 export class ProjectsModule {}
