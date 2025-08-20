@@ -87,7 +87,7 @@ export class LLMService {
 
         this.questionLLM = new ChatOpenAI({
             model: process.env.LLM_QUESTION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_QUESTION_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
@@ -98,7 +98,7 @@ export class LLMService {
             model:
                 process.env.LLM_MASTER_PORTFOLIO_MODEL ||
                 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_MASTER_PORTFOLIO_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,
