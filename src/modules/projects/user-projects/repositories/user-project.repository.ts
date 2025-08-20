@@ -38,8 +38,9 @@ export class UserProjectRepository {
         const row = await manager
             .getRepository(UserProject)
             .createQueryBuilder('up')
-            .where('up.projectId = :projectId', { projectId })
             .leftJoinAndSelect('up.user', 'user')
+            .where('up.projectId = :projectId', { projectId })
+            .getMany();
         return row;
     }
 
