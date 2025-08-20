@@ -53,6 +53,7 @@ import {
     UpdatedTaskStatusDTO,
 } from '../dtos/task-payload.dto';
 import { CreatedCommentDTO } from '../../comments/dto/comment-payload.dto';
+import { TaskUpdatedSubType } from '../enums/task-update-type.enum';
 @Injectable()
 export class TasksService {
     constructor(
@@ -210,7 +211,7 @@ export class TasksService {
         if (Object.keys(diff).length > 1) {
             const diffDto = UpdatedTaskDTO.from(diff, updatedTask, managers); // managers는 Manager[]
             await this.eventBus.publishAsync(
-                `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+                `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}.${TaskUpdatedSubType.DIFF}`,
                 EventPayloadDto.from(RealTimeType.UPDATED, {
                     projectId: updatedTask.step.project.id,
                     taskId: updatedTask.id,
@@ -765,7 +766,7 @@ export class TasksService {
 
         // 5. publish
         await this.eventBus.publishAsync(
-            `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`,
+            `${RealTimeEntity.TASK}.${RealTimeType.UPDATED}.${TaskUpdatedSubType.STATUS}`,
             EventPayloadDto.from(RealTimeType.UPDATED, {
                 projectId,
                 task: UpdatedTaskStatusDTO.from(updatedTask),

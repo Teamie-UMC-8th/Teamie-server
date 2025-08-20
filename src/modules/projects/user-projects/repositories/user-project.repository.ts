@@ -53,7 +53,7 @@ export class UserProjectRepository {
 
     async findAllWithProjectByUserId(userId: number) {
         return await this.userProjectRepository.find({
-            where: { user: { id: userId } },
+            where: { user: { id: userId }, project: { isCompleted: false } },
             relations: ['project'],
             select: {
                 project: {

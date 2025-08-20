@@ -3,7 +3,6 @@ import { Step } from '../entities/steps.entity';
 export class CreatedStepDTO {
     id: number;
     name: string;
-
     static from(entity: Step): CreatedStepDTO {
         const dto = new CreatedStepDTO();
         dto.id = entity.id;
@@ -35,3 +34,4 @@ export class UpdatedStepDTO {
         return dto;
     }
 }
+

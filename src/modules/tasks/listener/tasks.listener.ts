@@ -8,6 +8,8 @@ import {
     RealTimeMessage,
     RealTimeType,
 } from 'src/common/response/real-time-response.dto';
+import { UpdatedTaskStepDTO } from '../dtos/task-payload.dto';
+import { TaskUpdatedSubType } from '../enums/task-update-type.enum';
 
 @Injectable()
 export class TasksListener {
@@ -27,7 +29,7 @@ export class TasksListener {
     }
 
     /** 업무 수정 → 대시보드 + 업무 상세에 모두 반영 */
-    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`, { async: true })
+    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}.${TaskUpdatedSubType.DIFF}`, { async: true })
     async onTaskUpdated(payload: EventPayloadDto) {
         // diff 이벤트만 처리
         if (!payload?.data?.diff) return;
@@ -76,7 +78,7 @@ export class TasksListener {
     }
 
     /** 업무 상태 수정 → 프로젝트 대시보드에만 반영*/
-    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}`, { async: true })
+    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}.${TaskUpdatedSubType.STATUS}`, { async: true })
     async onTaskStatusUpdated(payload: EventPayloadDto) {
         // 상태 전용 이벤트만 처리
         if (!payload?.data?.task) return;
@@ -87,6 +89,18 @@ export class TasksListener {
             RealTimeEntity.TASK,
             payload.data.task
         );
+        this.gateway.handlePublish(dashboardRoom, msg);
+    }
+
+    /** task의 step 이동 -> 업무 대시보드에 반영 */
+    @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.UPDATED}.${TaskUpdatedSubType.STEP}`, { async: true })
+    async onTaskStepUpdated(payload: EventPayloadDto) {
+        const updated = payload.data.task as UpdatedTaskStepDTO;
+        const msg = RealTimeMessage.of(RealTimeType.UPDATED, RealTimeEntity.TASK, {
+            id: updated.id,
+            stepId: updated.stepId,
+        });
+        const dashboardRoom = `${SubEventType.PROJECT_DASHBOARD}:${updated.projectId}`;
         this.gateway.handlePublish(dashboardRoom, msg);
     }
 }

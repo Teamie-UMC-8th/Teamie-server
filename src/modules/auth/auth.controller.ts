@@ -11,6 +11,7 @@ import { InternalServerError } from 'src/common/exceptions/custom.errors';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
+import { ApiCommonErrorResponse } from 'src/common/response/swagger-response.helper';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -77,7 +78,10 @@ export class AuthController {
 
         // 사용자 인증 by JWT
         const kakaoUser = user;
-        const accessToken = await this.authService.handleKakaoLogin(qr, kakaoUser);
+        const { accessToken, refreshToken } = await this.authService.handleKakaoLogin(
+            qr,
+            kakaoUser
+        );
         req.session.destroy((err: Error) => {
             if (err) {
                 throw new InternalServerError('세션 파괴 중 에러 발생');
@@ -92,11 +96,49 @@ export class AuthController {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
-                maxAge: this.configService.get('JWT_EXPIRES_IN') || 1000 * 60 * 60, // 1시간
+                maxAge: 1000 * (this.configService.get('JWT_EXPIRES_IN') || 60 * 60), // 1시간
             });
-            //TODO: 추후 refreshToken 구현 필요
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 1000 * (this.configService.get('JWT_REFRESH_EXPIRES_IN') || 60 * 60 * 24), // 1일
+            });
             res.redirect(fullRedirect);
         });
+    }
+
+    @ApiOperation({
+        summary: '토큰 재발급',
+        description: '유효한 refreshToken을 사용해 accessToken을 재발급 받습니다.',
+    })
+    @ApiOkResponse({
+        schema: {
+            example: {
+                isSuccess: true,
+                error: null,
+                result: 'Generate New AccessToken',
+            },
+        },
+    })
+    @ApiCommonErrorResponse(
+        ErrorCode.UNAUTHORIZED,
+        '유효하지 않은 사용자입니다.',
+        HttpStatus.UNAUTHORIZED
+    )
+    @Pulbic()
+    @Post('refresh')
+    async handleRefresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+        const refreshToken = req.cookies?.['refreshToken'];
+        const accessToken = await this.authService.refreshAccessToken(refreshToken);
+        // 재발급한 액세스토큰으로 쿠키 교체
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 1000 * (this.configService.get('JWT_EXPIRES_IN') || 60 * 60), // 1시간
+        });
+        return 'Generate New AccessToken';
     }
 
     @ApiOperation({
@@ -118,11 +160,20 @@ export class AuthController {
     ])
     @Post('logout')
     async handleLogout(@Req() req: Request) {
-        const token = req.cookies?.['accessToken'];
-        if (token) {
-            await this.authService.blacklistToken(token);
+        const accessToken = req.cookies?.['accessToken'];
+        const refreshToken = req.cookies?.['refreshToken'];
+        if (accessToken) {
+            await this.authService.blacklistToken(accessToken);
+        }
+        if (refreshToken) {
+            await this.authService.revokeRefreshToken(refreshToken);
         }
         req.res?.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+        });
+        req.res?.clearCookie('refreshToken', {
             httpOnly: true,
             secure: true,
             sameSite: 'none',

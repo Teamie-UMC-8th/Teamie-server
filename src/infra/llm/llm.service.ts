@@ -107,7 +107,7 @@ export class LLMService {
 
         this.correctionLLM = new ChatOpenAI({
             model: process.env.LLM_CORRECTION_MODEL || 'google/gemini-2.5-flash-lite-preview-06-17',
-            temperature: 0.3,
+            temperature: parseFloat(process.env.LLM_CORRECTION_TEMPERATURE || '0.3'),
             apiKey: this.apiKey,
             configuration: {
                 baseURL: this.baseURL,

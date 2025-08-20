@@ -450,14 +450,14 @@ export class ProjectsService {
     }
 
     async getTeamCalender(projectId: number, startDate: string, endDate: string) {
-        //검색 범위 제한 - 최대 31일
+        //검색 범위 제한 - 최대 45일
         const start = new Date(startDate);
         const end = new Date(endDate);
 
         const diffInMs = end.getTime() - start.getTime();
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
-        if (diffInDays > 31) {
+        if (diffInDays > 45) {
             throw new InvalidDateException({
                 startDate: startDate,
                 endDate: endDate,
@@ -587,13 +587,13 @@ export class ProjectsService {
     }
 
     //프로젝트 종료 여부 조회
-    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted>  {
+    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted> {
         // 프로젝트 멤버 권한 검사
         await this.assertProjectMember(userId, projectId);
 
         //프로젝트 종료 여부 검사
         const isCompleted = await this.projectRepository.findIsCompletedByProjectId(projectId);
-        
-        return { isCompleted};
+
+        return { isCompleted };
     }
 }

@@ -286,19 +286,19 @@ export class ProjectsController {
             '프로젝트 별 팀 캘린더를 조회하는 API, 캘린더의 시작 날짜와 마지막 날짜를 입력해주세요.',
     })
     @ApiCommonResponseArray(TeamCalenderResponseDto)
-    @ApiCommonErrorResponses(HttpStatus.BAD_REQUEST, [
-        { errorCode: ErrorCode.PLAN_DATE_TOO_LONG, reason: '최대 31일까지만 조회할 수 있습니다.' },
-    ])
-    @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
-        {
-            errorCode: ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
-            reason: '해당 프로젝트에 접근 권한이 없습니다.',
-        },
-    ])
+    @ApiCommonErrorResponse(
+        ErrorCode.PLAN_DATE_TOO_LONG,
+        '최대 45일까지만 조회할 수 있습니다.',
+        HttpStatus.BAD_REQUEST
+    )
+    @ApiCommonErrorResponse(
+        ErrorCode.FORBIDDEN_USER_FOR_PROJECT,
+        '해당 프로젝트에 접근 권한이 없습니다.',
+        HttpStatus.FORBIDDEN
+    )
     @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/plans')
     async getTeamCalender(
-        @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number,
         @Query(new ValidationPipe({ transform: true })) query: CalenderQueryDto
     ) {

@@ -12,18 +12,17 @@ export class RagResponseDto {
     keywords: string[];
 
     @ApiProperty({
-        description: '관련 링크 목록',
+        description: '관련 제목/링크 목록',
         example: [
-            'https://kstd-lezhin.career.greetinghr.com/ko/o/143445',
-            'https://www.wanted.co.kr/wd/247334',
-            'https://dealsitetv.com/articles/51996',
-            'https://about.lezhin.com/ko',
+            { title: '원티드', url: 'https://www.wanted.co.kr/wd/247334' },
+            { title: '딜사이트TV', url: 'https://dealsitetv.com/articles/51996' },
+            { title: '레진코믹스', url: 'https://about.lezhin.com/ko' },
         ],
         isArray: true,
         type: String,
     })
     @IsArray()
-    links: string[];
+    links: { title: string; url: string }[];
 
     static fromEntity(entity: any): any {
         const dto = new RagResponseDto();
