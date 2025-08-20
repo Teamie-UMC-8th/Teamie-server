@@ -1,74 +1,87 @@
 // src/modules/projects/repositories/posts.store.ts
 import { Injectable, Inject } from '@nestjs/common';
 import { RedisClientType } from 'redis';
-import { PostNotFoundException } from 'src/common/exceptions/custom.errors';
 
 @Injectable()
 export class PostsStore {
     constructor(@Inject('REDIS_CLIENT') private readonly redis: RedisClientType) {}
 
-    private key = (projectId: number, prefix: string) => `${prefix}:${projectId}`;
+    private postKey = (projectId: number, postId: number) => `posts:${projectId}:${postId}`;
+    private listKey = (projectId: number, prefix: string) => `${prefix}:${projectId}:posts`;
 
+    // 전체 포스트 조회
     async findPosts(projectId: number, prefix: string): Promise<RedisPost[]> {
-        const raw = await this.redis.get(this.key(projectId, prefix));
-        if (!raw) return [];
-        return JSON.parse(raw) as RedisPost[];
+        const listKey = this.listKey(projectId, prefix);
+        const idStrs = await this.redis.lRange(listKey, 0, -1); // string[]
+        if (!idStrs.length) return [];
+
+        const postKeys = idStrs.map((idStr) => this.postKey(projectId, Number(idStr)));
+        const rawPosts = await this.redis.mGet(postKeys);
+
+        return rawPosts
+            .map((raw, idx) => (raw ? { ...JSON.parse(raw), id: Number(idStrs[idx]) } : null))
+            .filter((p): p is RedisPost => p !== null);
     }
+
+    // 포스트 저장
     async savePost(
         projectId: number,
         prefix: string,
         payload: { userId: number; content: string },
-        ttlSec: number,
-        maxCount: number
+        ttlSec: number
     ): Promise<RedisPost> {
-        const posts = await this.findPosts(projectId, prefix);
-        if (posts.length >= maxCount) throw new Error('POSTS_LIMIT');
+        const id = Number(generateRandomId(6));
 
-        const id = posts.length ? Math.max(...posts.map((p) => p.id)) + 1 : 1;
         const post: RedisPost = {
             id,
-            userId: payload.userId, // ← 여기서 반드시 넣음
+            userId: payload.userId,
             content: payload.content,
             createdAt: new Date().toISOString(),
         };
-        posts.push(post);
-        await this.savePosts(projectId, prefix, posts, ttlSec);
+
+        const postKey = this.postKey(projectId, id);
+        const listKey = this.listKey(projectId, prefix);
+
+        await this.redis.set(postKey, JSON.stringify(post), { EX: ttlSec });
+        await this.redis.rPush(listKey, id.toString());
+
         return post;
     }
 
-    async savePosts(
-        projectId: number,
-        prefix: string,
-        posts: RedisPost[],
-        ttlSec: number
-    ): Promise<void> {
-        await this.redis.set(this.key(projectId, prefix), JSON.stringify(posts));
-        await this.redis.expire(this.key(projectId, prefix), ttlSec);
-    }
+    // 포스트 삭제
     async deletePost(
         projectId: number,
         prefix: string,
         postId: number,
-        userId: number,
-        ttlSec: number
+        userId: number
     ): Promise<'OK' | 'NOT_FOUND' | 'NOT_OWNER'> {
-        const posts = await this.findPosts(projectId, prefix);
-        const idx = posts.findIndex((p) => p.id === postId);
-        if (idx === -1) return 'NOT_FOUND';
+        const postKey = this.postKey(projectId, postId);
+        const listKey = this.listKey(projectId, prefix);
 
-        const target = posts[idx];
-        if (Number(target.userId) !== Number(userId)) return 'NOT_OWNER';
+        const raw = await this.redis.get(postKey);
+        if (!raw) return 'NOT_FOUND';
 
-        posts.splice(idx, 1);
-        if (posts.length === 0) {
-            await this.deletePosts(projectId, prefix);
-        } else {
-            await this.savePosts(projectId, prefix, posts, ttlSec);
-        }
+        const post: RedisPost = JSON.parse(raw);
+        if (post.userId !== userId) return 'NOT_OWNER';
+
+        await this.redis.lRem(listKey, 0, postId.toString());
+        await this.redis.del(postKey);
         return 'OK';
     }
 
+    // 전체 포스트 삭제 (프로젝트 삭제 시)
     async deletePosts(projectId: number, prefix: string): Promise<void> {
-        await this.redis.del(this.key(projectId, prefix));
+        const listKey = this.listKey(projectId, prefix);
+        const idStrs = await this.redis.lRange(listKey, 0, -1);
+
+        if (idStrs.length) {
+            const postKeys = idStrs.map((idStr) => this.postKey(projectId, Number(idStr)));
+            await this.redis.del(postKeys);
+        }
+        await this.redis.del(listKey);
     }
+}
+
+function generateRandomId(length = 6): string {
+    return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
 }

@@ -28,6 +28,7 @@ import { CorrectionResultDto, GetCorrectionResultDto } from './dtos/correction-r
 import { StatusResponseDto } from './dtos/status-response.dto';
 import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
 import { UpdatePortfolioCorrectionDto } from './dtos/portfolio-correction.dto';
+import { MasterPortfolioOutputDto } from './dtos/master-portfolio-output.dto';
 
 @ApiTags('PortfolioCorrections')
 @Controller('portfolio-corrections')
@@ -271,9 +272,27 @@ export class PortfolioCorrectionsController {
         return await this.portfolioCorrectionsService.getCorrection(correctionId);
     }
 
+    @ApiOperation({
+        summary: '(4-2) AI 첨삭 대상 마스터 포트폴리오 조회',
+        description: 'AI 첨삭의 특정 마스터 포트폴리오 정보를 조회합니다.',
+    })
+    @ApiParam({ name: 'projectId', type: Number, description: '프로젝트 ID' })
+    @ApiCommonResponse(MasterPortfolioOutputDto)
+    @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
+        errorCode: 'MASTERPORTFOLIO4041',
+        reason: '마스터 포트폴리오를 찾을 수 없습니다.',
+    })
+    @Get(':projectId/master-portfolios')
+    async getMasterPortfolio(
+        @User('id') userId: number,
+        @Param('projectId', ParseIntPipe) projectId: number
+    ) {
+        return await this.portfolioCorrectionsService.getMasterPortfolio(userId, projectId);
+    }
+
     // 결과 개별 조회 API
     @ApiOperation({
-        summary: '(4-2) AI 첨삭 결과 개별 조회',
+        summary: '(4-3) AI 첨삭 결과 개별 조회',
         description: '특정 AI 첨삭의 결과를 개별적으로 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })

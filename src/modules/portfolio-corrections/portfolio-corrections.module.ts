@@ -9,6 +9,7 @@ import { AICorrection } from './entities/ai-correction.entity';
 import { Project } from '../projects/entities/projects.entity';
 import { RAGData } from './entities/rag-data.entity';
 import { MasterPortfolioAI } from '../master-portfolios/entities/master-portfolio-ai.entity';
+import { MasterPortfolio } from '../master-portfolios/entities/master-portfolios.entity';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { MasterPortfolioAI } from '../master-portfolios/entities/master-portfoli
             Project,
             RAGData,
             MasterPortfolioAI,
+            MasterPortfolio,
         ]),
         LLMModule,
     ],
