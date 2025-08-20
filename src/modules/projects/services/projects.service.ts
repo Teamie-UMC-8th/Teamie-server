@@ -343,9 +343,8 @@ export class ProjectsService {
         const newPost = await this.postsStore.savePost(
             projectId,
             this.postsKeyPrefix,
-            { userId, content: dto.content }, // ← userId 전달
-            this.POST_TTL_SECONDS,
-            this.POST_MAX
+            { userId, content: dto.content }, 
+            this.POST_TTL_SECONDS
         );
         // 10) 생성된 객체 반환
         return CreatePostResponseDto.fromEntity(newPost, projectId);
@@ -357,13 +356,11 @@ export class ProjectsService {
         projectId: number
     ): Promise<DeletePostResponseDto> {
         await this.assertProjectMember(userId, projectId);
-        const key = this.POSTS_KEY(projectId);
         const res = await this.postsStore.deletePost(
             projectId,
             this.postsKeyPrefix,
             postId,
-            userId, // ← 작성자 검증에 사용
-            this.POST_TTL_SECONDS
+            userId
         );
         if (res === 'NOT_FOUND') throw new PostNotFoundException();
         if (res === 'NOT_OWNER') throw new NotPostAuthorException();
