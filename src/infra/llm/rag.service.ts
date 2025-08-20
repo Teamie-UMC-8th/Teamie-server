@@ -73,7 +73,7 @@ export class RagService {
         const searchResults = await this.searchWithTavily(qr, correctionId, keywords);
 
         // step3. 검색 결과로 RAG 답변 생성
-        return await this.generateCompanyInsights(searchResults);
+        return await this.generateCompanyInsights(qr, correctionId, searchResults);
     }
 
     // 키워드 추출
@@ -151,17 +151,34 @@ export class RagService {
     }
 
     // 기업 분석 정보 생성
-    private async generateCompanyInsights(searchResults: string[]) {
+    private async generateCompanyInsights(
+        qr: QueryRunner,
+        correctionId: number,
+        searchResults: string[]
+    ) {
         // RAG 답변 생성을 위한 로직 구현
         const companyProfilePrompt = await PromptManager.getPrompt(
             this.promptLoader,
             'company-profile.prompt.md'
         );
 
+        const info = await qr.manager.findOne(PortfolioCorrection, {
+            where: { id: correctionId },
+            select: ['submissionTarget', 'jobTitle'],
+        });
+        if (!info) {
+            throw new PortfolioCorrectionNotFoundException(
+                correctionId,
+                '회사명/직무명 데이터를 조회하는데 실패했습니다.'
+            );
+        }
+
         const companyProfile = await companyProfilePrompt
             .pipe(this.ragLLM)
             .pipe(new StringOutputParser())
             .invoke({
+                companyName: info.submissionTarget,
+                jobTitle: info.jobTitle,
                 pageContents: searchResults,
             });
         return companyProfile;
