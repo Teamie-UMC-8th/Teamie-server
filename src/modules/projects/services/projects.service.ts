@@ -50,7 +50,7 @@ import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-resp
 import { EventPayloadDto } from 'src/common/dtos/event-payload.dto';
 import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
-import { ca } from 'zod/v4/locales';
+import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { getProjectIsCompleted } from '../dtos/get-project-isCompleted.dto';
 @Injectable()
 export class ProjectsService {
@@ -274,7 +274,14 @@ export class ProjectsService {
         }
 
         // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
-        await this.masterPortfoliosService.createMasterPortfolio(qr.manager, userId, projectId);
+        const members = await this.userProjectRepository.findUsersByProjectIdUsingManagers(qr.manager,projectId); // [UserProject]
+        for (const up of members) {
+            await this.masterPortfoliosService.createMasterPortfolio(
+                qr.manager,
+                up.user.id,
+                projectId
+            );
+        }
 
         // 5) 초대코드 정리 (InviteCodeStore 사용)
         const codes = await this.inviteStore.listCodesByProject(projectId);
@@ -343,9 +350,8 @@ export class ProjectsService {
         const newPost = await this.postsStore.savePost(
             projectId,
             this.postsKeyPrefix,
-            { userId, content: dto.content }, // ← userId 전달
-            this.POST_TTL_SECONDS,
-            this.POST_MAX
+            { userId, content: dto.content }, 
+            this.POST_TTL_SECONDS
         );
         // 10) 생성된 객체 반환
         return CreatePostResponseDto.fromEntity(newPost, projectId);
@@ -357,13 +363,11 @@ export class ProjectsService {
         projectId: number
     ): Promise<DeletePostResponseDto> {
         await this.assertProjectMember(userId, projectId);
-        const key = this.POSTS_KEY(projectId);
         const res = await this.postsStore.deletePost(
             projectId,
             this.postsKeyPrefix,
             postId,
-            userId, // ← 작성자 검증에 사용
-            this.POST_TTL_SECONDS
+            userId
         );
         if (res === 'NOT_FOUND') throw new PostNotFoundException();
         if (res === 'NOT_OWNER') throw new NotPostAuthorException();
