@@ -11,8 +11,6 @@ export class UpdateProfileDto {
 
     @ApiProperty({ example: '기획' })
     @IsString()
-    @IsNotEmpty()
-    // 필요하면 enum으로 제한: @IsEnum(projectRole)
     role: string;
 }
 

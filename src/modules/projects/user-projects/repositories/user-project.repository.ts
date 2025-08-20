@@ -34,6 +34,16 @@ export class UserProjectRepository {
         return users;
     }
 
+    async findUsersByProjectIdUsingManagers(manager:EntityManager,projectId: number) {
+        const row = await manager
+            .getRepository(UserProject)
+            .createQueryBuilder('up')
+            .leftJoinAndSelect('up.user', 'user')
+            .where('up.projectId = :projectId', { projectId })
+            .getMany();
+        return row;
+    }
+
     async findAllByProjectId(projectId: number): Promise<UserProject[]> {
         return await this.userProjectRepository.find({
             where: { project: { id: projectId } },
