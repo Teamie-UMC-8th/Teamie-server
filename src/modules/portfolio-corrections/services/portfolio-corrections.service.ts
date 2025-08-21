@@ -221,7 +221,8 @@ export class PortfolioCorrectionsService {
                     status: PortfolioCorrectionStatus.DONE,
                 });
 
-                return mergedCorrection;
+                // return mergedCorrection;
+                return "성공했습니다."
             } catch (error) {
                 console.error('첨삭 과정 중 실패: ', error);
                 throw new Error('첨삭 과정 중 실패');
