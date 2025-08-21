@@ -20,14 +20,13 @@ async function bootstrap() {
         ) => {
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) {
-                console.log(`[CORS] ✅ 허용: ${origin}`);
                 return callback(null, true);
             } else {
-                console.error(`[CORS] ❌ 거부: ${origin}`);
-                return callback(new Error(`CORS: ${origin} is not allowed`), false);
+                // Error 대신 false만 반환하여 CORS 헤더가 올바르게 설정되도록 함
+                return callback(null, false);
             }
         },
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
         allowedHeaders: [
             'Content-Type',
             'Authorization',
@@ -35,8 +34,15 @@ async function bootstrap() {
             'X-Requested-With',
             'Accept',
             'Origin',
+            'Access-Control-Allow-Origin',
         ],
         credentials: true,
+        // preflight 요청에 대한 응답 상태 코드 설정
+        optionsSuccessStatus: 200,
+        // preflight 요청 캐시 시간 (초)
+        maxAge: 86400, // 24시간
+        // preflight 요청을 다음 핸들러로 전달할지 여부
+        preflightContinue: false,
     });
     app.use(cookieParser());
 
