@@ -7,14 +7,17 @@ import {
     SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
+    WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { WebSocketExceptionFilter } from 'src/common/exceptions/ws-exception.filter';
-import { SubscribePayloadDto } from './dtos/subscribe-payload.dto';
+import { SubscribePayloadDto, ValidatePayloadDto } from './dtos/subscribe-payload.dto';
 import { allowedOrigins } from 'src/config/app.config';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { RealTimeMessage } from 'src/common/response/real-time-response.dto';
 import { getAccessTokenFromCookie } from 'src/common/utils/cookie.parse';
+import { EventBusService } from '../event-bus/event-bus.service';
+import { SubEventType } from 'src/common/enums/sub-event-type.enum';
 
 @UseFilters(new WebSocketExceptionFilter())
 @WebSocketGateway({
@@ -32,11 +35,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 소켓 관리
     private socketsMap = new Map<string, Socket>();
     // 클라이언트 별 구독 관리: socket.id -> 구독하는 room 이름
-    // NOTE: 단일 구독 방식으로 수정 필요
-    private subscriptions: Map<string, Set<string>> = new Map();
+    private subscriptions: Map<string, string> = new Map();
     // ban을 위한 userId -> socket.id 매핑
     private userSockets: Map<number, Set<string>> = new Map();
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly eventBus: EventBusService
+    ) {}
 
     async handleConnection(client: Socket) {
         //사용자 인증/인가
@@ -56,7 +61,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 this.userSockets.set(userId, new Set());
             }
             this.userSockets.get(userId)?.add(client.id);
-            this.subscriptions.set(client.id, new Set());
         } catch (err) {
             console.error(`Socket ${client.id} 인증 실패:`, err);
             client.disconnect(true);
@@ -77,16 +81,31 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('subscribe')
     async handleSubscribe(
-        @MessageBody(new ValidationPipe()) payload: SubscribePayloadDto,
+        @MessageBody(
+            new ValidationPipe({
+                exceptionFactory: (errors) => {
+                    return new WsException(errors.join(', '));
+                },
+            })
+        )
+        payload: SubscribePayloadDto,
         @ConnectedSocket() client: Socket
     ) {
+        await this.validateId(payload, client);
         const roomKey: string = `${payload.eventType}:${payload.id}`;
-        const clientSubs = this.subscriptions.get(client.id);
-        if (clientSubs && !clientSubs.has(roomKey)) {
-            client.join(roomKey);
-            clientSubs.add(roomKey);
-            console.log(`join to ${roomKey}`);
+        const currentRoomKey = this.subscriptions.get(client.id);
+
+        if (currentRoomKey === roomKey) {
+            return { status: 'success', message: `Already subscribed to ${roomKey}` };
         }
+
+        if (currentRoomKey) {
+            client.leave(currentRoomKey);
+        }
+
+        client.join(roomKey);
+        this.subscriptions.set(client.id, roomKey);
+        return { status: 'success', message: `Subscribed to ${roomKey}` };
     }
 
     @SubscribeMessage('unsubscribe')
@@ -95,15 +114,20 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket
     ) {
         const roomKey: string = `${payload.eventType}:${payload.id}`;
-        client.leave(roomKey);
-        console.log(`leave from ${roomKey}`);
-        this.subscriptions.get(client.id)?.delete(roomKey);
+        const currentRoomKey = this.subscriptions.get(client.id);
+
+        if (currentRoomKey === roomKey) {
+            client.leave(roomKey);
+            this.subscriptions.delete(client.id);
+            return { status: 'success', message: `Unsubscribed from ${roomKey}` };
+        }
+
+        return { status: 'error', message: `Not subscribed to ${roomKey}` };
     }
 
     // 브로드캐스트
     handlePublish(roomKey: string, payload: RealTimeMessage) {
         this.server.to(`${roomKey}`).emit('publish', payload);
-        console.log('broadcast');
     }
 
     // 사용자 ban
@@ -114,17 +138,43 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const socket = this.socketsMap.get(id);
             if (!socket) continue;
 
-            socket.emit('unsubscribe-forced', {
-                roomKey,
-                reason: '관리자에 의해 접근이 차단되었습니다.',
-            });
-            socket.leave(roomKey);
-
-            const subs = this.subscriptions.get(id);
-            subs?.delete(roomKey);
-            if (subs?.size === 0) {
+            if (this.subscriptions.get(id) === roomKey) {
+                socket.emit('unsubscribe-forced', {
+                    roomKey,
+                    reason: '관리자에 의해 접근이 차단되었습니다.',
+                });
+                socket.leave(roomKey);
                 this.subscriptions.delete(id);
             }
+        }
+    }
+
+    // subscribe에 대한 request validation을 위한 유틸함수
+    private async validateId(payload: SubscribePayloadDto, client: Socket) {
+        try {
+            switch (payload.eventType) {
+                case SubEventType.PLAN_DETAIL:
+                    this.eventBus.publishAsync(
+                        `${SubEventType.PLAN_DETAIL}.validate`,
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+                    break;
+
+                case SubEventType.TASK_DETAIL:
+                    this.eventBus.publishAsync(
+                        `${SubEventType.TASK_DETAIL}.validate`,
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+                    break;
+
+                default:
+                    this.eventBus.publishAsync(
+                        'project.validate',
+                        ValidatePayloadDto.from({ payload, client })
+                    );
+            }
+        } catch (err) {
+            console.log(err);
         }
     }
 }

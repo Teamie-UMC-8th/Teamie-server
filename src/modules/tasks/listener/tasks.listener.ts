@@ -10,10 +10,44 @@ import {
 } from 'src/common/response/real-time-response.dto';
 import { UpdatedTaskStepDTO } from '../dtos/task-payload.dto';
 import { TaskUpdatedSubType } from '../enums/task-update-type.enum';
+import { ValidatePayloadDto } from 'src/infra/gateway/dtos/subscribe-payload.dto';
+import { TaskRepository } from '../repositories/task.repository';
+import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 
 @Injectable()
 export class TasksListener {
-    constructor(private readonly gateway: AppGateway) {}
+    constructor(
+        private readonly gateway: AppGateway,
+        private readonly tasksRepository: TaskRepository,
+        private readonly userProjectRepository: UserProjectRepository
+    ) {}
+
+    /* taskId validation */
+    @OnEvent(`${SubEventType.TASK_DETAIL}.validate`, { async: true })
+    async validateTaskId(dto: ValidatePayloadDto) {
+        const { payload, client } = dto;
+        const id = payload.id;
+        const userId = client.data.user;
+        try {
+            const task = await this.tasksRepository.findById(id);
+            const projectId = task.step.project.id;
+            const isProjectMember = await this.userProjectRepository.findUserProject(
+                userId,
+                projectId
+            );
+            if (!isProjectMember) {
+                client.emit('exception', {
+                    message: `NOT_PROJECT_MEMBER(${id})`,
+                });
+                await this.gateway.handleUnsubscribe(payload, client);
+            }
+        } catch (err) {
+            client.emit('exception', {
+                message: `TASK_NOT_FOUND(${id})`,
+            });
+            await this.gateway.handleUnsubscribe(payload, client);
+        }
+    }
 
     /** 업무 생성 → 프로젝트 대시보드에만 반영 */
     @OnEvent(`${RealTimeEntity.TASK}.${RealTimeType.CREATED}`, { async: true })
