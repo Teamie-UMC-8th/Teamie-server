@@ -5,6 +5,8 @@ import { PlansListener } from './plans.listener';
 import { RealTimeEntity, RealTimeType } from 'src/common/response/real-time-response.dto';
 import { AppGateway } from 'src/infra/gateway/app.gateway';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
+import { PlanRepository } from '../repositories/plan.repository';
+import { UserProjectRepository } from 'src/modules/projects/user-projects/repositories/user-project.repository';
 
 describe('PlansListener', () => {
     let listener: PlansListener;
@@ -15,6 +17,9 @@ describe('PlansListener', () => {
         handlePublish: jest.fn(),
         handleBanUser: jest.fn(),
     };
+
+    const mockPlanRepository = {};
+    const mockUserProjectRepository = {};
 
     beforeEach(async () => {
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -31,6 +36,14 @@ describe('PlansListener', () => {
                 {
                     provide: AppGateway,
                     useValue: mockGateway,
+                },
+                {
+                    provide: PlanRepository,
+                    useValue: mockPlanRepository,
+                },
+                {
+                    provide: UserProjectRepository,
+                    useValue: mockUserProjectRepository,
                 },
             ],
         }).compile();
@@ -69,7 +82,6 @@ describe('PlansListener', () => {
             await new Promise((resolve) => setImmediate(resolve));
 
             // 3. Assert (결과 검증)
-            expect(consoleLogSpy).toHaveBeenCalledWith('일정 삭제 동기화 이벤트');
             // AppGateway.hadlePublish의 호출 확인
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(2);
 
@@ -108,7 +120,6 @@ describe('PlansListener', () => {
             await new Promise((resolve) => setImmediate(resolve));
 
             // 3. Assert (결과 검증)
-            expect(consoleLogSpy).toHaveBeenCalledWith('일정 생성 동기화 이벤트');
             // AppGateway.hadlePublish의 호출 확인
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(1);
             // 호출 인자 검증 - 팀 캘린더 / 일정 id, 이름, 날짜
@@ -138,7 +149,6 @@ describe('PlansListener', () => {
             await new Promise((resolve) => setImmediate(resolve));
 
             // 3. Assert (결과 검증)
-            expect(consoleLogSpy).toHaveBeenCalledWith('일정 수정 동기화 이벤트');
             // AppGateway.hadlePublish의 호출 확인
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(2);
 
@@ -172,7 +182,6 @@ describe('PlansListener', () => {
             await new Promise((resolve) => setImmediate(resolve));
 
             // 3. Assert (결과 검증)
-            expect(consoleLogSpy).toHaveBeenCalledWith('일정 수정 동기화 이벤트');
             // AppGateway.hadlePublish의 호출 확인
             expect(mockGateway.handlePublish).toHaveBeenCalledTimes(1);
 

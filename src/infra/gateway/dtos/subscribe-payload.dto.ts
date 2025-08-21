@@ -1,11 +1,30 @@
-import { IsInt, IsString } from 'class-validator';
+import { IsEnum, IsInt } from 'class-validator';
+import { Socket } from 'socket.io';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
 
-//NOTE: id에 대한 404 체크 validation 추가 필요
 export class SubscribePayloadDto {
-    @IsString()
+    @IsEnum(SubEventType)
     eventType: SubEventType;
 
     @IsInt()
     id: number;
+
+    static from(data: { eventType: SubEventType; id: number }) {
+        const dto = new SubscribePayloadDto();
+        dto.eventType = data.eventType;
+        dto.id = data.id;
+        return dto;
+    }
+}
+
+export class ValidatePayloadDto {
+    payload: SubscribePayloadDto;
+    client: Socket;
+
+    static from(data: { payload: SubscribePayloadDto; client: Socket }) {
+        const dto = new ValidatePayloadDto();
+        dto.payload = data.payload;
+        dto.client = data.client;
+        return dto;
+    }
 }

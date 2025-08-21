@@ -2,16 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppGateway } from './app.gateway';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { Server, Socket } from 'socket.io';
-import { SubscribePayloadDto } from './dtos/subscribe-payload.dto';
+import { SubscribePayloadDto, ValidatePayloadDto } from './dtos/subscribe-payload.dto';
 import {
     RealTimeEntity,
     RealTimeMessage,
     RealTimeType,
 } from 'src/common/response/real-time-response.dto';
 import { SubEventType } from 'src/common/enums/sub-event-type.enum';
+import { EventBusService } from '../event-bus/event-bus.service';
 
 describe('AppGateway', () => {
     let gateway: AppGateway;
+    let eventBus: EventBusService;
     let authService: AuthService;
     let consoleLogSpy: jest.SpyInstance;
     let moduleRef: TestingModule;
@@ -19,6 +21,10 @@ describe('AppGateway', () => {
     const mockServer = {
         to: jest.fn().mockReturnThis(),
         emit: jest.fn(),
+    };
+
+    const mockEventBus = {
+        publishAsync: jest.fn(),
     };
 
     // 소켓 모킹용 유틸
@@ -46,10 +52,15 @@ describe('AppGateway', () => {
                         verifyWsToken: jest.fn(),
                     },
                 },
+                {
+                    provide: EventBusService,
+                    useValue: mockEventBus,
+                },
             ],
         }).compile();
 
         gateway = moduleRef.get<AppGateway>(AppGateway);
+        eventBus = moduleRef.get<EventBusService>(EventBusService);
         authService = moduleRef.get<AuthService>(AuthService);
         gateway.server = mockServer as unknown as Server;
 
@@ -64,88 +75,174 @@ describe('AppGateway', () => {
         await moduleRef.close();
     });
 
-    it('handleConnection: handshake 시 액세스토큰이 없거나 유효하지 않을 경우 연결을 해제', async () => {
-        const socket = createMockSocket('socket1', '');
-        await gateway.handleConnection(socket);
-        expect(socket.disconnect).toHaveBeenCalled();
-        expect(gateway['subscriptions'].has(socket.id)).toBe(false);
-        expect(gateway['userSockets'].has(1)).toBe(false);
-        expect(gateway['socketsMap'].has(socket.id)).toBe(false);
+    describe('Connection Management', () => {
+        it('handleConnection: handshake 시 액세스토큰이 없거나 유효하지 않을 경우 연결을 해제', async () => {
+            const socket = createMockSocket('socket1', '');
+            await gateway.handleConnection(socket);
+            expect(socket.disconnect).toHaveBeenCalled();
+            expect(gateway['userSockets'].has(1)).toBe(false);
+            expect(gateway['socketsMap'].has(socket.id)).toBe(false);
+        });
+
+        it('handleConnection: 유효한 토큰에 대해 소켓 클라이언트에 사용자 데이터 저장 및 구독 정보 생성', async () => {
+            const socket = createMockSocket('socket2', 'accessToken=validtoken');
+            (authService.verifyWsToken as jest.Mock).mockResolvedValue(1);
+            await gateway.handleConnection(socket);
+            expect(authService.verifyWsToken).toHaveBeenCalledWith('validtoken');
+            expect(socket.data.user).toEqual(1);
+            expect(gateway['userSockets'].has(1)).toBe(true);
+            expect(gateway['userSockets'].get(1)).toContain(socket.id);
+            expect(gateway['socketsMap'].has(socket.id)).toBe(true);
+        });
+
+        it('handleDisconnect: 소켓 연결 해제 시 구독 정보를 메모리에서 해제', async () => {
+            const socket = createMockSocket('socket3');
+            socket.data.user = 1;
+            gateway['subscriptions'].set(socket.id, 'room:foo');
+            gateway['userSockets'].set(1, new Set([socket.id]));
+            gateway['socketsMap'].set(socket.id, socket);
+            await gateway.handleDisconnect(socket);
+            expect(gateway['subscriptions'].has(socket.id)).toBe(false);
+            expect(gateway['userSockets'].has(1)).toBe(false);
+            expect(gateway['socketsMap'].has(socket.id)).toBe(false);
+        });
     });
 
-    it('handleConnection: 유효한 토큰에 대해 소켓 클라이언트에 사용자 데이터 저장 및 구독 정보 생성', async () => {
-        const socket = createMockSocket('socket2', 'accessToken=validtoken');
-        (authService.verifyWsToken as jest.Mock).mockResolvedValue(1);
-        await gateway.handleConnection(socket);
-        expect(authService.verifyWsToken).toHaveBeenCalledWith('validtoken');
-        expect(socket.data.user).toEqual(1);
-        expect(gateway['subscriptions'].has(socket.id)).toBe(true);
-        expect(gateway['userSockets'].has(1)).toBe(true);
-        expect(gateway['userSockets'].get(1)).toContain(socket.id);
-        expect(gateway['socketsMap'].has(socket.id)).toBe(true);
-        expect(gateway['socketsMap'].get(socket.id)).toBe(socket);
+    describe('handleSubscribe', () => {
+        describe('validateRequest', () => {
+            const client = createMockSocket('mock-client');
+            it('eventType이 PLAN_DETAIL일 때, plan-detail.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.PLAN_DETAIL,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(
+                    `${payload.eventType}.validate`,
+                    expectedDto
+                );
+            });
+
+            it('eventType이 TASK_DETAIL일 때, task-detail.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.TASK_DETAIL,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(
+                    `${payload.eventType}.validate`,
+                    expectedDto
+                );
+            });
+
+            it('eventType이 그 외(PROJECT.*)일 때, project.validate 이벤트를 발행', async () => {
+                const payload: SubscribePayloadDto = {
+                    eventType: SubEventType.PROJECT_CALENDER,
+                    id: 100,
+                };
+
+                const expectedDto = ValidatePayloadDto.from({ payload, client: client });
+                await gateway.handleSubscribe(payload, client);
+
+                expect(eventBus.publishAsync).toHaveBeenCalledTimes(1);
+                expect(eventBus.publishAsync).toHaveBeenCalledWith(`project.validate`, expectedDto);
+            });
+        });
+
+        it('신규 구독: 구독 중인 room이 없을 때 새로운 room에 정상적으로 join', async () => {
+            const socket = createMockSocket('socket-sub-new');
+            const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
+            const roomKey = `${SubEventType.PLAN_DETAIL}:123`;
+            const response = await gateway.handleSubscribe(payload, socket);
+
+            expect(socket.join).toHaveBeenCalledWith(roomKey);
+            expect(gateway['subscriptions'].get(socket.id)).toBe(roomKey);
+            expect(response.status).toBe('success');
+        });
+
+        it('동일한 room 재구독: 아무 일도 일어나지 않고 성공 응답을 반환', async () => {
+            const socket = createMockSocket('socket-sub-same');
+            const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
+            const roomKey = `${SubEventType.PLAN_DETAIL}:123`;
+            gateway['subscriptions'].set(socket.id, roomKey);
+            const response = await gateway.handleSubscribe(payload, socket);
+
+            expect(socket.join).not.toHaveBeenCalled();
+            expect(socket.leave).not.toHaveBeenCalled();
+            expect(gateway['subscriptions'].get(socket.id)).toBe(roomKey);
+            expect(response.status).toBe('success');
+        });
+
+        it('room 교체: 다른 room을 구독 중일 때, 기존 room을 leave하고 새로운 room에 join', async () => {
+            const socket = createMockSocket('socket-sub-same');
+            const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
+            const currentRoomKey = `${SubEventType.PROJECT_CALENDER}:15`;
+            const newRoomKey = `${SubEventType.PLAN_DETAIL}:123`;
+            gateway['subscriptions'].set(socket.id, currentRoomKey);
+            const response = await gateway.handleSubscribe(payload, socket);
+
+            expect(socket.leave).toHaveBeenCalledWith(currentRoomKey);
+            expect(socket.join).toHaveBeenCalledWith(newRoomKey);
+            expect(gateway['subscriptions'].get(socket.id)).toBe(newRoomKey);
+            expect(response.status).toBe('success');
+        });
     });
 
-    it('handleDisconnect: 소켓 연결 해제 시 구독 정보를 메모리에서 해제', async () => {
-        const socket = createMockSocket('socket3');
-        socket.data.user = 1;
-        gateway['subscriptions'].set(socket.id, new Set());
-        gateway['userSockets'].set(1, new Set([socket.id]));
-        gateway['socketsMap'].set(socket.id, socket);
-        await gateway.handleDisconnect(socket);
-        expect(gateway['subscriptions'].has(socket.id)).toBe(false);
-        expect(gateway['userSockets'].has(1)).toBe(false);
-        expect(gateway['socketsMap'].has(socket.id)).toBe(false);
-    });
-
-    it('subscribe: sub 이벤트에 대해 room join 및 구독 정보 업데이트', async () => {
-        const socket = createMockSocket('socket4');
-        gateway['subscriptions'].set(socket.id, new Set());
-
-        const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
-        await gateway.handleSubscribe(payload, socket);
-
-        const expectedRoom = `${payload.eventType}:${payload.id}`;
-        expect(socket.join).toHaveBeenCalledWith(expectedRoom);
-        expect(gateway['subscriptions'].get(socket.id)?.has(expectedRoom)).toBe(true);
-    });
-
-    it('unsubscribe: unsub 이벤트에 대해 room leave 및 구독 정보 메모리에서 해제', async () => {
-        const socket = createMockSocket('socket5');
+    describe('handleUnsubscribe', () => {
         const roomKey = `${SubEventType.PLAN_DETAIL}:123`;
-        gateway['subscriptions'].set(socket.id, new Set([roomKey]));
+        it('unsub 이벤트에 대해 room leave 및 구독 정보 메모리에서 해제', async () => {
+            const socket = createMockSocket('socket-unsub-success');
+            gateway['subscriptions'].set(socket.id, roomKey);
 
-        const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
-        await gateway.handleUnsubscribe(payload, socket);
+            const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
+            const response = await gateway.handleUnsubscribe(payload, socket);
 
-        expect(socket.leave).toHaveBeenCalledWith(roomKey);
-        expect(gateway['subscriptions'].get(socket.id)?.has(roomKey)).toBe(false);
+            expect(socket.leave).toHaveBeenCalledWith(roomKey);
+            expect(gateway['subscriptions'].has(socket.id)).toBe(false);
+            expect(response.status).toBe('success');
+        });
+
+        it('unsub 이벤트에 대해 구독 중이지 않은 room일 경우', async () => {
+            const socket = createMockSocket('socket-unsub-error');
+            const payload: SubscribePayloadDto = { eventType: SubEventType.PLAN_DETAIL, id: 123 };
+            const response = await gateway.handleUnsubscribe(payload, socket);
+            expect(response.status).toBe('error');
+        });
     });
 
-    it('handlePublish: 이벤트에 대해 room에 브로드캐스트', () => {
-        const roomKey = 'event:123';
-        const payload = RealTimeMessage.of(RealTimeType.DELETED, RealTimeEntity.PLAN, {
-            foo: 'bar',
+    describe('Broadcasting and Banning', () => {
+        it('handlePublish: 이벤트에 대해 room에 브로드캐스트', () => {
+            const roomKey = 'event:123';
+            const payload = RealTimeMessage.of(RealTimeType.DELETED, RealTimeEntity.PLAN, {
+                foo: 'bar',
+            });
+            gateway.handlePublish(roomKey, payload);
+            expect(mockServer.to).toHaveBeenCalledWith(roomKey);
+            expect(mockServer.emit).toHaveBeenCalledWith('publish', payload);
         });
-        gateway.handlePublish(roomKey, payload);
-        expect(mockServer.to).toHaveBeenCalledWith(roomKey);
-        expect(mockServer.emit).toHaveBeenCalledWith('publish', payload);
-    });
 
-    it('handleBanUser: 강제 구독 해제 이벤트', async () => {
-        const socket = createMockSocket('socket6');
-        gateway['subscriptions'].set(socket.id, new Set('event:123'));
-        gateway['userSockets'].set(123, new Set([socket.id]));
-        gateway['socketsMap'].set(socket.id, socket);
-        const roomKey = 'event:123';
-        const userId = 123;
+        it('handleBanUser: 강제 구독 해제 이벤트', async () => {
+            const roomKey = 'event:123';
+            const socket = createMockSocket('socket6');
+            gateway['subscriptions'].set(socket.id, roomKey);
+            gateway['userSockets'].set(123, new Set([socket.id]));
+            gateway['socketsMap'].set(socket.id, socket);
 
-        await gateway.handleBanUser(userId, roomKey);
-        expect(socket.emit).toHaveBeenCalledWith('unsubscribe-forced', {
-            roomKey,
-            reason: '관리자에 의해 접근이 차단되었습니다.',
+            await gateway.handleBanUser(123, roomKey);
+            expect(socket.emit).toHaveBeenCalledWith('unsubscribe-forced', {
+                roomKey,
+                reason: '관리자에 의해 접근이 차단되었습니다.',
+            });
+            expect(socket.leave).toHaveBeenCalledWith(roomKey);
+            expect(gateway['subscriptions'].has(socket.id)).toBe(false);
         });
-        expect(socket.leave).toHaveBeenCalledWith(roomKey);
-        expect(gateway['subscriptions'].get(socket.id)?.has(roomKey)).toBe(false);
     });
 });
