@@ -13,9 +13,6 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    // allowedOrigins 배열 확인용 로그
-    console.log('🌐 [CORS] 허용된 Origins:', allowedOrigins);
-
     app.enableCors({
         origin: (
             origin: string | undefined,
@@ -24,12 +21,10 @@ async function bootstrap() {
             console.log(`🔍 [CORS] 요청 Origin: ${origin || 'undefined'}`);
             
             if (!origin) {
-                console.log('✅ [CORS] Origin 없음 - 허용');
                 return callback(null, true);
             }
             
             if (allowedOrigins.includes(origin)) {
-                console.log(`✅ [CORS] 허용된 Origin: ${origin}`);
                 return callback(null, true);
             } else {
                 console.warn(`❌ [CORS] 거부된 Origin: ${origin}`);
