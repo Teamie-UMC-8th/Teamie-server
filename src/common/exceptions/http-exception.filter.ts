@@ -7,8 +7,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     catch(exception: HttpException, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
+        const request = ctx.getRequest();
         const status = exception.getStatus();
         const exceptionResponse = exception.getResponse();
+
+        // CORS 헤더 명시적 설정 (오류 응답에도 포함)
+        const origin = request.headers.origin;
+        if (origin) {
+            response.header('Access-Control-Allow-Origin', origin);
+            response.header('Access-Control-Allow-Credentials', 'true');
+        }
 
         let errorCode = 'UNKNOWN';
         let reason = '서버 에러가 발생했습니다.';
