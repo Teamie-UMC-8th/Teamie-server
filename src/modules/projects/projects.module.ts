@@ -16,6 +16,8 @@ import { PostsStore } from './repositories/posts.store';
 import { UserProjectModule } from './user-projects/user-project.module';
 import { GateWayModule } from 'src/infra/gateway/gateway.module';
 import { ProjectsListener } from './listener/projects.listener';
+import { DummyDataService } from './services/dummy-data.service';
+
 @Module({
     imports: [
         TypeOrmModule.forFeature([Project, User]),
@@ -29,7 +31,14 @@ import { ProjectsListener } from './listener/projects.listener';
         GateWayModule,
     ],
     controllers: [ProjectsController],
-    providers: [ProjectsService, ProjectRepository, InviteCodeStore, PostsStore, ProjectsListener],
+    providers: [
+        ProjectsService,
+        ProjectRepository,
+        InviteCodeStore,
+        PostsStore,
+        ProjectsListener,
+        DummyDataService,
+    ],
     exports: [ProjectsService], // 다른 모듈에서 사용 가능하게 할 경우
 })
 export class ProjectsModule {}

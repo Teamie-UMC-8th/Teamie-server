@@ -52,6 +52,7 @@ import { CreatedStepDTO } from 'src/modules/steps/dtos/step-payload.dto';
 import { PermissionResponseDto } from '../dtos/get-permission.dto';
 import { MasterPortfolio } from '../../master-portfolios/entities/master-portfolios.entity';
 import { getProjectIsCompleted } from '../dtos/get-project-isCompleted.dto';
+import { DummyDataService } from './dummy-data.service';
 @Injectable()
 export class ProjectsService {
     private readonly postsKeyPrefix: string;
@@ -70,7 +71,10 @@ export class ProjectsService {
         private readonly postsStore: PostsStore,
         private readonly masterPortfoliosService: MasterPortfoliosService,
         private readonly plansService: PlansService,
-        private readonly eventBus: EventBusService
+        private readonly eventBus: EventBusService,
+
+        //NOTE: 임시 사용
+        private readonly dummyService: DummyDataService
     ) {
         this.postsKeyPrefix = this.configService.get<string>('POSTS_KEY_PREFIX', 'posts');
         const ttlStr = this.configService.get<string>('POST_TTL_SECONDS', `${7 * 24 * 3600}`);
@@ -107,6 +111,8 @@ export class ProjectsService {
         });
 
         await this.userProjectRepository.saveUserProject(up, qr.manager);
+        //NOTE: 데모 시연용 더미데이터 주입
+        await this.dummyService.createDummyDataForNewProject(qr, userId, savedProject.id);
 
         const { code, expiresAt } = await this.inviteStore.saveActive(
             savedProject.id,
