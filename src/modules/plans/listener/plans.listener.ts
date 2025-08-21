@@ -38,6 +38,7 @@ export class PlansListener {
                 client.emit('exception', {
                     message: `NOT_PROJECT_MEMBER(${id})`,
                 });
+                await this.gateway.handleUnsubscribe(payload, client);
             }
         } catch (err) {
             client.emit('exception', {
