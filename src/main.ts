@@ -13,16 +13,27 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    // allowedOrigins 배열 확인용 로그
+    console.log('🌐 [CORS] 허용된 Origins:', allowedOrigins);
+
     app.enableCors({
         origin: (
             origin: string | undefined,
             callback: (err: Error | null, allow?: boolean) => void
         ) => {
-            if (!origin) return callback(null, true);
+            console.log(`🔍 [CORS] 요청 Origin: ${origin || 'undefined'}`);
+            
+            if (!origin) {
+                console.log('✅ [CORS] Origin 없음 - 허용');
+                return callback(null, true);
+            }
+            
             if (allowedOrigins.includes(origin)) {
+                console.log(`✅ [CORS] 허용된 Origin: ${origin}`);
                 return callback(null, true);
             } else {
-                // Error 대신 false만 반환하여 CORS 헤더가 올바르게 설정되도록 함
+                console.warn(`❌ [CORS] 거부된 Origin: ${origin}`);
+                // Error 대신 false만 반환하여 적절한 CORS 헤더 설정
                 return callback(null, false);
             }
         },
@@ -34,14 +45,12 @@ async function bootstrap() {
             'X-Requested-With',
             'Accept',
             'Origin',
-            'Access-Control-Allow-Origin',
+            'X-Forwarded-For',
+            'X-Real-IP',
         ],
         credentials: true,
-        // preflight 요청에 대한 응답 상태 코드 설정
         optionsSuccessStatus: 200,
-        // preflight 요청 캐시 시간 (초)
-        maxAge: 86400, // 24시간
-        // preflight 요청을 다음 핸들러로 전달할지 여부
+        maxAge: 86400,
         preflightContinue: false,
     });
     app.use(cookieParser());
