@@ -268,8 +268,11 @@ export class PortfolioCorrectionsController {
         },
     ])
     @Get(':correctionId/results')
-    async getCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
-        return await this.portfolioCorrectionsService.getCorrection(correctionId);
+    async getCorrection(
+        @User('id') userId: number,
+        @Param('correctionId', ParseIntPipe) correctionId: number
+    ) {
+        return await this.portfolioCorrectionsService.getCorrection(userId, correctionId);
     }
 
     @ApiOperation({
@@ -304,9 +307,14 @@ export class PortfolioCorrectionsController {
     })
     @Get(':correctionId/:projectId')
     async getCorrectionById(
+        @User('id') userId: number,
         @Param('correctionId', ParseIntPipe) correctionId: number,
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
-        return await this.portfolioCorrectionsService.getCorrectionById(correctionId, projectId);
+        return await this.portfolioCorrectionsService.getCorrectionById(
+            userId,
+            correctionId,
+            projectId
+        );
     }
 }
