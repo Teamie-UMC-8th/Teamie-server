@@ -34,7 +34,7 @@ export class UserProjectRepository {
         return users;
     }
 
-    async findUsersByProjectIdUsingManagers(manager:EntityManager,projectId: number) {
+    async findUsersByProjectIdUsingManagers(manager: EntityManager, projectId: number) {
         const row = await manager
             .getRepository(UserProject)
             .createQueryBuilder('up')

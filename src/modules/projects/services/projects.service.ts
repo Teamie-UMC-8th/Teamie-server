@@ -274,7 +274,10 @@ export class ProjectsService {
         }
 
         // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
-        const members = await this.userProjectRepository.findUsersByProjectIdUsingManagers(qr.manager,projectId); // [UserProject]
+        const members = await this.userProjectRepository.findUsersByProjectIdUsingManagers(
+            qr.manager,
+            projectId
+        ); // [UserProject]
         for (const up of members) {
             await this.masterPortfoliosService.createMasterPortfolio(
                 qr.manager,
@@ -350,7 +353,7 @@ export class ProjectsService {
         const newPost = await this.postsStore.savePost(
             projectId,
             this.postsKeyPrefix,
-            { userId, content: dto.content }, 
+            { userId, content: dto.content },
             this.POST_TTL_SECONDS
         );
         // 10) 생성된 객체 반환
