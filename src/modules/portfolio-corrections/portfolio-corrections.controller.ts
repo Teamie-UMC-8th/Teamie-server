@@ -91,6 +91,7 @@ export class PortfolioCorrectionsController {
         description: '특정 포트폴리오 첨삭의 정보를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(PortfolioCorrectionResponseDto)
     @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
         errorCode: 'PORTFOLIOCORRECTION4041',
         reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
