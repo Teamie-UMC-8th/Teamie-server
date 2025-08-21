@@ -26,6 +26,14 @@ async function bootstrap() {
             }
         },
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'Cookie',
+            'X-Requested-With',
+            'Accept',
+            'Origin',
+        ],
         credentials: true,
     });
     app.use(cookieParser());
