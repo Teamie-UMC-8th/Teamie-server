@@ -25,7 +25,7 @@ async function bootstrap() {
                 return callback(new Error(`CORS: ${origin} is not allowed`), false);
             }
         },
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         credentials: true,
     });
     app.use(cookieParser());
