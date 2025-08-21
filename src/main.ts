@@ -20,8 +20,10 @@ async function bootstrap() {
         ) => {
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) {
+                console.log(`[CORS] ✅ 허용: ${origin}`);
                 return callback(null, true);
             } else {
+                console.error(`[CORS] ❌ 거부: ${origin}`);
                 return callback(new Error(`CORS: ${origin} is not allowed`), false);
             }
         },
