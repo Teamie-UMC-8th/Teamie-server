@@ -115,8 +115,8 @@ export class CorrectionResultDto {
         dto.contributionRate = data.contributionRate;
         dto.category = data.category;
         dto.correctionResult = CorrectionDto.from(data.correctionResult);
-        dto.createdAt = data.createdAt;
-        dto.completedAt = data.completedAt;
+        dto.createdAt = data.createdAt.toISOString();
+        dto.completedAt = data.completedAt.toISOString();
         return dto;
     }
 }
