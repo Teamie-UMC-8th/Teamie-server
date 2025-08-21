@@ -263,7 +263,7 @@ export class PortfolioCorrectionsService {
         createPortfolioCorrectionDto: CreatePortfolioCorrectionDto
     ) {
         const newCorrection = this.correctionRepository.create({
-            title: createPortfolioCorrectionDto.title || '새로운 첨삭 A',
+            title: createPortfolioCorrectionDto.title || '새로운 첨삭',
             submissionTarget: createPortfolioCorrectionDto.submissionTarget,
             jobTitle: createPortfolioCorrectionDto.jobTitle,
             jd: createPortfolioCorrectionDto.jd,
@@ -366,7 +366,7 @@ export class PortfolioCorrectionsService {
     }
 
     // 생성된 AI 첨삭 결과 조회
-    async getCorrection(correctionId: number) {
+    async getCorrection(userId: number, correctionId: number) {
         // correctionId에 해당하는 포트폴리오 첨삭 엔티티가 있는지
         const existCorrectionPortfolio = await this.correctionRepository.findOne({
             where: { id: correctionId },
@@ -393,24 +393,66 @@ export class PortfolioCorrectionsService {
         // { id, name } 객체로 반환
         const projects = await this.projectRepository.find({
             where: { id: In(projectIds) },
-            select: ['id', 'name', 'createdAt'],
+            select: ['id', 'name', 'createdAt', 'completedAt'],
             order: { createdAt: 'DESC' }, // 최신순으로 정렬
         });
+
         const projectList = projects.map((project) => ({
             id: project.id,
             name: project.name,
         }));
 
-        const result = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId }, projectId: projectList[0].id },
-        });
+        // 1. AICorrection과 Project 정보 조회
+        const basicResult = await this.aiCorrectionRepository
+            .createQueryBuilder('aiCorrection')
+            .leftJoinAndMapOne(
+                'aiCorrection.project',
+                Project,
+                'p',
+                'p.id = aiCorrection.projectId'
+            )
+            .where(
+                'aiCorrection.portfolioCorrectionId = :correctionId AND aiCorrection.projectId = :projectId',
+                {
+                    correctionId,
+                    projectId: projectList[0].id,
+                }
+            )
+            .select([
+                'aiCorrection.correctionResult',
+                'p.id',
+                'p.name',
+                'p.createdAt',
+                'p.completedAt',
+            ])
+            .getOne();
+        if (!basicResult) {
+            throw new AICorrectionNotFoundException(correctionId);
+        }
 
-        const filteredResult = removeOriginalContent(result?.correctionResult);
+        // 2. MasterPortfolio 정보 조회
+        const masterPortfolioData = await this.masterPortfolioRepository.findOne({
+            where: {
+                project: { id: projectList[0].id },
+                user: { id: userId },
+            },
+            select: ['id', 'contributionRate', 'category'],
+        });
+        if (!masterPortfolioData) {
+            throw new MasterPortfolioNotFoundException(projectList[0].id);
+        }
+
+        const filteredResult = removeOriginalContent(basicResult?.correctionResult);
 
         const final = {
             projects: projectList,
             firstCorrection: {
-                ...result,
+                projectId: (basicResult as any).project.id,
+                projectName: (basicResult as any).project.name,
+                createdAt: (basicResult as any).project.createdAt,
+                completedAt: (basicResult as any).project.completedAt,
+                contributionRate: masterPortfolioData.contributionRate,
+                category: masterPortfolioData.category,
                 correctionResult: filteredResult,
             },
         };
@@ -418,7 +460,7 @@ export class PortfolioCorrectionsService {
     }
 
     // 개별 조회
-    async getCorrectionById(correctionId: number, projectId: number) {
+    async getCorrectionById(userId: number, correctionId: number, projectId: number) {
         // 존재 유무 체크
         const existCorrectionPortfolio = await this.aiCorrectionRepository.findOne({
             where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
@@ -427,14 +469,55 @@ export class PortfolioCorrectionsService {
             throw new ProjectPortfolioCorrectionNotFoundException(correctionId);
         }
 
-        const result = await this.aiCorrectionRepository.findOne({
-            where: { portfolioCorrection: { id: correctionId }, projectId: projectId },
-        });
+        // 1. AICorrection과 Project 정보 조회
+        const basicResult = await this.aiCorrectionRepository
+            .createQueryBuilder('aiCorrection')
+            .leftJoinAndMapOne(
+                'aiCorrection.project',
+                Project,
+                'p',
+                'p.id = aiCorrection.projectId'
+            )
+            .where(
+                'aiCorrection.portfolioCorrectionId = :correctionId AND aiCorrection.projectId = :projectId',
+                {
+                    correctionId,
+                    projectId,
+                }
+            )
+            .select([
+                'aiCorrection.correctionResult',
+                'p.id',
+                'p.name',
+                'p.createdAt',
+                'p.completedAt',
+            ])
+            .getOne();
+        if (!basicResult) {
+            throw new AICorrectionNotFoundException(correctionId);
+        }
 
-        const filteredResult = removeOriginalContent(result?.correctionResult);
+        // 2. MasterPortfolio 정보 조회
+        const masterPortfolioData = await this.masterPortfolioRepository.findOne({
+            where: {
+                project: { id: projectId },
+                user: { id: userId },
+            },
+            select: ['id', 'contributionRate', 'category'],
+        });
+        if (!masterPortfolioData) {
+            throw new MasterPortfolioNotFoundException(projectId);
+        }
+
+        const filteredResult = removeOriginalContent(basicResult?.correctionResult);
 
         return CorrectionResultDto.from({
-            ...result,
+            projectId: (basicResult as any).project.id,
+            projectName: (basicResult as any).project.name,
+            createdAt: (basicResult as any).project.createdAt,
+            completedAt: (basicResult as any).project.completedAt,
+            contributionRate: masterPortfolioData.contributionRate,
+            category: masterPortfolioData.category,
             correctionResult: filteredResult,
         });
     }

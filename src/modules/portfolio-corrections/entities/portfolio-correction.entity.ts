@@ -7,7 +7,7 @@ import { PortfolioCorrectionStatus } from 'src/common/enums/portfolio-correction
 
 @Entity()
 export class PortfolioCorrection extends BaseEntity {
-    @Column({ length: 20, default: '새로운 첨삭 A' })
+    @Column({ length: 20, default: '새로운 첨삭' })
     title: string;
 
     @Column({ length: 20 })

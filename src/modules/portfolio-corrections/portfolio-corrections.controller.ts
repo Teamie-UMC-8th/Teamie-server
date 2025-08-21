@@ -91,6 +91,7 @@ export class PortfolioCorrectionsController {
         description: '특정 포트폴리오 첨삭의 정보를 조회합니다.',
     })
     @ApiParam({ name: 'correctionId', type: Number, description: '포트폴리오 첨삭 ID' })
+    @ApiCommonResponse(PortfolioCorrectionResponseDto)
     @ApiCommonErrorResponses(HttpStatus.NOT_FOUND, {
         errorCode: 'PORTFOLIOCORRECTION4041',
         reason: '포트폴리오 첨삭을 찾을 수 없습니다.',
@@ -268,8 +269,11 @@ export class PortfolioCorrectionsController {
         },
     ])
     @Get(':correctionId/results')
-    async getCorrection(@Param('correctionId', ParseIntPipe) correctionId: number) {
-        return await this.portfolioCorrectionsService.getCorrection(correctionId);
+    async getCorrection(
+        @User('id') userId: number,
+        @Param('correctionId', ParseIntPipe) correctionId: number
+    ) {
+        return await this.portfolioCorrectionsService.getCorrection(userId, correctionId);
     }
 
     @ApiOperation({
@@ -304,9 +308,14 @@ export class PortfolioCorrectionsController {
     })
     @Get(':correctionId/:projectId')
     async getCorrectionById(
+        @User('id') userId: number,
         @Param('correctionId', ParseIntPipe) correctionId: number,
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
-        return await this.portfolioCorrectionsService.getCorrectionById(correctionId, projectId);
+        return await this.portfolioCorrectionsService.getCorrectionById(
+            userId,
+            correctionId,
+            projectId
+        );
     }
 }

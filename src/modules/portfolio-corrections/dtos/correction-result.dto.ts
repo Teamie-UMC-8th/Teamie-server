@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsDate } from 'class-validator';
+import { portfolioType } from 'src/common/enums/portfolio-type.enum';
 
 export class CorrectionLineDto {
     @ApiProperty({ example: 'detailInfo_1' })
@@ -78,11 +80,43 @@ export class CorrectionResultDto {
     @ApiProperty({ type: CorrectionDto })
     correctionResult: CorrectionDto;
 
+    @ApiProperty({
+        description: '프로젝트에 대한 기여도 (0-100)',
+        example: 50,
+    })
+    contributionRate: number;
+
+    @ApiProperty({
+        description: '포트폴리오 유형',
+        example: portfolioType.OTHER,
+        enum: portfolioType,
+    })
+    category: portfolioType;
+
+    @ApiProperty({
+        example: '2025-07-14T20:35:00.000Z',
+        description: '프로젝트 생성일자',
+    })
+    @IsDate()
+    createdAt: Date;
+
+    @ApiProperty({
+        example: '2025-07-14T20:35:00.000Z',
+        description: '프로젝트 완료 시각',
+        nullable: true,
+    })
+    @IsDate()
+    completedAt: Date | null;
+
     static from(data: any): CorrectionResultDto {
         const dto = new CorrectionResultDto();
         dto.projectId = data.projectId;
         dto.projectName = data.projectName;
+        dto.contributionRate = data.contributionRate;
+        dto.category = data.category;
         dto.correctionResult = CorrectionDto.from(data.correctionResult);
+        dto.createdAt = data.createdAt.toISOString();
+        dto.completedAt = data.completedAt.toISOString();
         return dto;
     }
 }

@@ -7,7 +7,7 @@ export class PortfolioCorrectionResponseDto {
     @IsNumber()
     id: number;
 
-    @ApiProperty({ example: '새로운 첨삭 A', maxLength: 20 })
+    @ApiProperty({ example: '새로운 첨삭', maxLength: 20 })
     @IsString()
     title: string;
 
