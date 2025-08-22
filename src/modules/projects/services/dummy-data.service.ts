@@ -444,7 +444,7 @@ export class DummyDataService {
         const memberId = this.configService.get<number>('DEFAULT_MEMBER_OF_PROJECT') || 3;
 
         // 프로젝트 생성 시 팀원 추가
-        const isValid = this.userProjectRepository.findById(memberId, projectId);
+        const isValid = await this.userProjectRepository.findById(memberId, projectId);
         if (!isValid) {
             const up = qr.manager.create(UserProject, {
                 user: { id: memberId },
