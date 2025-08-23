@@ -263,11 +263,20 @@ export class ProjectsService {
             await this.userProjectRepository.updateProjectNum(projectId, qr.manager);
 
             // 3-3) PersonalRecall 생성 (create → save)
-            const recall = qr.manager.create(PersonalRecall, {
-                user: { id: userId },
-                project: { id: projectId },
-            });
-            await qr.manager.save(PersonalRecall, recall);
+            const members = await this.userProjectRepository.findUsersByProjectIdUsingManagers(
+                qr.manager,
+                projectId
+            ); // [UserProject] (leader 포함)
+
+            const recalls = members.map((up) =>
+                qr.manager.create(PersonalRecall, {
+                    user: { id: up.user.id },
+                    project: { id: projectId },
+                })
+            );
+            if (recalls.length) {
+                await qr.manager.save(PersonalRecall, recalls);
+            }
         } catch (err) {
             console.error('[completeProject] tx failed:', err); // 원시 객체
             throw new ProjectTransactionException();
