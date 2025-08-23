@@ -442,7 +442,7 @@ export class PortfolioCorrectionsService {
             throw new MasterPortfolioNotFoundException(projectList[0].id);
         }
 
-        const filteredResult = removeOriginalContent(basicResult?.correctionResult);
+        // const filteredResult = removeOriginalContent(basicResult?.correctionResult);
 
         const final = {
             projects: projectList,
@@ -453,7 +453,7 @@ export class PortfolioCorrectionsService {
                 completedAt: (basicResult as any).project.completedAt,
                 contributionRate: masterPortfolioData.contributionRate,
                 category: masterPortfolioData.category,
-                correctionResult: filteredResult,
+                correctionResult: basicResult.correctionResult,
             },
         };
         return GetCorrectionResultDto.from(final);
@@ -509,7 +509,7 @@ export class PortfolioCorrectionsService {
             throw new MasterPortfolioNotFoundException(projectId);
         }
 
-        const filteredResult = removeOriginalContent(basicResult?.correctionResult);
+        // const filteredResult = removeOriginalContent(basicResult?.correctionResult);
 
         return CorrectionResultDto.from({
             projectId: (basicResult as any).project.id,
@@ -518,7 +518,7 @@ export class PortfolioCorrectionsService {
             completedAt: (basicResult as any).project.completedAt,
             contributionRate: masterPortfolioData.contributionRate,
             category: masterPortfolioData.category,
-            correctionResult: filteredResult,
+            correctionResult: basicResult.correctionResult,
         });
     }
 
