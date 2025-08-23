@@ -77,7 +77,7 @@ export class RagService {
     }
 
     // 키워드 추출
-    private async extractSearchQuery(qr: QueryRunner, correctionId: number) {
+    private async extractSearchQuery(qr: QueryRunner, correctionId: number): Promise<string[]> {
         const queryExtractionPrompt = await PromptManager.getPrompt(
             this.promptLoader,
             'keyword-extract.prompt.md'
@@ -97,24 +97,49 @@ export class RagService {
             throw new PortfolioCorrectionNotFoundException(correctionId);
         }
 
-        // 실행
-        const extractedQuery = await queryExtractionPrompt.pipe(queryExtractor).invoke({
-            companyName: inputData.submissionTarget,
-            jobTitle: inputData.jobTitle,
-            jobDescription: inputData.jd,
-        });
+        // 실행 (최대 3번 재시도)
+        const maxRetries = 3;
+        let lastError: Error;
 
-        const queryList = extractedQuery.search_keywords;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const extractedQuery = await queryExtractionPrompt.pipe(queryExtractor).invoke({
+                    companyName: inputData.submissionTarget,
+                    jobTitle: inputData.jobTitle,
+                    jobDescription: inputData.jd,
+                });
+                const queryList = extractedQuery.search_keywords;
 
-        queryList.forEach(async (query) => {
-            await qr.manager.save(RAGData, {
-                portfolioCorrection: { id: correctionId },
-                type: RAGDataType.KEYWORD,
-                keyword: query,
-            });
-        });
+                if (!Array.isArray(queryList) || queryList.length !== 4) {
+                    throw new InternalServerErrorException('검색어 추출 결과가 유효하지 않습니다.');
+                }
 
-        return queryList;
+                // 키워드 DB에 저장
+                queryList.forEach(async (query) => {
+                    await qr.manager.save(RAGData, {
+                        portfolioCorrection: { id: correctionId },
+                        type: RAGDataType.KEYWORD,
+                        keyword: query,
+                    });
+                });
+
+                return queryList;
+            } catch (error) {
+                lastError = error as Error;
+                console.error(`[키워드 추출] 시도 ${attempt} 실패:`, error);
+
+                if (attempt === maxRetries) {
+                    console.error('모든 재시도 실패. 최종 에러:', lastError);
+                    throw new InternalServerErrorException('검색어 추출에 실패했습니다.');
+                }
+
+                // 재시도 전 잠시 대기
+                await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+            }
+        }
+
+        // 타입 안전성을 위해 모든 경로에서 반환 또는 예외가 발생하도록 보장
+        throw new InternalServerErrorException('검색어 추출에 실패했습니다.');
     }
 
     // 실시간 검색 api 사용
