@@ -4,7 +4,12 @@ import { UserProject } from 'src/modules/projects/user-projects/entities/user-pr
 import { ProjectSummaryResponseDto } from './project-response.dto';
 import { MaxLength, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { domainToASCII } from 'url';
 export class PostDto {
+    @ApiProperty()
+    @Type(() => Number)
+    id: number;
+
     @ApiProperty()
     @Type(() => Number)
     author: number;
@@ -16,6 +21,7 @@ export class PostDto {
 
     static from(data: any): PostDto {
         const dto = new PostDto();
+        dto.id = data.id;
         dto.author = data.author;
         dto.content = data.content;
         return dto;
