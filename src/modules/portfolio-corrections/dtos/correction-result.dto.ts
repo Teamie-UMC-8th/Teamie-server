@@ -6,11 +6,6 @@ export class CorrectionLineDto {
     @ApiProperty({ example: 'detailInfo_1' })
     line_number: string;
 
-    @ApiProperty({
-        example: '- 동아리 회원 간 언어 교환을 통한 실질적 관계 형성 및 학습 환경 조성',
-    })
-    original_content: string;
-
     @ApiProperty({ example: 1 })
     type: number;
 
@@ -22,7 +17,6 @@ export class CorrectionLineDto {
     static from(data: any): CorrectionLineDto {
         const dto = new CorrectionLineDto();
         dto.line_number = data.line_number;
-        dto.original_content = data.original_content;
         dto.type = data.type;
         dto.review_comment = data.review_comment;
         return dto;

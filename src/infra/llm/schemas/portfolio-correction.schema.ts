@@ -6,7 +6,6 @@ export const correctionSchema = z.object({
         lines: z.array(
             z.object({
                 line_number: z.string(),
-                original_content: z.string(),
                 type: z.number(),
                 review_comment: z.string().nullable(),
             })
@@ -17,7 +16,6 @@ export const correctionSchema = z.object({
         lines: z.array(
             z.object({
                 line_number: z.string(),
-                original_content: z.string(),
                 type: z.number(),
                 review_comment: z.string().nullable(),
             })
@@ -28,7 +26,6 @@ export const correctionSchema = z.object({
         lines: z.array(
             z.object({
                 line_number: z.string(),
-                original_content: z.string(),
                 type: z.number(),
                 review_comment: z.string().nullable(),
             })
@@ -39,7 +36,6 @@ export const correctionSchema = z.object({
         lines: z.array(
             z.object({
                 line_number: z.string(),
-                original_content: z.string(),
                 type: z.number(),
                 review_comment: z.string().nullable(),
             })
