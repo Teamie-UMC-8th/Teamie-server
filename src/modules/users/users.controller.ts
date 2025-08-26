@@ -132,6 +132,11 @@ export class UsersController {
         description:
             '홈 > 나의 업무 페이지의 업무 대시보드를 프로젝트 기준으로 필터링하여 업무를 추가 조회하는 API입니다. 커서는 1) 업무의 마감일, 2) 업무의 생성일을 기준으로 하는 복합커서입니다. 커서가 없는 경우 초기 더보기로 조회되는 업무 이후의 maxCardNum만큼의 업무를 조회합니다.',
     })
+    @ApiCommonResponseWithPagination(
+        TaskCardDTO,
+        hasNextPageExampleOfMyTasksMore,
+        lastPageExampleOfMyTasksMore
+    )
     @ApiQuery({ name: 'projectId', type: Number, required: true })
     @ApiQuery({ name: 'cursor', type: String, required: false })
     @Get('/me/tasks/more')
