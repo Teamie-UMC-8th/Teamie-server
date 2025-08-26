@@ -222,9 +222,10 @@ export class TaskRepository {
         projectId: number,
         userId: number,
         statuses: Status[],
-        maxCardNum: number
+        maxCardNum: number,
+        cursor?: { deadline: string; createdAt: string }
     ): Promise<{ id: number }[]> {
-        return this.repo
+        const qb = this.repo
             .createQueryBuilder('task')
             .leftJoin('task.step', 'step')
             .where('step.projectId = :projectId', { projectId })
@@ -239,12 +240,21 @@ export class TaskRepository {
                     .getQuery();
                 return `EXISTS ${sub}`;
             })
-            .orderBy('task.deadline IS NULL', 'ASC') // NULLS LAST
-            .addOrderBy('task.deadline', 'ASC')
-            .addOrderBy('task.createdAt', 'ASC')
-            .limit(maxCardNum)
-            .select('task.id', 'id')
-            .getRawMany();
+            .orderBy("IFNULL(task.deadline, '9999-12-31')", 'ASC') // NULLS LAST
+            .addOrderBy('task.createdAt', 'ASC');
+
+        // 커서가 있는 경우 복합 조건 추가
+        if (cursor) {
+            qb.andWhere(
+                `(IFNULL(task.deadline, '9999-12-31'), task.createdAt) > (:deadline, :createdAt)`,
+                {
+                    deadline: cursor.deadline ?? '999-12-31',
+                    createdAt: cursor.createdAt,
+                }
+            );
+        }
+
+        return await qb.limit(maxCardNum).select('task.id', 'id').getRawMany();
     }
 
     //주어진 ID들의 task 상세 정보 배열 반환

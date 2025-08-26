@@ -29,6 +29,12 @@ export class TaskCardDTO {
     deadline?: string;
 
     @ApiProperty({
+        example: '2025-08-13T10:00:00Z',
+        description: '업무의 생성일',
+    })
+    createdAt: string;
+
+    @ApiProperty({
         description: '업무의 담당자 리스트',
         isArray: true,
         type: UserProfile,
@@ -40,6 +46,7 @@ export class TaskCardDTO {
         name: string;
         status: Status;
         deadline: Date | null;
+        createdAt: Date;
         managers: Manager[];
     }) {
         const dto = new TaskCardDTO();
@@ -47,6 +54,7 @@ export class TaskCardDTO {
         dto.name = entity.name;
         dto.status = entity.status;
         if (entity.deadline) dto.deadline = entity.deadline.toISOString();
+        dto.createdAt = entity.createdAt.toISOString();
         dto.managers = entity.managers.map((manager) => UserProfile.from(manager.user));
         return dto;
     }
