@@ -29,7 +29,6 @@ import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { GetSearchTaskDto } from '../dtos/get-search-task.dto';
-import { Brackets } from 'typeorm';
 import { TaskRepository } from '../repositories/task.repository';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { StepRepository } from '../../steps/repositories/step.repository';
@@ -567,13 +566,22 @@ export class TasksService {
         projectId: number,
         cursor?: string
     ): Promise<PaginatedResponseDto<TaskCardDTO>> {
+        // 0. 쿼리 파라미터 유효성 검사
+        //NOTE: 수정 필요
+        await this.projectsService.findByIdWithTasks(projectId);
+
         // 1. 커서의 역직렬화
-        const decodedCursor = cursor
-            ? (JSON.parse(Buffer.from(cursor, 'base64').toString()) as {
-                  deadline: string;
-                  createdAt: string;
-              })
-            : undefined;
+        let decodedCursor: any;
+        try {
+            decodedCursor = cursor
+                ? (JSON.parse(Buffer.from(cursor, 'base64').toString()) as {
+                      deadline: string;
+                      createdAt: string;
+                  })
+                : undefined;
+        } catch (e) {
+            throw new BadRequestException('커서가 유효하지 않습니다.');
+        }
         // 2. 업무 조회 및 DTO로 변환하여 반환
         const tasks = await this.getTaskByProject(userId, projectId, decodedCursor);
 

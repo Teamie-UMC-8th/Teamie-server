@@ -130,7 +130,7 @@ export class UsersController {
     @ApiOperation({
         summary: '나의 업무 조회/더보기',
         description:
-            '홈 > 나의 업무 페이지의 업무 대시보드를 프로젝트 기준으로 필터링하여 업무를 추가 조회하는 API입니다. 커서는 1) 업무의 마감일, 2) 업무의 생성일을 기준으로 하는 복합커서입니다. 커서가 없는 경우 초기 더보기로 조회되는 업무 이후의 maxCardNum만큼의 업무를 조회합니다.',
+            '홈 > 나의 업무 페이지의 업무 대시보드에서 더보기를 눌렀을 때, 프로젝트 기준으로 필터링하여 업무를 추가 조회하는 API입니다. 커서는 1) 업무의 마감일, 2) 업무의 생성일을 기준으로 하는 복합커서입니다. 커서가 없는 경우 맨 처음 maxCardNum만큼의 업무를 조회합니다.',
     })
     @ApiCommonResponseWithPagination(
         TaskCardDTO,
