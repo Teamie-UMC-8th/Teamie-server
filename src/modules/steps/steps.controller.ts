@@ -1,12 +1,19 @@
-import { Controller, Body, ParseIntPipe, Patch, Delete, Param, Req } from '@nestjs/common';
+import {
+    Controller,
+    Body,
+    ParseIntPipe,
+    Patch,
+    Delete,
+    Param,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import { StepsService } from './services/steps.service';
-import { ApiBody, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import {
     ApiCommonResponse,
     ApiCommonErrorResponse,
 } from '../../common/response/swagger-response.helper';
-import { CreateStepDto } from './dtos/create-step.dto';
-import { User } from 'src/common/decorators/user.decorator';
 import { CommonResponse } from 'src/common/response/common-response.dto';
 import { UpdateStepDto, UpdateStepResponseDto } from './dtos/update-step.dto';
 import { UpdateTaskStepDto, UpdateTaskStepResponseDto } from './dtos/update-task-step.dto';
@@ -14,6 +21,7 @@ import { Transactional } from 'src/common/decorators/transaction.decorator';
 import { TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { HttpStatus } from '@nestjs/common';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
+import { StepMemberGuard } from './guards/step-member.guard';
 @ApiTags('Steps')
 @Controller('/steps')
 export class StepsController {
@@ -34,11 +42,11 @@ export class StepsController {
         '인증되지 않은 사용자입니다.',
         HttpStatus.FORBIDDEN
     )
+    @UseGuards(StepMemberGuard)
     @Transactional()
     @Patch('/:stepId')
     async updateStep(
         @Req() req: TransactionalRequest,
-        @User() userId: number,
         @Param('stepId', ParseIntPipe) stepId: number,
         @Body() dto: UpdateStepDto
     ): Promise<UpdateStepResponseDto> {
@@ -70,11 +78,11 @@ export class StepsController {
         '인증되지 않은 사용자입니다.',
         HttpStatus.FORBIDDEN
     )
+    @UseGuards(StepMemberGuard)
     @Transactional()
     @Patch('/:stepId/:taskId')
     async updateTaskStep(
         @Req() req: TransactionalRequest,
-        @User() userId: number,
         @Param('stepId', ParseIntPipe) stepId: number,
         @Param('taskId', ParseIntPipe) taskId: number,
         @Body() dto: UpdateTaskStepDto
@@ -102,11 +110,11 @@ export class StepsController {
         'STEP 내부에 업무가 존재할 경우, 삭제가 불가능합니다',
         HttpStatus.FORBIDDEN
     )
+    @UseGuards(StepMemberGuard)
     @Transactional()
     @Delete('/:stepId')
     async DeleteTaskResponseDto(
         @Req() req: TransactionalRequest,
-        @User() userId: number,
         @Param('stepId', ParseIntPipe) stepId: number
     ): Promise<CommonResponse> {
         return this.stepsService.deleteStep(req.queryRunner, stepId);
