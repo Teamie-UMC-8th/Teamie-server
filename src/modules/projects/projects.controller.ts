@@ -37,7 +37,7 @@ import { PlansService } from '../plans/services/plans.service';
 import { TeamCalenderResponseDto } from './dtos/team-calender-response.dto';
 import { CalenderQueryDto } from 'src/common/dtos/calender-date-query.dto';
 import { UserProfile } from '../../common/dtos/user-profile.dto';
-import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
+import { ProjectMemberGuard } from './guards/project-member.guard';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { HttpStatus } from '@nestjs/common';
 import { PermissionResponseDto } from './dtos/get-permission.dto';
@@ -111,12 +111,10 @@ export class ProjectsController {
             reason: '해당 프로젝트에 접근 권한이 없습니다.',
         },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId')
-    async getProjectFullData(
-        @User('id') userId: number,
-        @Param('projectId', ParseIntPipe) projectId: number
-    ) {
-        return await this.projectsService.getProjectFullData(userId, projectId);
+    async getProjectFullData(@Param('projectId', ParseIntPipe) projectId: number) {
+        return await this.projectsService.getProjectFullData(projectId);
     }
 
     @ApiOperation({ summary: '프로젝트 수정', description: '프로젝트의 정보를 수정합니다.' })
@@ -129,6 +127,7 @@ export class ProjectsController {
             reason: '해당 항목을 수정할 권한이 없습니다.',
         },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Patch('/:projectId')
     async updateProject(
@@ -150,6 +149,7 @@ export class ProjectsController {
             reason: '프로젝트는 팀장만 완료할 수 있습니다.',
         },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Patch(':projectId/complete')
     async completeProject(
@@ -169,6 +169,7 @@ export class ProjectsController {
     @ApiCommonErrorResponses(HttpStatus.FORBIDDEN, [
         { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Post(':projectId/steps')
     async createStep(
@@ -190,6 +191,7 @@ export class ProjectsController {
         { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
         { errorCode: ErrorCode.POSTS_EXCEEDED, reason: '포스트잇은 16개까지 생성될 수 있습니다.' },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Post(':projectId/posts')
     async createPost(
         @Req() req: TransactionalRequest,
@@ -216,6 +218,7 @@ export class ProjectsController {
             reason: '해당 프로젝트에 접근 권한이 없습니다.',
         },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Delete(':projectId/posts/:postId')
     async deletePost(
         @User('id') userId: number,
@@ -243,6 +246,7 @@ export class ProjectsController {
         },
         { errorCode: ErrorCode.ALREDY_LEADER, reason: '이미 팀장인 사용자입니다.' },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Patch(':projectId/leader')
     async changeProjectLeader(
@@ -269,6 +273,7 @@ export class ProjectsController {
         { errorCode: ErrorCode.NOT_YOUR_PROFILE, reason: '자신의 프로필만 수정할 수 있습니다.' },
         { errorCode: ErrorCode.PROJECT_NOT_FOUND, reason: '프로젝트를 찾을 수 없습니다.' },
     ])
+    @UseGuards(ProjectMemberGuard)
     @Transactional()
     @Patch('/:projectId/profile')
     async changeProfile(
@@ -397,11 +402,13 @@ export class ProjectsController {
         '프로젝트를 찾을 수 없습니다.',
         HttpStatus.NOT_FOUND
     )
+    //NOTE: 추후 커스텀 가드로 프로젝트 종료 여부 체크
+    @UseGuards(ProjectMemberGuard)
     @Get('/:projectId/isCompleted')
     async getProjectIsCompleted(
         @User('id') userId: number,
         @Param('projectId', ParseIntPipe) projectId: number
     ) {
-        return await this.projectsService.isCompleted(userId, projectId);
+        return await this.projectsService.isCompleted(projectId);
     }
 }
