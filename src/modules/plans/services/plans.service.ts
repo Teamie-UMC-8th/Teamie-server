@@ -4,7 +4,6 @@ import { PlanDetails } from '../dtos/plan-details.dto';
 import {
     PlanDateConflictException,
     PlanTransactionException,
-    ProjectForbiddenException,
     TransactionException,
 } from 'src/common/exceptions/custom.errors';
 import { ProjectsService } from '../../projects/services/projects.service';
@@ -133,13 +132,6 @@ export class PlansService {
         return PlanDetails.from(await this.planRepository.findByIdWithDetail(planId));
     }
 
-    // NOTE: 사용자의 권한 체크, Custom Guard로 추후 리팩토링 예정
-    async checkPermission(userId: number, planId: number): Promise<Boolean> {
-        const plan = await this.planRepository.findByIdWithProjectId(planId);
-        const projectId = plan.project.id;
-        return await this.projectsService.assertProjectMember(userId, projectId);
-    }
-
     // 일정 생성
     async createPlan(qr: QueryRunner, projectId: number, date: Date): Promise<CreatePlanResponse> {
         // 유효한 식별자인지 & 사용자 권한 check
@@ -174,16 +166,13 @@ export class PlansService {
     // 일정 수정
     async updatePlan(
         qr: QueryRunner,
-        userId: number,
         planId: number,
         body: BasicUpdatePlanReqDTO
     ): Promise<PlanDetails> {
         // 1. planId에 해당하는 plan의 존재 여부 확인
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
-        // 2. 수정 권한 체크
-        await this.projectsService.isProjectMember(userId, plan.project.id, qr.manager);
-        // 3. 일정 수정
+        // 2. 일정 수정
         try {
             await this.planRepository.updateWithBasicDTO(qr, planId, body);
             const updatedPlan = PlanDetails.from(
@@ -213,17 +202,7 @@ export class PlansService {
         // 1. planId에 해당하는 plan의 존재 여부 확인
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
 
-        // 2. 프로젝트 권한 체크: 기본 수정 권한
-        const checkUserIsMember = await this.projectsService.isProjectMember(
-            userId,
-            plan.project.id,
-            qr.manager
-        );
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
-
-        // 3. req의 유효성 체크
+        // 2. req의 유효성 체크
         if (Array.isArray(body.writers))
             await this.usersService.checkIsUserExistByArray(body.writers, plan.project.id);
         if (Array.isArray(body.attendees))
@@ -231,21 +210,21 @@ export class PlansService {
 
         try {
             const planDetail = await this.planRepository.findByIdWithDetailUsingQR(qr, planId);
-            // 4. 참여자 수정
+            // 3. 참여자 수정
             if (Array.isArray(body.writers)) {
                 const oldSet = new Set(planDetail.writers.map((w) => w.user.id));
                 const newSet = new Set(body.writers || []);
                 const writers = await this.updateWriters(qr, planId, oldSet, newSet);
                 planDetail.writers = writers;
             }
-            // 5. 기록자 수정
+            // 4. 기록자 수정
             if (Array.isArray(body.attendees)) {
                 const oldSet = new Set(planDetail.attendees.map((a) => a.user.id));
                 const newSet = new Set(body.attendees || []);
                 const attendees = await this.updateAttendees(qr, planId, oldSet, newSet);
                 planDetail.attendees = attendees;
             }
-            // 6. 일정 수정
+            // 5. 일정 수정
             await this.planRepository.savePlan(qr, planDetail);
             const updatedPlan = PlanDetails.from(
                 await this.planRepository.findByIdWithDetailUsingQR(qr, planId)
@@ -272,19 +251,9 @@ export class PlansService {
     ): Promise<DeletePlanResponseDto> {
         // 1. planId에 해당하는 plan 조회
         const plan = await this.planRepository.findByIdUsingQR(qr, planId);
-
-        // 2. 사용자의 삭제 권한 검사
         const projectId = plan.project.id;
-        const checkUserIsMember = await this.projectsService.isProjectMember(
-            userId,
-            projectId,
-            qr.manager
-        );
-        if (!checkUserIsMember) {
-            throw new ProjectForbiddenException();
-        }
 
-        // 3. 일정 삭제
+        // 2. 일정 삭제
         await this.planRepository.deletePlan(qr, planId);
         await this.eventBus.publishAsync(
             `${RealTimeEntity.PLAN}.${RealTimeType.DELETED}`,
