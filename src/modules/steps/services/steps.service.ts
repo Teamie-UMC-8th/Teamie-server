@@ -30,9 +30,6 @@ export class StepsService {
         dto: UpdateStepDto
     ): Promise<UpdateStepResponseDto> {
         const step = await this.stepRepository.findByIdUsingQR(qr.manager, stepId);
-        if (!step) {
-            throw new StepNotFoundException();
-        }
         step.name = dto.name;
         const updatedStep = await this.stepRepository.saveStep(qr.manager, step);
         await this.eventBus.publishAsync(
@@ -51,12 +48,10 @@ export class StepsService {
         taskId: number
     ): Promise<UpdateTaskStepResponseDto> {
         const { newStepId } = dto;
+
         // 1) task 조회 + 현재 stepId 일치 여부 확인
-
         const step = await this.stepRepository.findByIdWithTask(qr.manager, stepId);
-
-        if (!step) throw new StepNotFoundException();
-
+        // NOTE: 이건 객체에서 인메모리 탐색을 하는 것보다는 쿼리로 만드는게 더 좋을 것 같아요
         const hasTask = step.tasks.some((task) => task.id === taskId);
         if (!hasTask) {
             throw new TaskNotFoundException();

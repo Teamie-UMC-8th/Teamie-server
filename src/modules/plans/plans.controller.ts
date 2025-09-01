@@ -8,6 +8,7 @@ import {
     ParseIntPipe,
     Patch,
     Req,
+    UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
@@ -17,12 +18,12 @@ import {
 } from 'src/common/response/swagger-response.helper';
 import { PlanDetails } from './dtos/plan-details.dto';
 import { PlansService } from './services/plans.service';
-import { ProjectForbiddenException } from 'src/common/exceptions/custom.errors';
 import { Transactional, TransactionalRequest } from 'src/common/decorators/transaction.decorator';
 import { DeletePlanResponseDto } from './dtos/delete-plan.dto';
 import { BasicUpdatePlanReqDTO, UpdatePlanUserReqDTO } from './dtos/update-plan.dto';
 import { ErrorCode } from 'src/common/exceptions/errorcode.enum';
 import { ApiCommonErrorResponses } from 'src/common/decorators/api-common-error-responses.decorator';
+import { PlanMemberGuard } from './guards/plan-member.guard';
 
 @ApiTags('Plans')
 @Controller('/plans')
@@ -39,13 +40,9 @@ export class PlansController {
         'PLAN을 찾을 수 없습니다.',
         HttpStatus.NOT_FOUND
     )
+    @UseGuards(PlanMemberGuard)
     @Get('/:planId')
-    async getDetails(
-        @User('id') userId: number,
-        @Param('planId', ParseIntPipe) planId: number
-    ): Promise<PlanDetails> {
-        const check = await this.plansService.checkPermission(userId, planId);
-        if (!check) throw new ProjectForbiddenException();
+    async getDetails(@Param('planId', ParseIntPipe) planId: number): Promise<PlanDetails> {
         return this.plansService.getDetails(planId);
     }
 
@@ -64,6 +61,7 @@ export class PlansController {
         '해당 프로젝트에 접근 권한이 없습니다.',
         HttpStatus.FORBIDDEN
     )
+    @UseGuards(PlanMemberGuard)
     @Transactional()
     @Delete('/:planId')
     async deletePlan(
@@ -90,15 +88,15 @@ export class PlansController {
         '해당 프로젝트에 접근 권한이 없습니다.',
         HttpStatus.FORBIDDEN
     )
+    @UseGuards(PlanMemberGuard)
     @Transactional()
     @Patch('/:planId')
     async updatePlan(
         @Req() req: TransactionalRequest,
-        @User('id') userId: number,
         @Param('planId', ParseIntPipe) planId: number,
         @Body() body: BasicUpdatePlanReqDTO
     ): Promise<PlanDetails> {
-        return await this.plansService.updatePlan(req.queryRunner, userId, planId, body);
+        return await this.plansService.updatePlan(req.queryRunner, planId, body);
     }
 
     @ApiOperation({
@@ -128,6 +126,7 @@ export class PlansController {
             data: '프로젝트에 참여하지 않은 사용자 ID가 포함되어 있습니다.',
         },
     ])
+    @UseGuards(PlanMemberGuard)
     @Transactional()
     @Patch('/:planId/members')
     async updatePlanUserList(

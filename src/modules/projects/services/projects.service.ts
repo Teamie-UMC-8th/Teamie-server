@@ -196,13 +196,9 @@ export class ProjectsService {
         return AllProjectResponseDto.fromEntity({ project, posts });
     }
 
-    async getProjectFullData(userId: number, projectId: number): Promise<AllProjectResponseDto> {
+    async getProjectFullData(projectId: number): Promise<AllProjectResponseDto> {
         // 프로젝트 존재 검사
         const project = await this.projectRepository.findByIdWithTask(projectId);
-        // 프로젝트 멤버 권한 검사
-        const check = await this.assertProjectMember(userId, projectId);
-        if (!check) throw new AlreadyProjectCompletedException();
-
         const postsRaw = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
         const posts = Array.isArray(postsRaw) ? postsRaw.map(PostDto.from) : [];
 
@@ -312,10 +308,6 @@ export class ProjectsService {
         projectId: number,
         userId: number
     ): Promise<CreateStepResponseDto> {
-        // 프로젝트 존재 확인
-        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
-        // 프로젝트 멤버인지 확인
-        await this.isProjectMember(userId, projectId, qr.manager);
         let savedStep: Step;
         try {
             // 1) 엔티티 생성
@@ -349,14 +341,10 @@ export class ProjectsService {
         userId: number,
         projectId: number
     ): Promise<CreatePostResponseDto> {
-        // 1) 프로젝트 존재 확인, 프로젝트 멤버인지 확인
-        await this.projectRepository.findByIdWithTask(projectId);
-        await this.assertProjectMember(userId, projectId);
-
-        // 2) Redis에서 기존 포스트잇 로드
+        // 1) Redis에서 기존 포스트잇 로드
         const posts = await this.postsStore.findPosts(projectId, this.postsKeyPrefix);
 
-        // 4) 최대 개수 제한
+        // 2) 최대 개수 제한
         if (posts.length >= this.POST_MAX) throw new PostsExceededException();
 
         const newPost = await this.postsStore.savePost(
@@ -365,7 +353,7 @@ export class ProjectsService {
             { userId, content: dto.content },
             this.POST_TTL_SECONDS
         );
-        // 10) 생성된 객체 반환
+        // 3) 생성된 객체 반환
         return CreatePostResponseDto.fromEntity(newPost, projectId);
     }
 
@@ -374,7 +362,6 @@ export class ProjectsService {
         userId: number,
         projectId: number
     ): Promise<DeletePostResponseDto> {
-        await this.assertProjectMember(userId, projectId);
         const res = await this.postsStore.deletePost(
             projectId,
             this.postsKeyPrefix,
@@ -394,8 +381,7 @@ export class ProjectsService {
         dto: ChangeLeaderDto,
         currentUserId: number
     ): Promise<ChangeLeaderResponseDto> {
-        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
-        await this.isProjectMember(currentUserId, projectId, qr.manager);
+        //NOTE: newId에 대한 유효성 체크 필요 - 유효한 사용자인지
         const { newLeaderId } = dto;
         const newId = newLeaderId;
         const current = await this.userProjectRepository.findProjectLeaderByProjectIdUsingQR(
@@ -437,8 +423,6 @@ export class ProjectsService {
         userId: number,
         dto: UpdateProfileDto
     ): Promise<UpdateProfileResponseDto> {
-        // 프로젝트 완료 여부 검사
-        await this.projectRepository.findByProjectIdUsingQR(projectId, qr.manager);
         // 1. 본인 프로필 수정인지 확인
         if (userId !== dto.id) {
             throw new ProfileForbiddenException();
@@ -596,13 +580,9 @@ export class ProjectsService {
     }
 
     //프로젝트 종료 여부 조회
-    async isCompleted(userId: number, projectId: number): Promise<getProjectIsCompleted> {
-        // 프로젝트 멤버 권한 검사
-        await this.assertProjectMember(userId, projectId);
-
+    async isCompleted(projectId: number): Promise<getProjectIsCompleted> {
         //프로젝트 종료 여부 검사
         const isCompleted = await this.projectRepository.findIsCompletedByProjectId(projectId);
-
         return { isCompleted };
     }
 }
