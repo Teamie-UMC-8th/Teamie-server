@@ -13,7 +13,7 @@ import {
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
 import { UsersService } from './services/users.service';
 import {
@@ -31,7 +31,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UserMainTaskRequestDTO } from './dtos/user-main-task.dto';
 import { UserMasterPortfoliosResponseDto } from '../master-portfolios/dtos/user-master-portfolios-response.dto';
 import { UserProjectResponseDto } from './dtos/user-project.dto';
-import { ProjectDashBoardDTO } from '../tasks/dtos/user-task.dto';
+import { ProjectDashBoardDTO, TaskCardDTO } from '../tasks/dtos/user-task.dto';
 import { DateCursor } from 'src/common/dtos/date-cursor.dto';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { TasksService } from '../tasks/services/tasks.service';
@@ -40,9 +40,11 @@ import {
     hasNextPageExampleOfMyCorrections,
     hasNextPageExampleOfMyPortfolios,
     hasNextPageExampleOfMyTasks,
+    hasNextPageExampleOfMyTasksMore,
     lastPageExampleOfMyCorrections,
     lastPageExampleOfMyPortfolios,
     lastPageExampleOfMyTasks,
+    lastPageExampleOfMyTasksMore,
 } from 'src/config/swagger-examples';
 import { ConfigService } from '@nestjs/config';
 import { MasterPortfoliosService } from '../master-portfolios/services/master-portfolios.service';
@@ -123,6 +125,27 @@ export class UsersController {
         @Query(new ValidationPipe({ transform: true })) query?: DateCursor
     ): Promise<PaginatedResponseDto<ProjectDashBoardDTO>> {
         return await this.tasksService.getTaskByUser(userId, query?.cursor);
+    }
+
+    @ApiOperation({
+        summary: '나의 업무 조회/더보기',
+        description:
+            '홈 > 나의 업무 페이지의 업무 대시보드에서 더보기를 눌렀을 때, 프로젝트 기준으로 필터링하여 업무를 추가 조회하는 API입니다. 커서는 1) 업무의 마감일, 2) 업무의 생성일을 기준으로 하는 복합커서입니다. 커서가 없는 경우 맨 처음 maxCardNum만큼의 업무를 조회합니다.',
+    })
+    @ApiCommonResponseWithPagination(
+        TaskCardDTO,
+        hasNextPageExampleOfMyTasksMore,
+        lastPageExampleOfMyTasksMore
+    )
+    @ApiQuery({ name: 'projectId', type: Number, required: true })
+    @ApiQuery({ name: 'cursor', type: String, required: false })
+    @Get('/me/tasks/more')
+    async getMoreUserTasksPerProject(
+        @User('id') userId: number,
+        @Query('projectId', ParseIntPipe) projectId: number,
+        @Query('cursor') cursor?: string
+    ): Promise<PaginatedResponseDto<TaskCardDTO>> {
+        return await this.tasksService.getTasksMoreByUser(userId, projectId, cursor);
     }
 
     @ApiOperation({

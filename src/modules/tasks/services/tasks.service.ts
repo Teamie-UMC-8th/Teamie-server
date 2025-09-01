@@ -29,7 +29,6 @@ import { ProjectDashBoardDTO, TaskCardDTO } from '../dtos/user-task.dto';
 import { ConfigService } from '@nestjs/config';
 import { PaginatedResponseDto } from 'src/common/response/paginated-response.dto';
 import { GetSearchTaskDto } from '../dtos/get-search-task.dto';
-import { Brackets } from 'typeorm';
 import { TaskRepository } from '../repositories/task.repository';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { StepRepository } from '../../steps/repositories/step.repository';
@@ -561,20 +560,74 @@ export class TasksService {
         return PaginatedResponseDto.of(results, nextCursor, hasNextPage);
     }
 
+    // 사용자 별 나의 업무 조회 더보기 - 프로젝트 기준
+    async getTasksMoreByUser(
+        userId: number,
+        projectId: number,
+        cursor?: string
+    ): Promise<PaginatedResponseDto<TaskCardDTO>> {
+        // 0. 쿼리 파라미터 유효성 검사
+        //NOTE: 수정 필요
+        await this.projectsService.findByIdWithTasks(projectId);
+
+        // 1. 커서의 역직렬화
+        let decodedCursor: any;
+        try {
+            decodedCursor = cursor
+                ? (JSON.parse(Buffer.from(cursor, 'base64').toString()) as {
+                      deadline: string;
+                      createdAt: string;
+                  })
+                : undefined;
+        } catch (e) {
+            throw new BadRequestException('커서가 유효하지 않습니다.');
+        }
+        // 2. 업무 조회 및 DTO로 변환하여 반환
+        const tasks = await this.getTaskByProject(userId, projectId, decodedCursor);
+
+        // 3. hasNextPage 판단
+        let hasNextPage: boolean = false;
+        const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
+        const next = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
+            projectId,
+            userId,
+            [Status.ONGOING, Status.NOTSTART],
+            maxCardNum + 1,
+            decodedCursor
+        );
+        if (next.length > maxCardNum) {
+            hasNextPage = true;
+        }
+
+        // 4. nextCursor 계산
+        let nextCursor: string | null = null;
+        if (hasNextPage) {
+            const lastTask = tasks[tasks.length - 1];
+            const cursorObj = {
+                deadline: lastTask.deadline ?? null,
+                createdAt: lastTask.createdAt,
+            };
+            nextCursor = Buffer.from(JSON.stringify(cursorObj)).toString('base64');
+        }
+        return PaginatedResponseDto.of(tasks, nextCursor, hasNextPage);
+    }
+
     // 프로젝트 별 나의 업무 조회
     async getTaskByProject(
         userId: number,
         projectId: number,
-        cursor?: any
+        cursor?: { deadline: string; createdAt: string }
     ): Promise<TaskCardDTO[]> {
         const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
+        const decodedCursor = cursor ? cursor : undefined;
 
         // 1. 조건에 맞는 task id만 선조회
         const idRows = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
             projectId,
             userId,
             [Status.ONGOING, Status.NOTSTART],
-            maxCardNum
+            maxCardNum,
+            decodedCursor
         );
 
         const ids = idRows.map((r) => r.id);
