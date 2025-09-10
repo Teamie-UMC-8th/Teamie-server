@@ -50,6 +50,7 @@ import { ConfigService } from '@nestjs/config';
 import { MasterPortfoliosService } from '../master-portfolios/services/master-portfolios.service';
 import { UserPortfolioCorrectionResponseDto } from '../portfolio-corrections/dtos/user-portfolio-correction-response.dto';
 import { PortfolioCorrectionsService } from '../portfolio-corrections/services/portfolio-corrections.service';
+import { CursorDto, CursorValidationPipe } from '../tasks/pipes/cursor-validation.pipe';
 
 @ApiTags('Users')
 @Controller('users')
@@ -143,7 +144,7 @@ export class UsersController {
     async getMoreUserTasksPerProject(
         @User('id') userId: number,
         @Query('projectId', ParseIntPipe) projectId: number,
-        @Query('cursor') cursor?: string
+        @Query('cursor', CursorValidationPipe) cursor?: CursorDto | undefined
     ): Promise<PaginatedResponseDto<TaskCardDTO>> {
         return await this.tasksService.getTasksMoreByUser(userId, projectId, cursor);
     }

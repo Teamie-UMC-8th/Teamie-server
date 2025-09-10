@@ -114,6 +114,12 @@ export class ProjectMaxSelectedException extends CustomHttpException {
     }
 }
 
+export class FailToSerializeException extends CustomHttpException {
+    constructor(data?: any) {
+        super(ErrorCode.BAD_REQUEST, `Invalid Cursor Format.`, HttpStatus.BAD_REQUEST, data);
+    }
+}
+
 //401
 export class UnAuthorizedException extends CustomHttpException {
     constructor(data?: any) {

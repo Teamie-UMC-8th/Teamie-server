@@ -53,6 +53,8 @@ import {
 } from '../dtos/task-payload.dto';
 import { CreatedCommentDTO } from '../../comments/dto/comment-payload.dto';
 import { TaskUpdatedSubType } from '../enums/task-update-type.enum';
+import { CursorUtil } from 'src/common/utils/serialize-cursor.util';
+import { CursorDto } from '../pipes/cursor-validation.pipe';
 @Injectable()
 export class TasksService {
     constructor(
@@ -566,26 +568,13 @@ export class TasksService {
     async getTasksMoreByUser(
         userId: number,
         projectId: number,
-        cursor?: string
+        cursor?: CursorDto
     ): Promise<PaginatedResponseDto<TaskCardDTO>> {
-        // 0. 쿼리 파라미터 유효성 검사
-        //NOTE: 수정 필요
+        // 1. 쿼리 파라미터 유효성 검사 - 커서의 유효성 검사는 파이프로 수행
         await this.projectsService.findByIdWithTasks(projectId);
 
-        // 1. 커서의 역직렬화
-        let decodedCursor: any;
-        try {
-            decodedCursor = cursor
-                ? (JSON.parse(Buffer.from(cursor, 'base64').toString()) as {
-                      deadline: string;
-                      createdAt: string;
-                  })
-                : undefined;
-        } catch (e) {
-            throw new BadRequestException('커서가 유효하지 않습니다.');
-        }
         // 2. 업무 조회 및 DTO로 변환하여 반환
-        const { tasks, taskCursor } = await this.getTaskByProject(userId, projectId, decodedCursor);
+        const { tasks, taskCursor } = await this.getTaskByProject(userId, projectId, cursor);
 
         // 3. hasNextPage 판단
         let hasNextPage: boolean = false;
@@ -598,7 +587,7 @@ export class TasksService {
     async getTaskByProject(
         userId: number,
         projectId: number,
-        cursor?: { deadline: string; createdAt: string }
+        cursor?: CursorDto
     ): Promise<{
         tasks: TaskCardDTO[];
         taskCursor: string | null;
@@ -629,7 +618,7 @@ export class TasksService {
                 deadline: lastTask.deadline ?? null,
                 createdAt: lastTask.createdAt,
             };
-            nextCursor = Buffer.from(JSON.stringify(cursorObj)).toString('base64');
+            nextCursor = CursorUtil.encode(cursorObj);
         }
 
         // 3. id들로 상세 로딩 (step, managers, user까지) 및 DTO 변환 및 값 반환
