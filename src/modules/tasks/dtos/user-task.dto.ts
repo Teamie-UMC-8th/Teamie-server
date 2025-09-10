@@ -80,11 +80,19 @@ export class ProjectDashBoardDTO {
     })
     tasks: TaskCardDTO[];
 
-    static from(entity: { id: number; name: string; tasks: TaskCardDTO[] }) {
+    @ApiProperty({
+        example:
+            'eyJkZWFkbGluZSI6IjIwMjUtMDktMjhUMTQ6NTk6NTkuMDAwWiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMjFUMTk6NTA6MzEuODcyWiJ9",',
+        description: '나의 업무 조회/더보기에 필요한 커서',
+    })
+    taskCursor: string | null;
+
+    static from(entity: { id: number; name: string; tasks: TaskCardDTO[]; cursor: string | null }) {
         const dto = new ProjectDashBoardDTO();
         dto.projectId = entity.id;
         dto.projectName = entity.name;
         dto.tasks = entity.tasks;
+        dto.taskCursor = entity.cursor;
         return dto;
     }
 }

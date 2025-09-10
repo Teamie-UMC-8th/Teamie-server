@@ -550,10 +550,12 @@ export class TasksService {
         //3. 프로젝트 별 업무 조회
         const results = await Promise.all(
             pagedProjects.map(async (p) => {
+                const { tasks, taskCursor } = await this.getTaskByProject(userId, p.project.id);
                 return ProjectDashBoardDTO.from({
                     id: p.project.id,
                     name: p.project.name,
-                    tasks: await this.getTaskByProject(userId, p.project.id),
+                    tasks: tasks,
+                    cursor: taskCursor,
                 });
             })
         );
@@ -583,33 +585,13 @@ export class TasksService {
             throw new BadRequestException('커서가 유효하지 않습니다.');
         }
         // 2. 업무 조회 및 DTO로 변환하여 반환
-        const tasks = await this.getTaskByProject(userId, projectId, decodedCursor);
+        const { tasks, taskCursor } = await this.getTaskByProject(userId, projectId, decodedCursor);
 
         // 3. hasNextPage 판단
         let hasNextPage: boolean = false;
-        const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
-        const next = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
-            projectId,
-            userId,
-            [Status.ONGOING, Status.NOTSTART],
-            maxCardNum + 1,
-            decodedCursor
-        );
-        if (next.length > maxCardNum) {
-            hasNextPage = true;
-        }
+        if (taskCursor) hasNextPage = true;
 
-        // 4. nextCursor 계산
-        let nextCursor: string | null = null;
-        if (hasNextPage) {
-            const lastTask = tasks[tasks.length - 1];
-            const cursorObj = {
-                deadline: lastTask.deadline ?? null,
-                createdAt: lastTask.createdAt,
-            };
-            nextCursor = Buffer.from(JSON.stringify(cursorObj)).toString('base64');
-        }
-        return PaginatedResponseDto.of(tasks, nextCursor, hasNextPage);
+        return PaginatedResponseDto.of(tasks, taskCursor, hasNextPage);
     }
 
     // 프로젝트 별 나의 업무 조회
@@ -617,31 +599,42 @@ export class TasksService {
         userId: number,
         projectId: number,
         cursor?: { deadline: string; createdAt: string }
-    ): Promise<TaskCardDTO[]> {
+    ): Promise<{
+        tasks: TaskCardDTO[];
+        taskCursor: string | null;
+    }> {
         const maxCardNum: number = Number(this.configService.get('MAX_TASK_PAGE')) || 5;
         const decodedCursor = cursor ? cursor : undefined;
+        let nextCursor: null | string = null;
 
         // 1. 조건에 맞는 task id만 선조회
         const idRows = await this.taskRepository.findTaskIdsForUserAssignedOngoingTasks(
             projectId,
             userId,
             [Status.ONGOING, Status.NOTSTART],
-            maxCardNum,
+            maxCardNum + 1,
             decodedCursor
         );
 
         const ids = idRows.map((r) => r.id);
-        if (ids.length === 0) return [];
+        if (ids.length === 0) return { tasks: [], taskCursor: nextCursor };
 
-        // 2. id들로 상세 로딩 (step, managers, user까지)
-        const tasks = await this.taskRepository.findTasksByIds(ids);
+        // 2. 커서 조직
+        let pageIds = ids;
+        if (idRows.length > maxCardNum) {
+            pageIds = ids.slice(0, maxCardNum);
+            const taskIdOfLast: number = pageIds[maxCardNum - 1];
+            const lastTask = await this.taskRepository.findById(taskIdOfLast);
+            const cursorObj = {
+                deadline: lastTask.deadline ?? null,
+                createdAt: lastTask.createdAt,
+            };
+            nextCursor = Buffer.from(JSON.stringify(cursorObj)).toString('base64');
+        }
 
-        // 3. id 순서대로 정렬
-        const order = new Map(ids.map((id, i) => [id, i]));
-        tasks.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-
-        // 4. 반환값을 DTO로 변환
-        return tasks.map((task) => TaskCardDTO.from(task));
+        // 3. id들로 상세 로딩 (step, managers, user까지) 및 DTO 변환 및 값 반환
+        const tasks = await this.taskRepository.findTasksByIds(pageIds);
+        return { tasks: tasks.map((task) => TaskCardDTO.from(task)), taskCursor: nextCursor };
     }
 
     async getSearchTask(
@@ -720,7 +713,6 @@ export class TasksService {
                 steps: stepGroups,
                 totalCount,
             };
-            return { projectId, projectName: project.name, steps: stepGroups, totalCount };
         }
     }
     async getSearchMoreTasksByStep(
