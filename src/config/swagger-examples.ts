@@ -22,11 +22,14 @@ export const hasNextPageExampleOfMyTasks = {
                         ],
                     },
                 ],
+                taskCursor:
+                    'eyJkZWFkbGluZSI6IjIwMjUtMDgtMDlUMTU6MDA6MDAuMDAwWiIsImNyZWF0ZWRBdCI6IjIwMjUtMDktMDZUMTA6MTA6MzcuNDEyWiJ9',
             },
             {
                 projectId: 345,
                 projectName: '프로젝트B',
                 tasks: [],
+                taskCursor: null,
             },
         ],
         pageInfo: {
@@ -45,6 +48,7 @@ export const lastPageExampleOfMyTasks = {
                 projectId: 815,
                 projectName: '가장 최근 프로젝트',
                 tasks: [],
+                takCursor: null,
             },
         ],
         pageInfo: {
