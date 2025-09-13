@@ -248,7 +248,7 @@ export class TaskRepository {
             qb.andWhere(
                 `(IFNULL(task.deadline, '9999-12-31'), task.createdAt) > (:deadline, :createdAt)`,
                 {
-                    deadline: cursor.deadline ?? '999-12-31',
+                    deadline: cursor.deadline ?? '9999-12-31',
                     createdAt: cursor.createdAt,
                 }
             );
@@ -259,12 +259,15 @@ export class TaskRepository {
 
     //주어진 ID들의 task 상세 정보 배열 반환
     async findTasksByIds(ids: number[]): Promise<Task[]> {
-        return this.repo
+        return await this.repo
             .createQueryBuilder('task')
             .leftJoinAndSelect('task.step', 'step')
             .leftJoinAndSelect('task.managers', 'managers')
             .leftJoinAndSelect('managers.user', 'user')
             .whereInIds(ids)
+            .orderBy('task.deadline IS NULL', 'ASC')
+            .addOrderBy('task.deadline', 'ASC')
+            .addOrderBy('task.createdAt', 'ASC')
             .getMany();
     }
 
