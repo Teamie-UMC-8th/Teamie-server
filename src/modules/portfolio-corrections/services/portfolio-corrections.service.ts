@@ -245,12 +245,12 @@ export class PortfolioCorrectionsService {
 
         // Batch query: Get all project IDs that have master portfolio AI in a single query
         const projectIds = projects.map((p) => p.id);
-        const portfolioAIs = await this.masterPortfolioAIRepository.find({
-            where: { project: { id: In(projectIds) } },
-            select: ['id'],
-            relations: ['project'],
-        });
-        const projectsWithPortfolioAI = new Set(portfolioAIs.map((ai) => ai.project.id));
+        const portfolioAIs = await this.masterPortfolioAIRepository
+            .createQueryBuilder('ai')
+            .select('ai.projectId', 'projectId')
+            .where('ai.projectId IN (:...projectIds)', { projectIds })
+            .getRawMany<{ projectId: number }>();
+        const projectsWithPortfolioAI = new Set(portfolioAIs.map((ai) => ai.projectId));
 
         const projectsWithBoolean = projects.map((project) => ({
             ...project,
