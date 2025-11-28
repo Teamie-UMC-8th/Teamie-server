@@ -311,21 +311,21 @@ export class TasksService {
         // 2. status / step 분기 처리
         if (view === 'status') {
             const statuses = [Status.NOTSTART, Status.ONGOING, Status.COMPLETED];
-            const statusGroups: { status: Status; tasks: TaskInStatusDto[] }[] = [];
 
-            for (const status of statuses) {
-                const tasks =
-                    await this.taskRepository.findTop5ByProjectIdAndStatusOrderByDeadlineAsc(
-                        projectId,
-                        status,
-                        limit
-                    );
-
-                statusGroups.push({
+            // Parallel query execution for better performance
+            const statusTasksPromises = statuses.map((status) =>
+                this.taskRepository.findTop5ByProjectIdAndStatusOrderByDeadlineAsc(
+                    projectId,
                     status,
-                    tasks: tasks.map((task) => TaskInStatusDto.from(task)),
-                });
-            }
+                    limit
+                )
+            );
+            const statusTasksResults = await Promise.all(statusTasksPromises);
+
+            const statusGroups = statuses.map((status, index) => ({
+                status,
+                tasks: statusTasksResults[index].map((task) => TaskInStatusDto.from(task)),
+            }));
 
             return {
                 projectId: project.id,
@@ -336,22 +336,21 @@ export class TasksService {
         } else {
             const steps = await this.stepRepository.findByProjectId(projectId);
 
-            const stepGroups: { stepId: number; stepName: string; tasks: TaskInStepDto[] }[] = [];
+            // Parallel query execution for better performance
+            const stepTasksPromises = steps.map((step) =>
+                this.taskRepository.findTop5ByProjectIdAndStepOrderByDeadlineAsc(
+                    projectId,
+                    step.id,
+                    limit
+                )
+            );
+            const stepTasksResults = await Promise.all(stepTasksPromises);
 
-            for (const step of steps) {
-                const tasks =
-                    await this.taskRepository.findTop5ByProjectIdAndStepOrderByDeadlineAsc(
-                        projectId,
-                        step.id,
-                        limit
-                    );
-
-                stepGroups.push({
-                    stepId: step.id,
-                    stepName: step.name,
-                    tasks: tasks.map((task) => TaskInStepDto.from(task)),
-                });
-            }
+            const stepGroups = steps.map((step, index) => ({
+                stepId: step.id,
+                stepName: step.name,
+                tasks: stepTasksResults[index].map((task) => TaskInStepDto.from(task)),
+            }));
 
             return {
                 projectId: project.id,
@@ -652,22 +651,22 @@ export class TasksService {
         // 4) 그룹별 5개씩 병렬 조회
         if (view === 'status') {
             const statuses = [Status.NOTSTART, Status.ONGOING, Status.COMPLETED];
-            const statusGroups: { status: Status; tasks: TaskInStatusDto[] }[] = [];
 
-            for (const status of statuses) {
-                const tasks =
-                    await this.taskRepository.findTop5SearchByProjectIdAndStatusOrderByDeadlineAsc(
-                        projectId,
-                        status,
-                        limit,
-                        dto
-                    );
-
-                statusGroups.push({
+            // Parallel query execution for better performance
+            const statusTasksPromises = statuses.map((status) =>
+                this.taskRepository.findTop5SearchByProjectIdAndStatusOrderByDeadlineAsc(
+                    projectId,
                     status,
-                    tasks: tasks.map((task) => TaskInStatusDto.from(task)),
-                });
-            }
+                    limit,
+                    dto
+                )
+            );
+            const statusTasksResults = await Promise.all(statusTasksPromises);
+
+            const statusGroups = statuses.map((status, index) => ({
+                status,
+                tasks: statusTasksResults[index].map((task) => TaskInStatusDto.from(task)),
+            }));
 
             return {
                 projectId: project.id,
@@ -678,23 +677,22 @@ export class TasksService {
         } else {
             const steps = await this.stepRepository.findByProjectId(projectId);
 
-            const stepGroups: { stepId: number; stepName: string; tasks: TaskInStepDto[] }[] = [];
+            // Parallel query execution for better performance
+            const stepTasksPromises = steps.map((step) =>
+                this.taskRepository.findTop5SearchByProjectIdAndStepOrderByDeadlineAsc(
+                    projectId,
+                    step.id,
+                    limit,
+                    dto
+                )
+            );
+            const stepTasksResults = await Promise.all(stepTasksPromises);
 
-            for (const step of steps) {
-                const tasks =
-                    await this.taskRepository.findTop5SearchByProjectIdAndStepOrderByDeadlineAsc(
-                        projectId,
-                        step.id,
-                        limit,
-                        dto
-                    );
-
-                stepGroups.push({
-                    stepId: step.id,
-                    stepName: step.name,
-                    tasks: tasks.map((task) => TaskInStepDto.from(task)),
-                });
-            }
+            const stepGroups = steps.map((step, index) => ({
+                stepId: step.id,
+                stepName: step.name,
+                tasks: stepTasksResults[index].map((task) => TaskInStepDto.from(task)),
+            }));
 
             return {
                 projectId: project.id,

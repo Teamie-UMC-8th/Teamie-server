@@ -157,19 +157,27 @@ export class UserProjectRepository {
 
     // 완료 시 멤버들의 projectNum +1
     async updateProjectNum(projectId: number, manager: EntityManager): Promise<void> {
-        const raws = await manager
+        // First, get all user IDs for this project
+        const userIds = await manager
             .getRepository(UserProject)
             .createQueryBuilder('up')
-            .leftJoin('up.user', 'user')
-            .select(['up.userId AS userId', 'user.projectNum AS projectNum'])
+            .select('up.userId', 'userId')
             .where('up.projectId = :projectId', { projectId })
-            .getRawMany<{ userId: number; projectNum: number | string | null }>();
+            .getRawMany<{ userId: number }>();
 
-        for (const { userId, projectNum } of raws) {
-            const base = projectNum == null ? 0 : Number(projectNum); // ← 문자열/NULL 안전
-            const next = base + 1;
-            await manager.update(User, { id: userId }, { projectNum: next }); // PK는 id
+        if (userIds.length === 0) {
+            return;
         }
+
+        const ids = userIds.map((row) => row.userId);
+
+        // Batch update: Increment projectNum for all project members in a single query
+        await manager
+            .createQueryBuilder()
+            .update(User)
+            .set({ projectNum: () => 'COALESCE(projectNum, 0) + 1' })
+            .where('id IN (:...ids)', { ids })
+            .execute();
     }
 
     //프로젝트 내 역할 변경
