@@ -6,7 +6,7 @@ import { WsExceptionFilter } from '@nestjs/common'; // WsExceptionFilter 인터�
 export class WebSocketExceptionFilter implements WsExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost) {
         const client = host.switchToWs().getClient();
-        let errorPayload = {
+        const errorPayload = {
             status: 'error',
             message: 'Unknown error occurred',
         };

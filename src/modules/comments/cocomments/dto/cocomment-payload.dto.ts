@@ -12,7 +12,7 @@ export class CreatedCocommentDTO {
         const dto = new CreatedCocommentDTO();
         dto.id = cocomment.id;
         dto.content = cocomment.content;
-        dto.user = UserProfile.from(cocomment.user as User);
+        dto.user = UserProfile.from(cocomment.user);
         return dto;
     }
 }

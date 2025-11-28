@@ -205,7 +205,7 @@ export class MasterPortfoliosService {
 
                 const questionEntity = qr.manager.create(Questions, {
                     questionId: q.id,
-                    questionType: q.questionType as QuestionType,
+                    questionType: q.questionType,
                     question: q.question,
                     masterPortfolio: { id: masterPortfolioId },
                 });
@@ -511,7 +511,7 @@ export class MasterPortfoliosService {
     }
 
     // 마스터포트폴리오 소유자 체크
-    async checkMasterPortfolioOwner(userId: number, portfolioId: number): Promise<Boolean> {
+    async checkMasterPortfolioOwner(userId: number, portfolioId: number): Promise<boolean> {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
             where: { id: portfolioId },
             relations: ['user'],

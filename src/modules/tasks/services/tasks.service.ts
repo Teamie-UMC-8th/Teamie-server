@@ -121,7 +121,7 @@ export class TasksService {
         );
         const before = {
             name: task.name,
-            deadline: task.deadline as Date | null,
+            deadline: task.deadline,
             status: task.status,
             memo: task.memo,
             stepId: task.step.id,

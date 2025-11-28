@@ -26,7 +26,7 @@ export class CursorValidationPipe
             return undefined;
         }
         // 1. Cursor Decode
-        let decoded: object = CursorUtil.decode<CursorDto>(value);
+        const decoded: object = CursorUtil.decode<CursorDto>(value);
 
         // 2. DTO 클래스로 변환 및 유효성 검증
         const cursorObject = plainToInstance(CursorDto, decoded, {

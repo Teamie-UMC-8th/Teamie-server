@@ -56,7 +56,7 @@ export class UpdatedTaskDTO {
         if ('stepId' in diff) dto.stepId = entity.step.id;
         if ('memo' in diff) dto.memo = entity.memo;
         if ('managers' in diff) {
-            dto.managers = managerEntities.map((m) => UserProfile.from(m.user as User));
+            dto.managers = managerEntities.map((m) => UserProfile.from(m.user));
         }
         return dto;
     }
