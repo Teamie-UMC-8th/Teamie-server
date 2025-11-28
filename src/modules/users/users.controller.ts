@@ -144,7 +144,7 @@ export class UsersController {
     async getMoreUserTasksPerProject(
         @User('id') userId: number,
         @Query('projectId', ParseIntPipe) projectId: number,
-        @Query('cursor', CursorValidationPipe) cursor?: CursorDto | undefined
+        @Query('cursor', CursorValidationPipe) cursor?: CursorDto
     ): Promise<PaginatedResponseDto<TaskCardDTO>> {
         return await this.tasksService.getTasksMoreByUser(userId, projectId, cursor);
     }

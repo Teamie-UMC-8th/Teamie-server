@@ -239,21 +239,23 @@ export class PortfolioCorrectionsService {
             .where('user.id = :userId', { userId })
             .getMany();
 
-        const projectsWithBoolean = await Promise.all(
-            projects.map(async (project) => {
-                const projectId = project.id;
-                const hasMasterPortfolio =
-                    (await this.masterPortfolioAIRepository.findOne({
-                        where: { project: { id: projectId } },
-                    })) !== null;
-                return {
-                    ...project,
-                    hasMasterPortfolio,
-                };
-            })
-        );
+        if (projects.length === 0) {
+            return [];
+        }
 
-        // 반환값이 있으면 1, 없으면 0으로 hasMasterPortfolio 속성 추가
+        // Batch query: Get all project IDs that have master portfolio AI in a single query
+        const projectIds = projects.map((p) => p.id);
+        const portfolioAIs = await this.masterPortfolioAIRepository
+            .createQueryBuilder('ai')
+            .select('ai.projectId', 'projectId')
+            .where('ai.projectId IN (:...projectIds)', { projectIds })
+            .getRawMany<{ projectId: number }>();
+        const projectsWithPortfolioAI = new Set(portfolioAIs.map((ai) => ai.projectId));
+
+        const projectsWithBoolean = projects.map((project) => ({
+            ...project,
+            hasMasterPortfolio: projectsWithPortfolioAI.has(project.id),
+        }));
 
         return projectsWithBoolean.map(ProjectResponseDto.from);
     }

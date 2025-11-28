@@ -278,18 +278,20 @@ export class ProjectsService {
             throw new ProjectTransactionException();
         }
 
-        // 4) 트랜잭션 넘겨서 MasterPortfolio 생성
+        // 4) 트랜잭션 넘겨서 MasterPortfolio 생성 - Parallel execution for better performance
         const members = await this.userProjectRepository.findUsersByProjectIdUsingManagers(
             qr.manager,
             projectId
         ); // [UserProject]
-        for (const up of members) {
-            await this.masterPortfoliosService.createMasterPortfolio(
-                qr.manager,
-                up.user.id,
-                projectId
-            );
-        }
+        await Promise.all(
+            members.map((up) =>
+                this.masterPortfoliosService.createMasterPortfolio(
+                    qr.manager,
+                    up.user.id,
+                    projectId
+                )
+            )
+        );
 
         // 5) 초대코드 정리 (InviteCodeStore 사용)
         const codes = await this.inviteStore.listCodesByProject(projectId);

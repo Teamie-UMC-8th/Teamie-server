@@ -205,7 +205,7 @@ export class MasterPortfoliosService {
 
                 const questionEntity = qr.manager.create(Questions, {
                     questionId: q.id,
-                    questionType: q.questionType as QuestionType,
+                    questionType: q.questionType,
                     question: q.question,
                     masterPortfolio: { id: masterPortfolioId },
                 });
@@ -244,13 +244,26 @@ export class MasterPortfoliosService {
     // TODO: 커스텀 에러 추가
     // 마스터 포트폴리오 질문(답변) 업데이트
     async updateQuestions(qr: QueryRunner, portfolioId: number, questions: UpdateQuestionDto[]) {
+        // Batch fetch: Get all questions for this portfolio in a single query
+        const questionIds = questions.map((q) => q.questionId);
+        const existingQuestions = await qr.manager.find(Questions, {
+            where: {
+                questionId: In(questionIds),
+                masterPortfolio: { id: portfolioId },
+            },
+        });
+
+        // Create a map for O(1) lookup
+        const existingQuestionsMap = new Map(existingQuestions.map((q) => [q.questionId, q]));
+
+        // Validate all questions exist and collect updates
+        const updatePromises: Promise<any>[] = [];
+
         for (const q of questions) {
             const questionId = q.questionId;
-            const questionExists = await qr.manager.findOne(Questions, {
-                where: { questionId, masterPortfolio: { id: portfolioId } },
-            });
+            const questionExists = existingQuestionsMap.get(questionId);
+
             if (!questionExists) {
-                // questionId+portfolioId가 존재하지 않을 때
                 throw new QuestionNotFoundException(
                     `질문 ID ${questionId}는 포트폴리오 ${portfolioId}에 존재하지 않습니다.`
                 );
@@ -259,13 +272,15 @@ export class MasterPortfoliosService {
             const questionType = questionExists.questionType;
             if (questionType === QuestionType.YES_NO) {
                 if (q.answer) {
-                    await qr.manager.update(
-                        Questions,
-                        { questionId, masterPortfolio: { id: portfolioId } },
-                        {
-                            answer: q.answer,
-                            reason: q.reason,
-                        }
+                    updatePromises.push(
+                        qr.manager.update(
+                            Questions,
+                            { questionId, masterPortfolio: { id: portfolioId } },
+                            {
+                                answer: q.answer,
+                                reason: q.reason,
+                            }
+                        )
                     );
                 } else {
                     throw new QuestionUpdateException(
@@ -273,21 +288,26 @@ export class MasterPortfoliosService {
                     );
                 }
             } else if (questionType === QuestionType.TEXT) {
-                // answer가 있으면 안됨
                 if (q.answer) {
                     throw new QuestionUpdateException(
                         `질문 타입이 ${QuestionType.TEXT}인 질문 ID ${questionId}는 answer 값이 존재할 수 없습니다.`
                     );
                 }
-                await qr.manager.update(
-                    Questions,
-                    { questionId, masterPortfolio: { id: portfolioId } },
-                    {
-                        reason: q.reason,
-                    }
+                updatePromises.push(
+                    qr.manager.update(
+                        Questions,
+                        { questionId, masterPortfolio: { id: portfolioId } },
+                        {
+                            reason: q.reason,
+                        }
+                    )
                 );
             }
         }
+
+        // Execute all updates in parallel
+        await Promise.all(updatePromises);
+
         return await qr.manager.find(Questions, {
             where: { masterPortfolio: { id: portfolioId } },
             order: { questionId: 'ASC' },
@@ -511,7 +531,7 @@ export class MasterPortfoliosService {
     }
 
     // 마스터포트폴리오 소유자 체크
-    async checkMasterPortfolioOwner(userId: number, portfolioId: number): Promise<Boolean> {
+    async checkMasterPortfolioOwner(userId: number, portfolioId: number): Promise<boolean> {
         const masterPortfolio = await this.masterPortfolioRepository.findOne({
             where: { id: portfolioId },
             relations: ['user'],
